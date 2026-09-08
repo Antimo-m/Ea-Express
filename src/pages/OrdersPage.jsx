@@ -16,6 +16,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
   const resource = useApi(listOrders, {
     ...values,
     ...(pickups ? { kind: "pickup" } : {}),
+    ...(messages ? { has_messages: values.has_messages || "0" } : {}),
   });
   const base = pickups ? "/pickups" : messages ? "/messages" : "/shipments";
   function filter(event) {
@@ -54,6 +55,20 @@ export default function OrdersPage({ pickups = false, messages = false }) {
       </Header>
       <section className="panel flush">
         <form className="filters" onSubmit={filter} key={params.toString()}>
+          {values.courier && (
+            <input type="hidden" name="courier" value={values.courier} />
+          )}
+          {messages && (
+            <Field label="Conversazioni">
+              <select
+                name="has_messages"
+                defaultValue={values.has_messages || "0"}
+              >
+                <option value="0">Tutte le spedizioni</option>
+                <option value="1">Con messaggi</option>
+              </select>
+            </Field>
+          )}
           <Field
             label="Cerca"
             name="q"
@@ -99,7 +114,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
         <State resource={resource}>
           {(data) => (
             <>
-              <OrderList orders={data.data} base={base} />
+              <OrderList orders={data.data} base={base} messages={messages} />
               <Pagination
                 meta={data.meta}
                 onPage={(page) => setParams({ ...values, page })}

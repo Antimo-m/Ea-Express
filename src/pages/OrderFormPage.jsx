@@ -177,6 +177,11 @@ function OrderForm({ order, pickups }) {
           dettaglio.
         </p>
         <Feedback error={error} />
+        {error?.status === 409 && (
+          <Link className="button secondary full" to={`${base}/${order.id}`}>
+            Ricarica il dettaglio aggiornato
+          </Link>
+        )}
         <button className="button full" disabled={busy}>
           {busy
             ? "Invio in corso…"

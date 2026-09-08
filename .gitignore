@@ -14,3 +14,9 @@ dist/
 *.log
 .DS_Store
 .vscode/
+*.sqlite
+*.sqlite3
+*.sql
+*.p12
+*.pfx
+*.crt

@@ -130,7 +130,7 @@ export function Pagination({ meta, onPage }) {
     </nav>
   );
 }
-export function OrderList({ orders, base = "/shipments" }) {
+export function OrderList({ orders, base = "/shipments", messages = false }) {
   if (!orders.length)
     return (
       <Empty
@@ -152,6 +152,20 @@ export function OrderList({ orders, base = "/shipments" }) {
           <div>
             <strong className="reference">{order.reference}</strong>
             <span>{order.recipient_name}</span>
+            {messages && (
+              <span
+                className={
+                  order.unread_messages_count
+                    ? "message-count unread-count"
+                    : "message-count"
+                }
+              >
+                <Icon name="chat-left-text" />{" "}
+                {order.unread_messages_count
+                  ? `${order.unread_messages_count} da leggere`
+                  : `${order.messages_count || 0} messaggi`}
+              </span>
+            )}
           </div>
           <div>
             <strong>

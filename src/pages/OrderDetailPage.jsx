@@ -55,6 +55,11 @@ function Detail({ order, reload, pickups, messages }) {
         )}
       </Header>
       <Feedback error={error} success={success} />
+      {error?.status === 409 && (
+        <button className="button secondary" onClick={reload}>
+          Ricarica i dati aggiornati
+        </button>
+      )}
       {!messages && (
         <div className="detail-grid">
           <div>

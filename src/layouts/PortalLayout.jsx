@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { useMobile } from "../hooks/useMobile";
 import { useAuth } from "../hooks/useAuth";
 import { Icon, Feedback } from "../components/UI";
 import { initials } from "../utils/format";
@@ -17,22 +18,46 @@ export default function PortalLayout() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const toggle = useRef(null);
+  const navigation = useRef(null);
+  const mobile = useMobile();
   const location = useLocation();
   useEffect(() => {
     document.title = "EA-Express · Portale clienti";
     window.scrollTo(0, 0);
   }, [location.pathname]);
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mobile) return;
+    const previousOverflow = document.body.style.overflow;
+    const toggleButton = toggle.current;
+    document.body.style.overflow = "hidden";
+    navigation.current?.querySelector("button")?.focus();
     const key = (event) => {
+      if (event.key === "Tab") {
+        const elements = navigation.current.querySelectorAll(
+          "a[href], button:not([disabled])",
+        );
+        const first = elements[0],
+          last = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
       if (event.key === "Escape") {
         setOpen(false);
-        toggle.current?.focus();
+        toggleButton?.focus();
       }
     };
     window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [open]);
+    return () => {
+      window.removeEventListener("keydown", key);
+      document.body.style.overflow = previousOverflow;
+      toggleButton?.focus();
+    };
+  }, [open, mobile]);
   async function signOut() {
     setBusy(true);
     try {
@@ -55,7 +80,22 @@ export default function PortalLayout() {
           onClick={() => setOpen(false)}
         />
       )}
-      <aside id="navigation" className={`sidebar ${open ? "is-open" : ""}`}>
+      <aside
+        ref={navigation}
+        id="navigation"
+        role={mobile ? "dialog" : undefined}
+        aria-modal={mobile && open ? true : undefined}
+        aria-label="Menu principale"
+        inert={mobile && !open}
+        className={`sidebar ${open ? "is-open" : ""}`}
+      >
+        <button
+          className="icon-button sidebar-close"
+          aria-label="Chiudi navigazione"
+          onClick={() => setOpen(false)}
+        >
+          <Icon name="x-lg" />
+        </button>
         <Link className="brand" to="/dashboard" onClick={() => setOpen(false)}>
           <img src="/brand.svg" alt="" />{" "}
           <span>
@@ -91,7 +131,7 @@ export default function PortalLayout() {
           </button>
         </div>
       </aside>
-      <div className="workspace">
+      <div className="workspace" inert={mobile && open}>
         <header className="topbar">
           <button
             ref={toggle}

@@ -44,6 +44,7 @@ export async function request(
     response = await fetch(`${base}${path}`, {
       method,
       credentials: "include",
+      signal: AbortSignal.timeout(20000),
       headers: {
         Accept: "application/json",
         ...(method !== "GET"
@@ -60,7 +61,10 @@ export async function request(
     await csrf();
     return request(path, { method, data, retry: false });
   }
-  const body = await response.json().catch(() => ({}));
+  const body = await response.json().catch(() => {
+    if (response.ok && response.status !== 204) throw new ApiError(0);
+    return {};
+  });
   if (!response.ok) {
     if (response.status === 401) {
       csrfToken = null;

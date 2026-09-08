@@ -23,7 +23,10 @@ export default function CouriersPage() {
                   <p className="muted">
                     Assegnato a una o più delle tue spedizioni.
                   </p>
-                  <Link className="button secondary" to="/messages">
+                  <Link
+                    className="button secondary"
+                    to={`/messages?courier=${courier.id}`}
+                  >
                     <Icon name="chat-dots" />
                     Scegli una spedizione
                   </Link>
