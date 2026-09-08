@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.[mM][dD]
+*.markdown
+.agents/
+.ai/
+.codex/
+.claude/
+*.pem
+*.key
+*.log
+.DS_Store
+.vscode/
