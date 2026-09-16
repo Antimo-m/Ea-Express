@@ -18,6 +18,7 @@ import OrderFormPage from "./pages/OrderFormPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import CouriersPage from "./pages/CouriersPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import LabelPage from "./pages/LabelPage";
 import ProfilePage from "./pages/ProfilePage";
 import "bootstrap-icons/font/bootstrap-icons.css";
 function Session() {
@@ -51,6 +52,7 @@ export default function App() {
               <Route element={<Protected />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="shipments/:id/label" element={<LabelPage />} />
                 <Route path="shipments" element={<OrdersPage />} />
                 <Route path="shipments/new" element={<OrderFormPage />} />
                 <Route path="shipments/:id" element={<OrderDetailPage />} />

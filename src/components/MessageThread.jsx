@@ -1,22 +1,29 @@
-import { useEffect, useState } from "react";
+import { observeMessageReceipts } from "../services/message-receipts";
+import { useEffect, useRef, useState } from "react";
 import { listMessages, sendMessage, readMessages } from "../api/messages";
 import { useApi } from "../hooks/useApi";
 import { State, Feedback, Empty, Icon, Pagination } from "./UI";
 import { date } from "../utils/format";
 export default function MessageThread({ id }) {
   const [page, setPage] = useState(1);
-  const resource = useApi(listMessages, { id, page });
+  const resource = useApi(listMessages, { id, page }, true);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const list = useRef(null);
+  const nearEnd = useRef(true);
+  const [newMessages, setNewMessages] = useState(false);
   useEffect(() => {
-    if (
-      resource.data?.data.some(
-        (message) => message.sender === "courier" && !message.read_at,
-      )
-    )
-      readMessages(id).catch(setError);
+    const container = list.current;
+    if (!container || !resource.data) return;
+    if (nearEnd.current) container.scrollTop = container.scrollHeight;
+    return observeMessageReceipts(container, resource.data.data, (ids, state) => readMessages(id, ids, state), 'customer', setError);
   }, [id, resource.data]);
+  useEffect(() => {
+    const incoming = event => { if (event.detail.kind === 'messages' && event.detail.order_id === Number(id) && (!nearEnd.current || page !== 1)) setNewMessages(true); };
+    window.addEventListener('ea:workspace-updated', incoming);
+    return () => window.removeEventListener('ea:workspace-updated', incoming);
+  }, [id, page]);
   async function submit(event) {
     event.preventDefault();
     if (!body.trim()) return;
@@ -25,6 +32,7 @@ export default function MessageThread({ id }) {
     try {
       await sendMessage(id, body.trim());
       setBody("");
+      nearEnd.current = true;
       setPage(1);
       resource.reload();
     } catch (error) {
@@ -56,12 +64,14 @@ export default function MessageThread({ id }) {
         {(data) => (
           <>
             <Pagination meta={data.meta} onPage={setPage} />
-            <div className="messages" aria-label="Messaggi">
+            {newMessages && <button className="button secondary" onClick={() => { setPage(1); nearEnd.current = true; setNewMessages(false); list.current?.scrollTo({ top: list.current.scrollHeight, behavior: 'smooth' }); }}>Vai ai nuovi messaggi ↓</button>}
+            <div ref={list} className="messages" aria-label="Messaggi" onScroll={() => { const node = list.current; nearEnd.current = node.scrollHeight - node.scrollTop - node.clientHeight < 60; if (nearEnd.current && page === 1) setNewMessages(false); }}>
               {data.data.length ? (
                 [...data.data].reverse().map((message) => (
                   <article
                     className={`message ${message.sender === "customer" ? "outgoing" : ""}`}
                     key={message.id}
+                    data-message-id={message.id}
                   >
                     <strong>
                       {message.sender === "customer" ? "Tu" : "Corriere"}
@@ -70,7 +80,7 @@ export default function MessageThread({ id }) {
                     <small>
                       {date(message.created_at, true)}
                       {message.sender === "customer" &&
-                        ` · ${message.read_at ? "Letto" : "Inviato"}`}
+                        ` · ${message.read_at ? "Letto" : message.delivered_at ? "Consegnato" : "Inviato"}`}
                     </small>
                   </article>
                 ))

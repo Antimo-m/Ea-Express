@@ -1,3 +1,7 @@
+import { useEffect, useRef } from 'react';
+import { attachFormPopovers } from '../services/form-popovers';
+import { cloneElement, useContext, useId } from "react";
+import { FormErrorsContext } from "../context/FormErrorsContext";
 import { Link } from "react-router";
 import { date } from "../utils/format";
 export function Icon({ name, ...props }) {
@@ -96,14 +100,59 @@ export function State({ resource, children }) {
     );
   return children(resource.data);
 }
-export function Field({ label, name, children, ...props }) {
+export function Form({ errors, ...props }) {
   return (
-    <label
-      className={`field ${props.type === "checkbox" ? "check-field" : ""}`}
-    >
-      <span>{label}</span>
-      {children || <input name={name} {...props} />}
-    </label>
+    <FormErrorsContext.Provider value={errors || {}}>
+      <form {...props} />
+    </FormErrorsContext.Provider>
+  );
+}
+export function Field({ label, name, children, help, width, ...props }) {
+  const controlRoot = useRef(null);
+  useEffect(() => attachFormPopovers(controlRoot.current), []);
+  const errors = useContext(FormErrorsContext);
+  const id = useId();
+  const fieldName = name || children?.props?.name;
+  const error = errors[fieldName];
+  const size =
+    width ||
+    (["parcel_value", "price"].includes(fieldName)
+      ? "amount"
+      : props.type === "number"
+        ? "quantity"
+        : props.type === "tel"
+          ? "phone"
+          : ["time", "date"].includes(props.type)
+            ? props.type
+            : "auto");
+  const described =
+    [error ? `${id}-error` : "", help ? `${id}-help` : ""]
+      .filter(Boolean)
+      .join(" ") || undefined;
+  const accessibility = {
+    id,
+    "aria-invalid": error ? true : undefined,
+    "aria-describedby": described,
+  };
+  return (
+    <div ref={controlRoot} className={`field field-${size}`}>
+      <label htmlFor={id}>{label}</label>
+      {children ? (
+        cloneElement(children, accessibility)
+      ) : (
+        <input name={name} {...props} {...accessibility} />
+      )}
+      {help && (
+        <small id={`${id}-help`} className="field-help">
+          {help}
+        </small>
+      )}
+      {error && (
+        <small className="field-error" id={`${id}-error`} role="alert">
+          {error.join(" ")}
+        </small>
+      )}
+    </div>
   );
 }
 export function Pagination({ meta, onPage }) {

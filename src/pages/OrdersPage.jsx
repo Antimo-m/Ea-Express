@@ -17,7 +17,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
     ...values,
     ...(pickups ? { kind: "pickup" } : {}),
     ...(messages ? { has_messages: values.has_messages || "0" } : {}),
-  });
+  }, true);
   const base = pickups ? "/pickups" : messages ? "/messages" : "/shipments";
   function filter(event) {
     event.preventDefault();
@@ -46,12 +46,9 @@ export default function OrdersPage({ pickups = false, messages = false }) {
         }
       >
         <Link
-          className="button"
+
           to={pickups ? "/pickups/new" : "/shipments/new"}
-        >
-          <Icon name="plus-lg" />
-          {pickups ? "Programma ritiro" : "Nuova spedizione"}
-        </Link>
+         className="button create-button" aria-label={pickups ? "Programma ritiro" : "Nuova spedizione"} title={pickups ? "Programma ritiro" : "Nuova spedizione"}><span aria-hidden="true">+</span></Link>
       </Header>
       <section className="panel flush">
         <form className="filters" onSubmit={filter} key={params.toString()}>

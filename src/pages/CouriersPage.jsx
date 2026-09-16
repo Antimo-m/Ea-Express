@@ -4,7 +4,7 @@ import { useApi } from "../hooks/useApi";
 import { Header, State, Empty, Icon } from "../components/UI";
 import { initials } from "../utils/format";
 export default function CouriersPage() {
-  const resource = useApi(couriers);
+  const resource = useApi(couriers, {}, true);
   return (
     <>
       <Header
@@ -40,9 +40,7 @@ export default function CouriersPage() {
                 text="Quando un rider prenderà in carico la tua richiesta, lo troverai qui."
                 icon="bicycle"
               >
-                <Link className="button" to="/shipments/new">
-                  Crea una spedizione
-                </Link>
+                <Link to="/shipments/new" className="button create-button" aria-label="Nuova spedizione" title="Nuova spedizione"><span aria-hidden="true">+</span></Link>
               </Empty>
             </section>
           )

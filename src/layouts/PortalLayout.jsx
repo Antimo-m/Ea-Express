@@ -3,6 +3,9 @@ import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useMobile } from "../hooks/useMobile";
 import { useAuth } from "../hooks/useAuth";
 import { Icon, Feedback } from "../components/UI";
+import NotificationSound from "../components/NotificationSound";
+import { connectWorkspace } from "../services/workspace-realtime";
+import { request } from "../api/client";
 import { initials } from "../utils/format";
 const items = [
   ["/dashboard", "grid-1x2", "Panoramica"],
@@ -14,6 +17,7 @@ const items = [
 ];
 export default function PortalLayout() {
   const { user, logout } = useAuth();
+  useEffect(() => connectWorkspace(request), [user.id]);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -103,7 +107,7 @@ export default function PortalLayout() {
             <small>BUSINESS</small>
           </span>
         </Link>
-        <p className="nav-caption">IL TUO NEGOZIO, IN MOVIMENTO</p>
+        <p className="nav-caption">IL TUO SPAZIO SPEDIZIONI</p>
         <nav aria-label="Navigazione principale">
           {items.map(([to, icon, label]) => (
             <NavLink key={to} to={to} onClick={() => setOpen(false)}>
@@ -117,9 +121,7 @@ export default function PortalLayout() {
             <Icon name="lightning-charge" />
             <strong>Una richiesta. Si parte.</strong>
             <p>Organizza il prossimo ritiro in pochi passaggi.</p>
-            <Link to="/pickups/new" onClick={() => setOpen(false)}>
-              Programma un ritiro <Icon name="arrow-right" />
-            </Link>
+            <Link to="/pickups/new" onClick={() => setOpen(false)} className="button create-button" aria-label="Programma ritiro" title="Programma ritiro"><span aria-hidden="true">+</span></Link>
           </div>
           <NavLink to="/settings" onClick={() => setOpen(false)}>
             <Icon name="sliders" />
@@ -147,6 +149,7 @@ export default function PortalLayout() {
             Portale clienti <span>/</span> <strong>La tua operatività</strong>
           </span>
           <div className="topbar-actions">
+            <NotificationSound />
             <Link
               className="icon-button"
               to="/notifications"
@@ -158,7 +161,11 @@ export default function PortalLayout() {
               <span className="avatar">{initials(user.name)}</span>
               <span>
                 <strong>{user.name}</strong>
-                <small>Negozio · Cliente</small>
+                <small>
+                  {user.sender_type === "private"
+                    ? "Privato"
+                    : "Attività commerciale"}
+                </small>
               </span>
               <Icon name="chevron-down" />
             </Link>

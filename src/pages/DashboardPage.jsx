@@ -12,38 +12,32 @@ import {
 } from "../components/UI";
 import { date } from "../utils/format";
 export default function DashboardPage() {
-  const resource = useApi(dashboard);
+  const resource = useApi(dashboard, {}, true);
   const { user } = useAuth();
   return (
     <>
       <Header
         eyebrow="TUTTO PRONTO PER PARTIRE"
         title={`Ciao, ${user.name}.`}
-        description="Ecco cosa si muove oggi nel tuo negozio."
+        description="Richieste, ritiri e consegne: le tue priorità a colpo d’occhio."
       />
       <section className="hero">
         <div>
           <span className="hero-label">
-            <span /> IL TUO NEGOZIO, SENZA DISTANZE
+            <span /> ORGANIZZA LA PROSSIMA SPEDIZIONE
           </span>
           <h2>
-            Tu pensa al negozio.
+            Pronto a spedire?
             <br />
-            <em>Al resto, ci muoviamo noi.</em>
+            <em>Partiamo da qui.</em>
           </h2>
           <p>
             Organizza i ritiri, segui le consegne e resta in contatto con i tuoi
             corrieri.
           </p>
           <div className="actions">
-            <Link className="button" to="/shipments/new">
-              <Icon name="plus-lg" />
-              Nuova spedizione
-            </Link>
-            <Link className="button secondary" to="/pickups/new">
-              <Icon name="calendar2-plus" />
-              Programma ritiro
-            </Link>
+            <Link to="/shipments/new" className="button create-button" aria-label="Nuova spedizione" title="Nuova spedizione"><span aria-hidden="true">+</span></Link>
+            <Link to="/pickups/new" className="button create-button" aria-label="Programma ritiro" title="Programma ritiro"><span aria-hidden="true">+</span></Link>
           </div>
         </div>
         <div className="route-art" aria-hidden="true">
@@ -115,7 +109,9 @@ export default function DashboardPage() {
                 <div className="section-heading">
                   <div>
                     <h2>Spedizioni recenti</h2>
-                    <p className="muted">Tieni il filo di ogni consegna.</p>
+                    <p className="muted">
+                      Le ultime richieste e il loro stato.
+                    </p>
                   </div>
                   <Link to="/shipments">
                     Vedi tutte <Icon name="arrow-right" />
@@ -152,7 +148,7 @@ export default function DashboardPage() {
                     text="Il prossimo ritiro parte da qui."
                     icon="calendar2-check"
                   >
-                    <Link to="/pickups/new">Programma un ritiro</Link>
+                    <Link to="/pickups/new" className="button create-button" aria-label="Programma ritiro" title="Programma ritiro"><span aria-hidden="true">+</span></Link>
                   </Empty>
                 )}
               </section>

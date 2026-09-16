@@ -13,6 +13,7 @@ dist/
 *.key
 *.log
 .DS_Store
+*.code-workspace
 .vscode/
 *.sqlite
 *.sqlite3

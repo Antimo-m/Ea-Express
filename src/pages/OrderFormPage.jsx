@@ -1,11 +1,15 @@
+import PackageFields from "../components/PackageFields";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { createOrder, getOrder, updateOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
-import { Header, Field, Feedback, State, Icon } from "../components/UI";
+import SenderFields from "../components/SenderFields";
+import { useAuth } from "../hooks/useAuth";
+import { Header, Field, Feedback, State, Icon, Form } from "../components/UI";
 import { today } from "../utils/format";
 function OrderForm({ order, pickups }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const base = pickups ? "/pickups" : "/shipments";
@@ -15,6 +19,8 @@ function OrderForm({ order, pickups }) {
     setBusy(true);
     const data = Object.fromEntries(new FormData(event.currentTarget));
     data.parcel_count = Number(data.parcel_count);
+    data.packages = JSON.parse(data.packages);
+    Object.keys(data).filter(key => key.startsWith("packages.")).forEach(key => delete data[key]);
     try {
       const result = order
         ? await updateOrder(order.id, { ...data, version: order.version })
@@ -57,15 +63,18 @@ function OrderForm({ order, pickups }) {
       </div>
     );
   return (
-    <form className="order-form" onSubmit={submit}>
+    <Form errors={error?.errors} className="order-form" onSubmit={submit}>
       <div>
         <section className="panel">
           <h2>
-            <span className="step">01</span> Da dove partiamo
+            <span className="step">01</span> Mittente e ritiro
           </h2>
+          <SenderFields identity={order || user} nameField="store_name" />
           <div className="form-grid">
             {field("pickup_address", "Indirizzo di ritiro")}
             {field("pickup_city", "Città di ritiro", { maxLength: 100 })}
+          </div>
+          <div className="form-grid">
             {field("pickup_date", "Data del ritiro", {
               type: "date",
               min: today(),
@@ -94,6 +103,8 @@ function OrderForm({ order, pickups }) {
               maxLength: 30,
               minLength: 6,
             })}
+          </div>
+          <div className="form-grid">
             {field("delivery_address", "Indirizzo di consegna")}
             {field("delivery_city", "Città di consegna", { maxLength: 100 })}
             {field(
@@ -112,11 +123,16 @@ function OrderForm({ order, pickups }) {
             <span className="step">03</span> Cosa spediamo
           </h2>
           <div className="form-grid">
-            {field("parcel_count", "Numero di colli", {
-              type: "number",
-              min: 1,
-              max: 100,
-              defaultValue: order?.parcel_count || 1,
+            {field("parcel_value", "Valore merce (€)", {
+              required: false,
+              inputMode: "decimal",
+              placeholder: "0,00",
+              maxLength: 9,
+              defaultValue:
+                order?.parcel_value_cents != null
+                  ? (order.parcel_value_cents / 100).toFixed(2)
+                  : "",
+              help: "Valore dichiarato del contenuto. Non è il costo di spedizione né un importo da riscuotere.",
             })}
             <Field label="Contenuto">
               <select name="category" defaultValue={order?.category || "other"}>
@@ -135,6 +151,7 @@ function OrderForm({ order, pickups }) {
               </select>
             </Field>
           </div>
+          <PackageFields order={order} />
           <Field label="Istruzioni per il corriere (facoltative)">
             <textarea
               name="customer_notes"
@@ -147,34 +164,10 @@ function OrderForm({ order, pickups }) {
         </section>
       </div>
       <aside className="panel form-summary">
-        <span className="empty-icon">
-          <Icon name="box-seam" />
-        </span>
-        <h2>
-          Il prossimo passo
-          <br />è una consegna.
-        </h2>
+        <h2>{order ? "Salva la richiesta" : "Invia ai rider"}</h2>
         <p className="muted">
-          La richiesta sarà visibile ai rider, che potranno prenderla in carico
-          e aggiornarti sul percorso.
-        </p>
-        <ul className="check-list">
-          <li>
-            <Icon name="check2" />
-            Aggiornamenti sullo stato
-          </li>
-          <li>
-            <Icon name="check2" />
-            Conversazione dedicata
-          </li>
-          <li>
-            <Icon name="check2" />
-            Modificabile prima della presa in carico
-          </li>
-        </ul>
-        <p className="muted small">
-          L’eventuale costo viene indicato dal gestionale e sarà visibile nel
-          dettaglio.
+          Controlla indirizzi, contatto e orario. Potrai modificare la richiesta
+          fino alla presa in carico.
         </p>
         <Feedback error={error} />
         {error?.status === 409 && (
@@ -194,7 +187,7 @@ function OrderForm({ order, pickups }) {
           Annulla
         </Link>
       </aside>
-    </form>
+    </Form>
   );
 }
 function EditForm({ id, pickups }) {

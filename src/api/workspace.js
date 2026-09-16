@@ -7,3 +7,7 @@ export const readNotification = (id) =>
   request(`/notifications/${id}/read`, { method: "PATCH" });
 export const readAllNotifications = () =>
   request("/notifications/read-all", { method: "PATCH" });
+
+export const notificationFeed = () => request("/notifications/feed");
+export const notificationHistory = ({ id, page }) =>
+  request(`/notifications/orders/${id}${query({ page })}`);

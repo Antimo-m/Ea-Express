@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { forgotPassword, resetPassword } from "../api/auth";
-import { Field, Feedback, Icon } from "../components/UI";
+import SenderFields from "../components/SenderFields";
+import { Field, Feedback, Icon, Form } from "../components/UI";
 export default function AuthPage({ mode = "login" }) {
   const { user, authenticate } = useAuth();
   const [params] = useSearchParams();
@@ -76,7 +77,7 @@ export default function AuthPage({ mode = "login" }) {
             </span>
           </div>
         </div>
-        <small>EA-Express · Portale dedicato a negozi e clienti</small>
+        <small>EA-Express · Portale per attività e privati</small>
       </section>
       <section className="auth-form-wrap">
         <div className="auth-form">
@@ -92,7 +93,7 @@ export default function AuthPage({ mode = "login" }) {
           </h2>
           <p className="muted">
             {create
-              ? "Crea il tuo account negozio per organizzare le prime spedizioni."
+              ? "Spedisci come attività o privato, da un unico account."
               : forgot
                 ? "Inserisci l’email del tuo account cliente."
                 : reset
@@ -100,16 +101,8 @@ export default function AuthPage({ mode = "login" }) {
                   : "Accedi e dai il via alla tua giornata."}
           </p>
           <Feedback error={error} success={success} />
-          <form onSubmit={submit}>
-            {create && (
-              <Field
-                label="Nome del negozio"
-                name="name"
-                autoComplete="organization"
-                required
-                maxLength={150}
-              />
-            )}
+          <Form errors={error?.errors} onSubmit={submit}>
+            {create && <SenderFields />}
             <Field
               label="Email"
               name="email"
@@ -153,7 +146,7 @@ export default function AuthPage({ mode = "login" }) {
               {busy
                 ? "Attendi…"
                 : create
-                  ? "Crea account negozio"
+                  ? "Crea account cliente"
                   : forgot
                     ? "Invia istruzioni"
                     : reset
@@ -161,12 +154,12 @@ export default function AuthPage({ mode = "login" }) {
                       : "Accedi al tuo spazio"}
               <Icon name="arrow-right" />
             </button>
-          </form>
+          </Form>
           <p className="auth-switch">
             {mode === "login" ? (
               <>
                 Non hai un account?{" "}
-                <Link to="/register">Registra il tuo negozio</Link>
+                <Link to="/register">Crea il tuo account</Link>
               </>
             ) : (
               <Link to="/login">Torna all’accesso</Link>

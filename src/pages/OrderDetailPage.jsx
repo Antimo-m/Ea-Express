@@ -46,6 +46,10 @@ function Detail({ order, reload, pickups, messages }) {
         }
         description={`Destinatario: ${order.recipient_name}`}
       >
+        <Link className="button secondary" to={`/shipments/${order.id}/label`}>
+          <Icon name="printer" />
+          Stampa etichetta
+        </Link>
         <Status order={order} />
         {order.can_edit && (
           <Link className="button secondary" to={`${base}/${order.id}/edit`}>
@@ -118,11 +122,32 @@ function Detail({ order, reload, pickups, messages }) {
               <h2>Dettagli della richiesta</h2>
               <dl className="facts">
                 <div>
+                  <dt>Mittente</dt>
+                  <dd>
+                    {order.store_name}
+                    <small className="muted">
+                      {" "}
+                      ·{" "}
+                      {order.sender_type === "private"
+                        ? "Privato"
+                        : order.business_type || "Attività"}
+                    </small>
+                  </dd>
+                </div>
+                <div>
+                  <dt>Valore merce</dt>
+                  <dd>
+                    {order.parcel_value_cents == null
+                      ? "Non dichiarato"
+                      : money(order.parcel_value_cents)}
+                  </dd>
+                </div>
+                <div>
                   <dt>Corriere</dt>
                   <dd>{order.courier?.name || "Da assegnare"}</dd>
                 </div>
                 <div>
-                  <dt>Colli</dt>
+                  <dt>pacchi</dt>
                   <dd>{order.parcel_count}</dd>
                 </div>
                 <div>
@@ -142,7 +167,7 @@ function Detail({ order, reload, pickups, messages }) {
                   <dd>{order.urgency === "urgent" ? "Urgente" : "Standard"}</dd>
                 </div>
                 <div>
-                  <dt>Costo</dt>
+                  <dt>Costo spedizione</dt>
                   <dd>{money(order.price_cents)}</dd>
                 </div>
                 {order.estimated_at && (
@@ -193,13 +218,14 @@ function Detail({ order, reload, pickups, messages }) {
           </aside>
         </div>
       )}
+      {order.packages?.length > 0 && <section className="panel"><h2>I tuoi pacchi</h2>{order.packages.map((item, index) => <p key={index}><strong>Pacco {index + 1}</strong> · {item.weight_kg} kg · {item.length_cm} × {item.width_cm} × {item.height_cm} cm</p>)}</section>}
       <MessageThread id={order.id} />
     </>
   );
 }
 export default function OrderDetailPage({ pickups = false, messages = false }) {
   const { id } = useParams();
-  const resource = useApi(getOrder, { id });
+  const resource = useApi(getOrder, { id }, true);
   return (
     <State resource={resource}>
       {(data) => (

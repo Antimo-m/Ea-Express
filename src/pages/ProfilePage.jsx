@@ -6,7 +6,8 @@ import {
   updatePreferences,
   me,
 } from "../api/auth";
-import { Header, Field, Feedback, Icon } from "../components/UI";
+import SenderFields from "../components/SenderFields";
+import { Header, Field, Feedback, Icon, Form } from "../components/UI";
 function AccountForm({ kind, user, onUpdate }) {
   const [error, setError] = useState(null),
     [success, setSuccess] = useState(""),
@@ -42,24 +43,21 @@ function AccountForm({ kind, user, onUpdate }) {
     }
   }
   return (
-    <form className="panel account-form" onSubmit={submit}>
+    <Form
+      errors={error?.errors}
+      className="panel account-form"
+      onSubmit={submit}
+    >
       <h2>
         {kind === "profile"
-          ? "Il tuo negozio"
+          ? "Dati del mittente"
           : kind === "password"
             ? "Proteggi il tuo accesso"
             : "Scegli cosa ricevere"}
       </h2>
       {kind === "profile" ? (
         <>
-          <Field
-            label="Nome del negozio"
-            name="name"
-            defaultValue={user.name}
-            required
-            maxLength={150}
-            autoComplete="organization"
-          />
+          <SenderFields identity={user} />
           <Field
             label="Email"
             name="email"
@@ -129,7 +127,7 @@ function AccountForm({ kind, user, onUpdate }) {
         <Icon name="check2" />
         {busy ? "Salvataggio…" : "Salva modifiche"}
       </button>
-    </form>
+    </Form>
   );
 }
 export default function ProfilePage({ settings = false }) {
@@ -141,7 +139,7 @@ export default function ProfilePage({ settings = false }) {
         description={
           settings
             ? "Gestisci le preferenze del tuo spazio di lavoro."
-            : "Aggiorna i dati del negozio e la sicurezza dell’account."
+            : "Aggiorna i tuoi dati e la sicurezza dell’account."
         }
       />
       <div className="profile-grid">
