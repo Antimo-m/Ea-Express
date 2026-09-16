@@ -1,3 +1,4 @@
+import { contentLabel } from "../utils/order-content";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { getOrder, cancelOrder } from "../api/shipments";
@@ -153,13 +154,7 @@ function Detail({ order, reload, pickups, messages }) {
                 <div>
                   <dt>Contenuto</dt>
                   <dd>
-                    {
-                      {
-                        clothing: "Abbigliamento",
-                        documents: "Documenti",
-                        other: "Altro",
-                      }[order.category]
-                    }
+                    {contentLabel(order)}
                   </dd>
                 </div>
                 <div>

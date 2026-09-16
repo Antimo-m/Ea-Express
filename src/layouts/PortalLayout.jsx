@@ -150,13 +150,6 @@ export default function PortalLayout() {
           </span>
           <div className="topbar-actions">
             <NotificationSound />
-            <Link
-              className="icon-button"
-              to="/notifications"
-              aria-label="Notifiche"
-            >
-              <Icon name="bell" />
-            </Link>
             <Link className="account" to="/profile">
               <span className="avatar">{initials(user.name)}</span>
               <span>

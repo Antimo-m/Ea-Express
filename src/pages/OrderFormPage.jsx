@@ -1,3 +1,4 @@
+import { contentCategories } from "../utils/order-content";
 import PackageFields from "../components/PackageFields";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -136,9 +137,7 @@ function OrderForm({ order, pickups }) {
             })}
             <Field label="Contenuto">
               <select name="category" defaultValue={order?.category || "other"}>
-                <option value="other">Altro</option>
-                <option value="clothing">Abbigliamento</option>
-                <option value="documents">Documenti</option>
+                {Object.entries(contentCategories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </Field>
             <Field label="Priorità">
@@ -151,6 +150,12 @@ function OrderForm({ order, pickups }) {
               </select>
             </Field>
           </div>
+          {field("content_description", "Descrivi il contenuto (facoltativo)", {
+            required: false,
+            maxLength: 255,
+            placeholder: "Es. campioni di tessuto, ceramiche artigianali…",
+            help: "Puoi specificare il contenuto di qualsiasi categoria oppure scegliere Altro.",
+          })}
           <PackageFields order={order} />
           <Field label="Istruzioni per il corriere (facoltative)">
             <textarea

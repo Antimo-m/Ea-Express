@@ -99,11 +99,13 @@ export default function NotificationsPage() {
     try {
       if (item) {
         await readNotification(item.id);
+        window.dispatchEvent(new CustomEvent('ea:workspace-updated', { detail: { kind: 'notifications' } }));
         navigate(
           `/${item.is_message ? "messages" : "shipments"}/${item.order_id}`,
         );
       } else {
         await readAllNotifications();
+        window.dispatchEvent(new CustomEvent('ea:workspace-updated', { detail: { kind: 'notifications' } }));
         resource.reload();
       }
     } catch (error) {
