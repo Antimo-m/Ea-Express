@@ -47,6 +47,7 @@ export async function request(
       signal: AbortSignal.timeout(20000),
       headers: {
         Accept: "application/json",
+        "X-Requested-With": "XMLHttpRequest",
         ...(method !== "GET"
           ? { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken }
           : {}),

@@ -12,6 +12,8 @@ const items = [
   ["/shipments", "box-seam", "Spedizioni"],
   ["/pickups", "calendar2-week", "Ritiri"],
   ["/messages", "chat-left-text", "Messaggi"],
+  ["/rates", "tags", "Listino"],
+  ["/statistics", "bar-chart", "Statistiche"],
   ["/couriers", "bicycle", "Corrieri"],
   ["/notifications", "bell", "Notifiche"],
 ];
@@ -157,7 +159,7 @@ export default function PortalLayout() {
                 <small>
                   {user.sender_type === "private"
                     ? "Privato"
-                    : "Attività commerciale"}
+                    : user.sender_type === "online_shop" ? "Shop online" : "Attività commerciale"}
                 </small>
               </span>
               <Icon name="chevron-down" />

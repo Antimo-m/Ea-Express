@@ -4,6 +4,8 @@ import { Link, useLocation, useParams } from "react-router";
 import { getOrder, cancelOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
 import { Header, State, Status, Feedback, Icon, Empty } from "../components/UI";
+import ShippingPrice from "../components/ShippingPrice";
+import PaymentAgreement from "../components/PaymentAgreement";
 import MessageThread from "../components/MessageThread";
 import { date, money } from "../utils/format";
 function Detail({ order, reload, pickups, messages }) {
@@ -47,9 +49,8 @@ function Detail({ order, reload, pickups, messages }) {
         }
         description={`Destinatario: ${order.recipient_name}`}
       >
-        <Link className="button secondary" to={`/shipments/${order.id}/label`}>
+        <Link className="button secondary" title="Stampa etichetta" aria-label="Stampa etichetta" to={`/shipments/${order.id}/label`}>
           <Icon name="printer" />
-          Stampa etichetta
         </Link>
         <Status order={order} />
         {order.can_edit && (
@@ -77,8 +78,8 @@ function Detail({ order, reload, pickups, messages }) {
                 <div>
                   <span className="journey-point" />
                   <p className="eyebrow">RITIRO</p>
-                  <h3>{order.pickup_address}</h3>
-                  <p>{order.pickup_city}</p>
+                  <h3>{order.pickup_address} {order.pickup_street_number}</h3>
+                  <p>{order.pickup_postal_code} {order.pickup_city}</p>
                   <small>
                     {date(order.pickup_date)} · {order.pickup_from}–
                     {order.pickup_to}
@@ -87,8 +88,8 @@ function Detail({ order, reload, pickups, messages }) {
                 <div>
                   <span className="journey-point destination" />
                   <p className="eyebrow">DESTINAZIONE</p>
-                  <h3>{order.delivery_address}</h3>
-                  <p>{order.delivery_city}</p>
+                  <h3>{order.delivery_address} {order.delivery_street_number}</h3>
+                  <p>{order.delivery_postal_code} {order.delivery_city}</p>
                   <small>
                     {order.recipient_name} · {order.recipient_phone}
                   </small>
@@ -120,7 +121,7 @@ function Detail({ order, reload, pickups, messages }) {
           </div>
           <aside>
             <section className="panel">
-              <h2>Dettagli della richiesta</h2>
+              <h2>Dettagli della richiesta</h2><p className={order.package_type==='fragile'?'fragile-badge':'muted'}>{order.package_type==='fragile'?'FRAGILE':order.package_type==='other'?order.package_description:'Pacco standard'}</p>
               <dl className="facts">
                 <div>
                   <dt>Mittente</dt>
@@ -131,7 +132,7 @@ function Detail({ order, reload, pickups, messages }) {
                       ·{" "}
                       {order.sender_type === "private"
                         ? "Privato"
-                        : order.business_type || "Attività"}
+                        : order.sender_type === "online_shop" ? "Shop online" : order.business_type || "Attività"}
                     </small>
                   </dd>
                 </div>
@@ -214,6 +215,7 @@ function Detail({ order, reload, pickups, messages }) {
         </div>
       )}
       {order.packages?.length > 0 && <section className="panel"><h2>I tuoi pacchi</h2>{order.packages.map((item, index) => <p key={index}><strong>Pacco {index + 1}</strong> · {item.weight_kg} kg · {item.length_cm} × {item.width_cm} × {item.height_cm} cm</p>)}</section>}
+      <ShippingPrice order={order} reload={reload}/><PaymentAgreement order={order} reload={reload} />
       <MessageThread id={order.id} />
     </>
   );

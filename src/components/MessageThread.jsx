@@ -10,6 +10,8 @@ export default function MessageThread({ id }) {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const submission = useRef(null);
+  const submitting = useRef(false);
   const list = useRef(null);
   const nearEnd = useRef(true);
   const [newMessages, setNewMessages] = useState(false);
@@ -26,11 +28,14 @@ export default function MessageThread({ id }) {
   }, [id, page]);
   async function submit(event) {
     event.preventDefault();
-    if (!body.trim()) return;
+    if (!body.trim() || submitting.current) return;
+    submitting.current = true;
+    if (submission.current?.body !== body.trim()) submission.current = { body: body.trim(), key: crypto.randomUUID() };
     setBusy(true);
     setError(null);
     try {
-      await sendMessage(id, body.trim());
+      await sendMessage(id, body.trim(), submission.current.key);
+      submission.current = null;
       setBody("");
       nearEnd.current = true;
       setPage(1);
@@ -38,6 +43,7 @@ export default function MessageThread({ id }) {
     } catch (error) {
       setError(error);
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -49,7 +55,7 @@ export default function MessageThread({ id }) {
             <Icon name="chat-left-text" /> In contatto con il corriere
           </h2>
           <p className="muted">
-            Una conversazione dedicata a questa spedizione.
+            Una conversazione dedicata a questa spedizione. Il pagamento è confermato soltanto dalla registrazione dell’incasso nel gestionale.
           </p>
         </div>
         <button

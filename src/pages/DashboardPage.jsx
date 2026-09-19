@@ -36,8 +36,8 @@ export default function DashboardPage() {
             corrieri.
           </p>
           <div className="actions">
-            <Link to="/shipments/new" className="button create-button" aria-label="Nuova spedizione" title="Nuova spedizione"><span aria-hidden="true">+</span></Link>
-            <Link to="/pickups/new" className="button create-button" aria-label="Programma ritiro" title="Programma ritiro"><span aria-hidden="true">+</span></Link>
+            <Link to="/shipments/new" className="button"><Icon name="plus-lg" /> Nuova spedizione</Link>
+            <Link to="/pickups" className="button secondary"><Icon name="calendar2-week" /> Agenda ritiri</Link>
           </div>
         </div>
         <div className="route-art" aria-hidden="true">

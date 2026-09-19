@@ -8,3 +8,5 @@ export const updateOrder = (id, data) =>
   request(`/orders/${id}`, { method: "PATCH", data });
 export const cancelOrder = (id, data) =>
   request(`/orders/${id}/cancel`, { method: "POST", data });
+
+export const reviewOrder = (data, id) => request(id ? `/orders/${id}/checkout` : "/orders/checkout", {method:"POST",data});

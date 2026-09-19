@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Field, Icon } from "./UI";
 export default function SenderFields({ identity = {}, nameField = "name" }) {
   const [type, setType] = useState(identity.sender_type || "business");
+  const [senderName, setSenderName] = useState(identity.store_name || identity.name || "");
   const suggestions = useId();
   const [businessType, setBusinessType] = useState(
     identity.business_type || "",
@@ -16,6 +17,7 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
         {[
           ["business", "shop", "Attività commerciale"],
           ["private", "person", "Privato"],
+          ["online_shop", "bag", "Shop online"],
         ].map(([value, icon, label]) => (
           <label key={value} className={type === value ? "selected" : ""}>
             <input
@@ -23,7 +25,7 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
               name="sender_type"
               value={value}
               checked={type === value}
-              onChange={() => setType(value)}
+              onChange={() => { setType(value); setSenderName(""); }}
             />
             <Icon name={icon} />
             <span>{label}</span>
@@ -35,12 +37,14 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
           type === "private" ? "Nome e cognome del mittente" : "Nome attività"
         }
         name={nameField}
-        defaultValue={identity.store_name || identity.name || ""}
+        value={senderName}
+        onChange={event => setSenderName(event.target.value)}
+        placeholder={type === "private" ? "Nome e cognome" : "Nome della tua attività"}
         maxLength={150}
         required
         autoComplete={type === "private" ? "name" : "organization"}
       />
-      {type === "business" && (
+      {type !== "private" && (
         <div className="form-grid">
           <Field
             label="Tipologia di attività"

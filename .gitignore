@@ -21,3 +21,17 @@ dist/
 *.p12
 *.pfx
 *.crt
+
+# Materiale riservato e dati operativi.
+/docs/
+*.csv
+*.pdf
+*.docx
+*.xlsx
+*.map
+*.zip
+*.tar
+*.tar.gz
+*.sql.gz
+*.bak
+*.backup
