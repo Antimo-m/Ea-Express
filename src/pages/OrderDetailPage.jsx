@@ -1,3 +1,4 @@
+import Modal from "../components/Modal";
 import { contentLabel } from "../utils/order-content";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
@@ -9,6 +10,7 @@ import PaymentAgreement from "../components/PaymentAgreement";
 import MessageThread from "../components/MessageThread";
 import { date, money } from "../utils/format";
 function Detail({ order, reload, pickups, messages }) {
+  const [cancelOpen, setCancelOpen] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(useLocation().state?.success || "");
@@ -23,6 +25,7 @@ function Detail({ order, reload, pickups, messages }) {
         reason: new FormData(event.currentTarget).get("reason"),
       });
       setSuccess("Richiesta annullata.");
+      setCancelOpen(false);
       reload();
     } catch (error) {
       setError(error);
@@ -194,22 +197,11 @@ function Detail({ order, reload, pickups, messages }) {
               </section>
             )}
             {order.can_cancel && (
-              <details className="panel cancellation">
-                <summary>Annulla questa richiesta</summary>
-                <p>
-                  Puoi annullare la richiesta finché non è stata presa in
-                  carico.
-                </p>
-                <form onSubmit={cancel}>
-                  <label className="field">
-                    <span>Motivo dell’annullamento</span>
-                    <textarea name="reason" required maxLength={500} rows={3} />
-                  </label>
-                  <button className="button danger" disabled={busy}>
-                    {busy ? "Attendi…" : "Conferma annullamento"}
-                  </button>
-                </form>
-              </details>
+              <section className="panel cancellation"><h3>Gestisci la richiesta</h3><button type="button" className="button secondary" onClick={() => setCancelOpen(true)}><Icon name="x-circle"/> Annulla richiesta</button>
+                <Modal open={cancelOpen} title="Annullare questa richiesta?" description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city}. La richiesta non sarà più disponibile ai corrieri.`} danger busy={busy} onClose={() => setCancelOpen(false)}>
+                  <form onSubmit={cancel}><div className="modal-content-area"><Feedback error={error}/><label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label></div><footer className="modal-actions"><button type="button" className="button secondary" disabled={busy} onClick={() => setCancelOpen(false)}>Torna alla spedizione</button><button className="button danger" disabled={busy}>{busy ? 'Annullamento…' : 'Conferma annullamento'}</button></footer></form>
+                </Modal>
+              </section>
             )}
           </aside>
         </div>

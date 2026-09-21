@@ -1,6 +1,8 @@
+import { attachBookingRules } from '../services/booking-rules';
+import { request } from '../api/client';
 import { contentCategories } from "../utils/order-content";
 import ShippingQuote from "../components/ShippingQuote";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { createOrder, getOrder, updateOrder, reviewOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
@@ -9,6 +11,16 @@ import { useAuth } from "../hooks/useAuth";
 import { Header, Field, Feedback, State, Icon, Form } from "../components/UI";
 import { today, money } from "../utils/format";
 function OrderForm({ order, pickups }) {
+  const bookingForm = useRef(null);
+  useEffect(() => {
+    let disposed = false;
+    let cleanup;
+    const load = () => request('/booking-rules');
+    load().then(payload => { if (!disposed) cleanup = attachBookingRules(bookingForm.current, payload, order, load); }).catch(() => {
+      if (!disposed) cleanup = attachBookingRules(bookingForm.current, {server_now:new Date().toISOString()}, order, load);
+    });
+    return () => {disposed = true; cleanup?.();};
+  }, [order]);
   const [review,setReview] = useState(null);
   const [zone,setZone] = useState(order?.delivery_zone || "");
   const [street,setStreet] = useState(order?.delivery_address || "");
@@ -50,7 +62,7 @@ function OrderForm({ order, pickups }) {
       const data = {...review.data,checkout_token:review.checkout_token};
       const result = order ? await updateOrder(order.id,data) : await createOrder(data);
       navigate(`${base}/${result.data.id}`, {replace:true,state:{success:order ? "Richiesta aggiornata." : "Richiesta confermata e inviata ai rider."}});
-    } catch (failure) { setError(failure); }
+    } catch (failure) { setError(failure); if (failure.errors?.pickup_from || failure.errors?.pickup_date) setReview(previous => ({...previous,checkout_token:null})); }
     finally { submitting.current=false; setBusy(false); }
   }
   const field = (name, label, extra = {}) => (
@@ -78,6 +90,7 @@ function OrderForm({ order, pickups }) {
     );
   return (
     <>
+    <nav className="form-progress" aria-label="Avanzamento prenotazione"><span>{review ? '1. Dati del ritiro' : <strong>1. Dati del ritiro</strong>}</span><Icon name="chevron-right"/><span>{review ? <strong>2. Riepilogo e conferma</strong> : '2. Riepilogo e conferma'}</span></nav>
     {review && <section className="panel checkout-review" aria-label="Revisione richiesta">
       <p className="eyebrow">PRIMA DELLA CONFERMA</p><h2>Controlla la richiesta</h2>
       <div className="form-grid"><div><h3>Mittente e ritiro</h3><p>{review.data.store_name || user.name}<br/>{review.data.pickup_address} {review.data.pickup_street_number}<br/>{review.data.pickup_postal_code} {review.data.pickup_city}</p><p>{review.data.pickup_date} · {review.data.pickup_from}–{review.data.pickup_to}</p></div>
@@ -85,13 +98,13 @@ function OrderForm({ order, pickups }) {
       <p><strong>{review.data.parcel_count} colli</strong> · {review.data.package_type === 'fragile' ? 'Fragile' : review.data.package_type === 'other' ? review.data.package_description : 'Standard'} · {contentCategories[review.data.category]} {review.data.content_description}</p>
       {review.data.customer_notes && <p>Istruzioni: {review.data.customer_notes}</p>}
       <p>Metodo di pagamento: {{cash:'Contanti',card:'Carta tramite POS',bank_transfer:'Bonifico',other:'Altro'}[review.data.payment_method]}</p>
-      <dl className="checkout-amounts"><div><dt>Valore del pacco</dt><dd>{money(review.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{money(review.shipping_price_cents)}</dd></div><div className="checkout-total"><dt>Totale finale</dt><dd>{money(review.total_cents)}</dd></div></dl>
+      <p className="review-note"><Icon name="shield-check"/> La richiesta viene inviata solo dopo la conferma. Gli importi sono verificati dal sistema.</p><dl className="checkout-amounts"><div><dt>Valore del pacco</dt><dd>{money(review.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{money(review.shipping_price_cents)}</dd></div><div className="checkout-total"><dt>Totale finale</dt><dd>{money(review.total_cents)}</dd></div></dl>
       <p className="muted">Il totale somma il valore dichiarato e la spedizione. Questa conferma non esegue un pagamento e non attiva un contrassegno.</p>
       <p className="muted">{review.quote.reason} {review.quote.delivery_time} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
       {!review.checkout_token && <p role="alert">Non possiamo confermare un costo affidabile. Controlla la destinazione o contatta EA Express per la tariffa.</p>}
       <Feedback error={error}/><div className="actions"><button className="button secondary" disabled={busy} onClick={()=>{setReview(null);setError(null);}}>Indietro / Modifica</button><button className="button" disabled={busy || !review.checkout_token || error?.status===409} onClick={confirm}>{busy ? 'Conferma in corso…' : 'Conferma richiesta'}</button></div>
     </section>}
-    <div hidden={Boolean(review)}><Form errors={error?.errors} className="order-form" onSubmit={submit}>
+    <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors} className="order-form" onSubmit={submit}>
       <div>
         <section className="panel">
           <h2>
@@ -158,8 +171,9 @@ function OrderForm({ order, pickups }) {
             <span className="step">03</span> Cosa spediamo
           </h2>
           <div className="form-grid">
-            {field("parcel_value", "Valore merce (€)", {
-              required: false,
+            {field("parcel_value", "Valore del pacco (€)", {
+              required: true,
+              pattern: "[0-9]{1,6}([.,][0-9]{1,2})?",
               inputMode: "decimal",
               placeholder: "0,00",
               maxLength: 9,

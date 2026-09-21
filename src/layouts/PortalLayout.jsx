@@ -109,7 +109,7 @@ export default function PortalLayout() {
             <small>BUSINESS</small>
           </span>
         </Link>
-        <p className="nav-caption">IL TUO SPAZIO SPEDIZIONI</p>
+        <Link to="/pickups/new" className="button portal-create" onClick={() => setOpen(false)}><Icon name="plus-lg"/> Prenota un ritiro</Link><p className="nav-caption">IL TUO SPAZIO SPEDIZIONI</p>
         <nav aria-label="Navigazione principale">
           {items.map(([to, icon, label]) => (
             <NavLink key={to} to={to} onClick={() => setOpen(false)}>
@@ -119,12 +119,6 @@ export default function PortalLayout() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-tip">
-            <Icon name="lightning-charge" />
-            <strong>Una richiesta. Si parte.</strong>
-            <p>Organizza il prossimo ritiro in pochi passaggi.</p>
-            <Link to="/pickups/new" onClick={() => setOpen(false)} className="button create-button" aria-label="Programma ritiro" title="Programma ritiro"><span aria-hidden="true">+</span></Link>
-          </div>
           <NavLink to="/settings" onClick={() => setOpen(false)}>
             <Icon name="sliders" />
             Impostazioni
@@ -148,7 +142,7 @@ export default function PortalLayout() {
             <Icon name="list" />
           </button>
           <span className="topbar-label">
-            Portale clienti <span>/</span> <strong>La tua operatività</strong>
+            EA-Express <span>/</span> <strong>Portale clienti</strong>
           </span>
           <div className="topbar-actions">
             <NotificationSound />

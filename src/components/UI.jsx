@@ -199,7 +199,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
       {orders.map((order) => (
         <Link className="order-row" key={order.id} to={`${base}/${order.id}`}>
           <div>
-            <strong className="reference">{order.reference}</strong>
+            <strong className="reference" title={order.reference} aria-label={order.reference}>{order.reference.length > 20 ? `EA-…${order.reference.slice(-10)}` : order.reference}</strong>
             <span>{order.recipient_name}</span>
             {messages && (
               <span

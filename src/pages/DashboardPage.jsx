@@ -21,40 +21,7 @@ export default function DashboardPage() {
         title={`Ciao, ${user.name}.`}
         description="Richieste, ritiri e consegne: le tue priorità a colpo d’occhio."
       />
-      <section className="hero">
-        <div>
-          <span className="hero-label">
-            <span /> ORGANIZZA LA PROSSIMA SPEDIZIONE
-          </span>
-          <h2>
-            Pronto a spedire?
-            <br />
-            <em>Partiamo da qui.</em>
-          </h2>
-          <p>
-            Organizza i ritiri, segui le consegne e resta in contatto con i tuoi
-            corrieri.
-          </p>
-          <div className="actions">
-            <Link to="/shipments/new" className="button"><Icon name="plus-lg" /> Nuova spedizione</Link>
-            <Link to="/pickups" className="button secondary"><Icon name="calendar2-week" /> Agenda ritiri</Link>
-          </div>
-        </div>
-        <div className="route-art" aria-hidden="true">
-          <div className="orbit" />
-          <div className="art-pin">
-            <Icon name="geo-alt-fill" />
-          </div>
-          <div className="art-box">
-            <Icon name="box-seam" />
-            <span>Pronti a partire.</span>
-          </div>
-          <div className="art-rider">
-            <Icon name="bicycle" />
-          </div>
-          <span className="route-dot" />
-        </div>
-      </section>
+      <section className="dashboard-actions"><div><h2>Il prossimo ritiro parte da qui</h2><p>Prepara la richiesta e verifica il totale prima di confermare.</p></div><div className="actions"><Link to="/pickups/new" className="button"><Icon name="plus-lg"/> Prenota un ritiro</Link><Link to="/rates" className="button secondary"><Icon name="geo-alt"/> Consulta le tariffe</Link></div></section>
       <State resource={resource}>
         {(data) => (
           <>
