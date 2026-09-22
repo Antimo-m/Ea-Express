@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { forgotPassword, resetPassword } from "../api/auth";
@@ -11,12 +11,23 @@ export default function AuthPage({ mode = "login" }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState("");
+  const sending = useRef(false);
+  const [retryAt, setRetryAt] = useState(0);
+  const [now, setNow] = useState(Date.now);
+  const remaining = Math.max(0, Math.ceil((retryAt - now) / 1000));
+  useEffect(() => {
+    if (!retryAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [retryAt]);
   const create = mode === "register",
     forgot = mode === "forgot",
     reset = mode === "reset";
   if (user && !reset) return <Navigate to="/dashboard" replace />;
   async function submit(event) {
     event.preventDefault();
+    if (sending.current || Date.now() < retryAt) return;
+    sending.current = true;
     setBusy(true);
     setError(null);
     setSuccess("");
@@ -38,7 +49,9 @@ export default function AuthPage({ mode = "login" }) {
       }
     } catch (error) {
       setError(error);
+      if (error.status === 429) { setNow(Date.now()); setRetryAt(Date.now() + (error.retryAfter || 60) * 1000); }
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
@@ -140,8 +153,8 @@ export default function AuthPage({ mode = "login" }) {
               </Link>
             )}
             <button
-              className="button full"
-              disabled={busy || (reset && !params.get("token"))}
+              className={`button full ${create ? "auth-create" : reset ? "auth-edit" : ""}`}
+              disabled={busy || remaining > 0 || (reset && !params.get("token"))}
             >
               {busy
                 ? "Attendi…"
@@ -152,8 +165,9 @@ export default function AuthPage({ mode = "login" }) {
                     : reset
                       ? "Aggiorna password"
                       : "Accedi al tuo spazio"}
-              <Icon name="arrow-right" />
+              <Icon name={create ? "plus-lg" : reset ? "pencil" : forgot ? "envelope" : "arrow-right"} />
             </button>
+            {remaining > 0 && <p className="muted" role="status">Puoi riprovare tra {Math.ceil(remaining / 60)} minuti.</p>}
           </Form>
           <p className="auth-switch">
             {mode === "login" ? (

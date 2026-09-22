@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { Link } from "react-router";
 import { couriers } from "../api/workspace";
 import { useApi } from "../hooks/useApi";
@@ -40,7 +41,7 @@ export default function CouriersPage() {
                 text="Quando un rider prenderà in carico la tua richiesta, lo troverai qui."
                 icon="bicycle"
               >
-                <Link to="/shipments/new" className="button create-button" aria-label="Nuova spedizione" title="Nuova spedizione"><span aria-hidden="true">+</span></Link>
+                <IconButton action="add" to="/shipments/new" label="Nuova spedizione" />
               </Empty>
             </section>
           )

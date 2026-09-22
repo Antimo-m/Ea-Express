@@ -3728,3 +3728,48 @@ to {
 @media (min-width: 761px) { .menu-toggle, .sidebar-close { display: none; } }
 .status { font-size: .75rem; }
 .order-row .reference { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Action vocabulary shared by the staff and customer interfaces. */
+.icon-button[class*="action-"] {
+  --action-color: var(--ea-info);
+  --action-soft: #edf4fc;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 44px; min-width: 44px; height: 44px; min-height: 44px;
+  padding: 10px; border: 1px solid currentColor; border-radius: var(--ea-radius-control);
+  background: var(--action-soft); color: var(--action-color); text-decoration: none;
+  font: inherit; font-size: 18px; line-height: 1; flex-shrink: 0; cursor: pointer;
+  transition: background var(--ea-transition), color var(--ea-transition);
+}
+.icon-button.action-add { --action-color: var(--ea-brand); --action-soft: var(--ea-orange-soft); }
+.icon-button.action-edit { --action-color: var(--ea-success); --action-soft: #eaf6ef; }
+.icon-button.action-delete { --action-color: var(--ea-danger); --action-soft: #fff0ee; }
+.icon-button[class*="action-"]:hover { color: #fff; background: var(--action-color); }
+.icon-button:focus-visible, summary:focus-visible { outline: 3px solid var(--ea-focus); outline-offset: 3px; }
+.icon-button:disabled, .icon-button[aria-disabled="true"] { opacity: .45; cursor: not-allowed; pointer-events: none; }
+.icon-button[aria-busy="true"] .action-icon { opacity: .45; }
+.icon-button.action-with-text { width: auto; max-width: 100%; height: auto; font-size: .875rem; line-height: 1.4; }
+.action-icon { position: relative; display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; flex-shrink: 0; }
+.print-plus { position: absolute; right: -5px; top: -7px; font-size: 15px; font-weight: 800; line-height: 16px; width: 16px; height: 16px; border-radius: 50%; background: var(--ea-surface); color: var(--ea-info); box-shadow: 0 0 0 1px currentColor; }
+summary.icon-button { list-style: none; }
+summary.icon-button::marker, summary.icon-button::-webkit-details-marker { display: none; content: ''; }
+summary.icon-button::before, summary.icon-button::after { display: none; }
+.ea-modal { max-width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; overflow-wrap: anywhere; }
+.modal-actions { flex-wrap: wrap; gap: 12px; }
+.modal-actions > button { min-height: 44px; }
+.page-heading, .dashboard-heading, .actions { flex-wrap: wrap; gap: 12px; }
+@media (max-width: 575px) {
+  .icon-button[class*="action-"] { width: 44px; min-width: 44px; height: 44px; }
+  .icon-button.action-with-text { width: auto; height: auto; }
+  .modal-actions > button { flex: 1; }
+}
+
+.sidebar .nav-group { margin: 12px 0; }
+.sidebar .nav-caption { font-size: .65rem; letter-spacing: .065em; line-height: 1.5; margin: 0 12px 5px; color: var(--ea-muted); font-weight: 700; text-transform: uppercase; }
+.sidebar nav { gap: 0; }
+.sidebar .nav-group a { display: flex; min-height: 44px; }
+.sidebar { overflow-y: auto; }
+
+.button.auth-edit { background: var(--ea-success); }
+.button.auth-create { background: var(--ea-brand); }
+
+.order-row .reference { max-width: 100%; min-width: 0; }

@@ -12,15 +12,17 @@ const messages = {
   409: "La richiesta è stata aggiornata. Ricarica i dati prima di proseguire.",
   419: "La sessione è cambiata. Riprova.",
   422: "Controlla i dati inseriti.",
-  429: "Troppe richieste. Attendi un minuto e riprova.",
+  429: "Troppe richieste. Attendi prima di riprovare.",
 };
 export class ApiError extends Error {
-  constructor(status, errors = {}) {
+  constructor(status, errors = {}, retryAfter = null) {
     super(
       messages[status] || "Il servizio non è disponibile. Riprova tra poco.",
     );
     this.status = status;
     this.errors = errors;
+    this.retryAfter = retryAfter;
+    if (status === 429 && retryAfter) this.message = `Troppe richieste. Potrai riprovare tra ${Math.ceil(retryAfter / 60)} minuti.`;
   }
 }
 async function csrf() {
@@ -74,6 +76,7 @@ export async function request(
     throw new ApiError(
       response.status,
       response.status === 422 ? body.errors : {},
+      response.status === 429 ? retrySeconds(response.headers.get('Retry-After'), body.retry_after) : null,
     );
   }
   if (body.csrf_token) csrfToken = body.csrf_token;
@@ -86,4 +89,9 @@ export function query(params = {}) {
     ),
   ).toString();
   return value ? `?${value}` : "";
+}
+
+function retrySeconds(header, fallback) {
+  const seconds = header && /^\d+$/.test(header) ? Number(header) : header ? Math.ceil((Date.parse(header) - Date.now()) / 1000) : Number(fallback);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }

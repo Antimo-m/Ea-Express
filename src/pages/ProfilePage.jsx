@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -7,7 +8,7 @@ import {
   me,
 } from "../api/auth";
 import SenderFields from "../components/SenderFields";
-import { Header, Field, Feedback, Icon, Form } from "../components/UI";
+import { Header, Field, Feedback, Form } from "../components/UI";
 function AccountForm({ kind, user, onUpdate }) {
   const [error, setError] = useState(null),
     [success, setSuccess] = useState(""),
@@ -123,10 +124,7 @@ function AccountForm({ kind, user, onUpdate }) {
         </>
       )}
       <Feedback error={error} success={success} />
-      <button className="button" disabled={busy}>
-        <Icon name="check2" />
-        {busy ? "Salvataggio…" : "Salva modifiche"}
-      </button>
+      <IconButton action="edit" label={kind === "password" ? "Aggiorna password" : kind === "preferences" ? "Salva preferenze" : "Salva profilo"} type="submit" loading={busy} />
     </Form>
   );
 }

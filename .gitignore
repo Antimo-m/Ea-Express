@@ -35,3 +35,11 @@ dist/
 *.sql.gz
 *.bak
 *.backup
+
+# Test, fixture e risultati di verifica restano esclusivamente locali.
+/tests/
+/coverage/
+/test-results/
+/playwright-report/
+*.test.*
+*.spec.*

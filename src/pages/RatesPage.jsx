@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { useState } from "react";
 import { request, query } from "../api/client";
 import { useApi } from "../hooks/useApi";
@@ -11,7 +12,7 @@ export default function RatesPage() {
     <form className="panel filter-bar" onSubmit={event => {event.preventDefault();setFilters({...Object.fromEntries(new FormData(event.currentTarget)),page:1});}}>
       <Field name="q" label="Cerca località" defaultValue={filters.q} placeholder="Città, CAP o zona" maxLength={100}/>
       <Field label="Area"><select name="area" defaultValue=""><option value="">Tutte le aree</option>{(resource.data?.areas || []).map(area => <option key={area}>{area}</option>)}</select></Field>
-      <button className="button secondary"><Icon name="search"/> Cerca</button>
+      <IconButton action="search" label="Filtra risultati" type="submit" />
     </form>
     <State resource={resource}>{({rates}) => <><p className="data-caption">{rates.total} tariffe disponibili</p>{rates.data.length ? <div className="rates-grid">{rates.data.map(rate => <article className="panel rate-card" key={rate.id}>
       <header><span className="eyebrow">{rate.area || 'Località'}</span><Icon name="geo-alt"/></header><h2>{rate.city}</h2><p className="rate-location">{[rate.zone,rate.postal_code ? `CAP ${rate.postal_code}` : '',rate.street].filter(Boolean).join(' · ') || 'Intera località'}</p>

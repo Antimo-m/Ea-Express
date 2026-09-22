@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useMobile } from "../hooks/useMobile";
@@ -7,15 +8,15 @@ import NotificationSound from "../components/NotificationSound";
 import { connectWorkspace } from "../services/workspace-realtime";
 import { request } from "../api/client";
 import { initials } from "../utils/format";
-const items = [
-  ["/dashboard", "grid-1x2", "Panoramica"],
-  ["/shipments", "box-seam", "Spedizioni"],
-  ["/pickups", "calendar2-week", "Ritiri"],
-  ["/messages", "chat-left-text", "Messaggi"],
-  ["/rates", "tags", "Listino"],
-  ["/statistics", "bar-chart", "Statistiche"],
-  ["/couriers", "bicycle", "Corrieri"],
-  ["/notifications", "bell", "Notifiche"],
+const groups = [
+  ['Operatività', [
+    ['/dashboard', 'grid-1x2', 'Panoramica'], ['/pickups', 'calendar2-week', 'Ritiri'],
+    ['/shipments', 'box-seam', 'Spedizioni e storico'], ['/couriers', 'bicycle', 'Corrieri'],
+    ['/messages', 'chat-left-text', 'Messaggi'],
+  ]],
+  ['Amministrazione e contabilità', [['/statistics', 'bar-chart', 'Statistiche e spese']]],
+  ['Configurazione commerciale', [['/rates', 'tags', 'Listini']]],
+  ['Account e sistema', [['/profile', 'person-circle', 'Profilo e sicurezza'], ['/settings', 'sliders', 'Impostazioni'], ['/notifications', 'bell', 'Notifiche']]],
 ];
 export default function PortalLayout() {
   const { user, logout } = useAuth();
@@ -109,20 +110,14 @@ export default function PortalLayout() {
             <small>BUSINESS</small>
           </span>
         </Link>
-        <Link to="/pickups/new" className="button portal-create" onClick={() => setOpen(false)}><Icon name="plus-lg"/> Prenota un ritiro</Link><p className="nav-caption">IL TUO SPAZIO SPEDIZIONI</p>
+        <IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text className="portal-create" onClick={() => setOpen(false)} />
         <nav aria-label="Navigazione principale">
-          {items.map(([to, icon, label]) => (
-            <NavLink key={to} to={to} onClick={() => setOpen(false)}>
-              <Icon name={icon} />
-              {label}
-            </NavLink>
-          ))}
+          {groups.map(([title, items]) => <section className="nav-group" key={title} aria-label={title}>
+            <h2 className="nav-caption">{title}</h2>
+            {items.map(([to, icon, label]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}><Icon name={icon} />{label}</NavLink>)}
+          </section>)}
         </nav>
         <div className="sidebar-bottom">
-          <NavLink to="/settings" onClick={() => setOpen(false)}>
-            <Icon name="sliders" />
-            Impostazioni
-          </NavLink>
           <button className="logout" disabled={busy} onClick={signOut}>
             <Icon name="box-arrow-right" />
             {busy ? "Uscita…" : "Esci"}

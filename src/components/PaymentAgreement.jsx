@@ -1,3 +1,4 @@
+import IconButton from "./IconButton";
 import { useRef, useState } from "react";
 import { request } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
@@ -33,6 +34,6 @@ export default function PaymentAgreement({ order, reload }) {
     <Feedback error={error} success={success} />
     {error?.status === 409 && <button className="button secondary" onClick={reload}>Ricarica accordo</button>}
     {editable && payment.state === "proposed" && payment.proposed_by !== user.id && <Form onSubmit={submit}><input type="hidden" name="action" value="confirm" /><button className="button" disabled={busy}>Conferma proposta del corriere</button></Form>}
-    {editable && <Form onSubmit={submit} errors={error?.errors} className="payment-form"><input type="hidden" name="action" value="propose" /><Field label="Proponi un metodo"><select key={payment.method || 'empty'} name="method" defaultValue={payment.method || ""} required><option value="">Seleziona</option><option value="cash">Contanti</option><option value="card">Carta tramite POS</option><option value="bank_transfer">Bonifico</option><option value="other">Altro</option></select></Field><button className="button secondary" disabled={busy}>{busy ? "Invio…" : "Invia proposta"}</button></Form>}
+    {editable && <Form onSubmit={submit} errors={error?.errors} className="payment-form"><input type="hidden" name="action" value="propose" /><Field label="Proponi un metodo"><select key={payment.method || 'empty'} name="method" defaultValue={payment.method || ""} required><option value="">Seleziona</option><option value="cash">Contanti</option><option value="card">Carta tramite POS</option><option value="bank_transfer">Bonifico</option><option value="other">Altro</option></select></Field><IconButton action="edit" label="Invia proposta di pagamento" text type="submit" loading={busy} /></Form>}
   </section>;
 }

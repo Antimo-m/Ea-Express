@@ -1,4 +1,5 @@
-import Modal from "../components/Modal";
+import IconButton from "../components/IconButton";
+import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import { contentLabel } from "../utils/order-content";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
@@ -11,27 +12,12 @@ import MessageThread from "../components/MessageThread";
 import { date, money } from "../utils/format";
 function Detail({ order, reload, pickups, messages }) {
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(useLocation().state?.success || "");
   const base = pickups ? "/pickups" : "/shipments";
-  async function cancel(event) {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await cancelOrder(order.id, {
-        version: order.version,
-        reason: new FormData(event.currentTarget).get("reason"),
-      });
-      setSuccess("Richiesta annullata.");
-      setCancelOpen(false);
-      reload();
-    } catch (error) {
-      setError(error);
-    } finally {
-      setBusy(false);
-    }
+  async function cancel(data) {
+    await cancelOrder(order.id, { version: order.version, reason: data.get('reason') });
+    setSuccess('Richiesta annullata.');
+    reload();
   }
   return (
     <>
@@ -52,23 +38,14 @@ function Detail({ order, reload, pickups, messages }) {
         }
         description={`Destinatario: ${order.recipient_name}`}
       >
-        <Link className="button secondary" title="Stampa etichetta" aria-label="Stampa etichetta" to={`/shipments/${order.id}/label`}>
-          <Icon name="printer" />
-        </Link>
+        <IconButton action="print" label="Stampa etichetta" to={`/shipments/${order.id}/label`} />
         <Status order={order} />
         {order.can_edit && (
-          <Link className="button secondary" to={`${base}/${order.id}/edit`}>
-            <Icon name="pencil" />
-            Modifica
-          </Link>
+          <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.id}/edit`} />
         )}
       </Header>
-      <Feedback error={error} success={success} />
-      {error?.status === 409 && (
-        <button className="button secondary" onClick={reload}>
-          Ricarica i dati aggiornati
-        </button>
-      )}
+      <Feedback success={success} />
+
       {!messages && (
         <div className="detail-grid">
           <div>
@@ -197,10 +174,10 @@ function Detail({ order, reload, pickups, messages }) {
               </section>
             )}
             {order.can_cancel && (
-              <section className="panel cancellation"><h3>Gestisci la richiesta</h3><button type="button" className="button secondary" onClick={() => setCancelOpen(true)}><Icon name="x-circle"/> Annulla richiesta</button>
-                <Modal open={cancelOpen} title="Annullare questa richiesta?" description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city}. La richiesta non sarà più disponibile ai corrieri.`} danger busy={busy} onClose={() => setCancelOpen(false)}>
-                  <form onSubmit={cancel}><div className="modal-content-area"><Feedback error={error}/><label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label></div><footer className="modal-actions"><button type="button" className="button secondary" disabled={busy} onClick={() => setCancelOpen(false)}>Torna alla spedizione</button><button className="button danger" disabled={busy}>{busy ? 'Annullamento…' : 'Conferma annullamento'}</button></footer></form>
-                </Modal>
+              <section className="panel cancellation"><h3>Gestisci la richiesta</h3><IconButton action="delete" label="Annulla richiesta" onClick={() => setCancelOpen(true)} />
+                <ConfirmDeleteModal onReload={reload} open={cancelOpen} name={order.reference} actionLabel="Annulla richiesta" description="La richiesta sarà annullata e resterà consultabile nello storico." onClose={() => setCancelOpen(false)} onConfirm={cancel}>
+                  <label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label>
+                </ConfirmDeleteModal>
               </section>
             )}
           </aside>

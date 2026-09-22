@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { contentLabel } from "../utils/order-content";
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
@@ -11,7 +12,7 @@ function Label({ order }) {
     <div className="print-toolbar">
       <Header title="Documento di spedizione" description="Etichetta da applicare al pacco o ricevuta completa da conservare. La stampa include soltanto il documento.">
         <Link className="button secondary" to={`/shipments/${order.id}`}><Icon name="arrow-left" /> Torna alla spedizione</Link>
-        <button className="button" onClick={() => window.print()}><Icon name="printer" /> Stampa {format === 'a6' ? 'etichetta' : 'ricevuta'}</button>
+        <IconButton action="print" label={format === 'a6' ? 'Stampa etichetta' : 'Stampa ricevuta'} onClick={() => window.print()} />
       </Header>
       <div className="form-grid">
         <Field label="Documento"><select value={format} onChange={event => setFormat(event.target.value)}><option value="a6">Etichetta pacco · A6</option><option value="a4">Ricevuta completa · A4</option></select></Field>

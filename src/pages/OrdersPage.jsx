@@ -1,9 +1,9 @@
-import { Link, useSearchParams } from "react-router";
+import IconButton from "../components/IconButton";
+import { useSearchParams } from "react-router";
 import { listOrders } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
 import {
   Header,
-  Icon,
   State,
   OrderList,
   Pagination,
@@ -45,10 +45,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
               : "Ogni richiesta, dal tuo negozio a destinazione."
         }
       >
-        <Link
-
-          to={pickups ? "/pickups/new" : "/shipments/new"}
-         className="button create-button" aria-label={pickups ? "Programma ritiro" : "Nuova spedizione"} title={pickups ? "Programma ritiro" : "Nuova spedizione"}><span aria-hidden="true">+</span></Link>
+        <IconButton action="add" to={pickups ? "/pickups/new" : "/shipments/new"} label={pickups ? "Programma ritiro" : "Nuova spedizione"} />
       </Header>
       <section className="panel flush">
         <form className="filters" onSubmit={filter} key={params.toString()}>
@@ -94,10 +91,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
             type="date"
             defaultValue={values.to || ""}
           />
-          <button className="button secondary">
-            <Icon name="search" />
-            Filtra
-          </button>
+          <IconButton action="search" label="Filtra risultati" type="submit" />
           {params.size > 0 && (
             <button
               type="button"

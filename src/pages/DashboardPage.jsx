@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { Link } from "react-router";
 import { dashboard } from "../api/workspace";
 import { useApi } from "../hooks/useApi";
@@ -21,7 +22,7 @@ export default function DashboardPage() {
         title={`Ciao, ${user.name}.`}
         description="Richieste, ritiri e consegne: le tue priorità a colpo d’occhio."
       />
-      <section className="dashboard-actions"><div><h2>Il prossimo ritiro parte da qui</h2><p>Prepara la richiesta e verifica il totale prima di confermare.</p></div><div className="actions"><Link to="/pickups/new" className="button"><Icon name="plus-lg"/> Prenota un ritiro</Link><Link to="/rates" className="button secondary"><Icon name="geo-alt"/> Consulta le tariffe</Link></div></section>
+      <section className="dashboard-actions"><div><h2>Il prossimo ritiro parte da qui</h2><p>Prepara la richiesta e verifica il totale prima di confermare.</p></div><div className="actions"><IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text /><Link to="/rates" className="button secondary"><Icon name="geo-alt"/> Consulta le tariffe</Link></div></section>
       <State resource={resource}>
         {(data) => (
           <>
@@ -115,7 +116,7 @@ export default function DashboardPage() {
                     text="Il prossimo ritiro parte da qui."
                     icon="calendar2-check"
                   >
-                    <Link to="/pickups/new" className="button create-button" aria-label="Programma ritiro" title="Programma ritiro"><span aria-hidden="true">+</span></Link>
+                    <IconButton action="add" to="/pickups/new" label="Programma ritiro" />
                   </Empty>
                 )}
               </section>

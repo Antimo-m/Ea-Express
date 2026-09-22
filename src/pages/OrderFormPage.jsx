@@ -1,3 +1,4 @@
+import IconButton from "../components/IconButton";
 import { attachBookingRules } from '../services/booking-rules';
 import { request } from '../api/client';
 import { contentCategories } from "../utils/order-content";
@@ -102,7 +103,7 @@ function OrderForm({ order, pickups }) {
       <p className="muted">Il totale somma il valore dichiarato e la spedizione. Questa conferma non esegue un pagamento e non attiva un contrassegno.</p>
       <p className="muted">{review.quote.reason} {review.quote.delivery_time} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
       {!review.checkout_token && <p role="alert">Non possiamo confermare un costo affidabile. Controlla la destinazione o contatta EA Express per la tariffa.</p>}
-      <Feedback error={error}/><div className="actions"><button className="button secondary" disabled={busy} onClick={()=>{setReview(null);setError(null);}}>Indietro / Modifica</button><button className="button" disabled={busy || !review.checkout_token || error?.status===409} onClick={confirm}>{busy ? 'Conferma in corso…' : 'Conferma richiesta'}</button></div>
+      <Feedback error={error}/><div className="actions"><IconButton action="edit" label="Modifica richiesta" disabled={busy} onClick={()=>{setReview(null);setError(null);}} /><IconButton action={order ? "edit" : "add"} label="Conferma richiesta" text loading={busy} disabled={!review.checkout_token || error?.status===409} onClick={confirm} /></div>
     </section>}
     <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors} className="order-form" onSubmit={submit}>
       <div>
@@ -229,14 +230,7 @@ function OrderForm({ order, pickups }) {
             Ricarica il dettaglio aggiornato
           </Link>
         )}
-        <button className="button full" disabled={busy}>
-          {busy
-            ? "Invio in corso…"
-            : order
-              ? "Rivedi modifiche"
-              : "Rivedi richiesta"}
-          <Icon name="arrow-right" />
-        </button>
+        <IconButton action={order ? "edit" : "add"} label={order ? "Rivedi modifiche" : "Rivedi richiesta"} type="submit" text loading={busy} />
         <Link className="cancel-link" to={order ? `${base}/${order.id}` : base}>
           Annulla
         </Link>
