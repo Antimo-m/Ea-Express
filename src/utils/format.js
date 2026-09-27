@@ -52,3 +52,12 @@ export function today() {
 export function displayName(order) {
   return order.display_name?.trim() || order.store_name?.trim() || order.reference;
 }
+
+export function chartDate(value, monthly = false, compact = false) {
+  return new Intl.DateTimeFormat('it-IT', {
+    ...(monthly ? {} : { day: 'numeric' }),
+    month: compact ? 'short' : 'long',
+    ...(!compact || monthly ? { year: 'numeric' } : {}),
+    timeZone: 'Europe/Rome',
+  }).format(new Date(`${value.length === 7 ? `${value}-01` : value}T12:00:00Z`));
+}
