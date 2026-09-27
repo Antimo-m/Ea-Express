@@ -104,7 +104,7 @@ export default function PortalLayout() {
           <Icon name="x-lg" />
         </button>
         <Link className="brand" to="/dashboard" onClick={() => setOpen(false)}>
-          <img src="/brand.svg" alt="" />{" "}
+          <img className="brand-logo" src="/brand.svg" alt="EA Express" width="155" height="83"/>{" "}
           <span>
             EA<span className="brand-light">-Express</span>
             <small>BUSINESS</small>

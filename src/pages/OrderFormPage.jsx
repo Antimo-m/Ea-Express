@@ -1,9 +1,10 @@
 import IconButton from "../components/IconButton";
 import { attachBookingRules } from '../services/booking-rules';
 import { request } from '../api/client';
-import { contentCategories } from "../utils/order-content";
+import { contentCategories, contentLabel } from "../utils/order-content";
+import Modal from "../components/Modal";
 import ShippingQuote from "../components/ShippingQuote";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { createOrder, getOrder, updateOrder, reviewOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
@@ -22,11 +23,20 @@ function OrderForm({ order, pickups }) {
     });
     return () => {disposed = true; cleanup?.();};
   }, [order]);
+  const [category,setCategory] = useState(order?.category || 'custom');
+  const [shippingType,setShippingType] = useState(order?.shipping_type || 'regional');
+  const [cancelOpen,setCancelOpen] = useState(false);
   const [review,setReview] = useState(null);
   const [zone,setZone] = useState(order?.delivery_zone || "");
   const [street,setStreet] = useState(order?.delivery_address || "");
   const [city,setCity] = useState(order?.delivery_city || '');
   const [postal,setPostal] = useState(order?.delivery_postal_code || '');
+  const [province,setProvince] = useState(order?.delivery_province || '');
+  const [region,setRegion] = useState(order?.delivery_region || '');
+  const resolvePostal = useCallback(code => {
+    if (bookingForm.current) bookingForm.current.elements.delivery_postal_code.value = code;
+    setPostal(code);
+  }, []);
   const [packageType,setPackageType] = useState(order?.package_type || 'standard');
   const submitting = useRef(false);
   const navigate = useNavigate();
@@ -96,20 +106,19 @@ function OrderForm({ order, pickups }) {
       <p className="eyebrow">PRIMA DELLA CONFERMA</p><h2>Controlla la richiesta</h2>
       <div className="form-grid"><div><h3>Mittente e ritiro</h3><p>{review.data.store_name || user.name}<br/>{review.data.pickup_address} {review.data.pickup_street_number}<br/>{review.data.pickup_postal_code} {review.data.pickup_city}</p><p>{review.data.pickup_date} · {review.data.pickup_from}–{review.data.pickup_to}</p></div>
       <div><h3>Destinatario e consegna</h3><p>{review.data.recipient_name}<br/>{review.data.recipient_phone}<br/>{review.data.delivery_address} {review.data.delivery_street_number}<br/>{review.data.delivery_postal_code} {review.data.delivery_city} {review.data.delivery_zone}</p><p>{review.data.delivery_window && `Preferenza: ${review.data.delivery_window}`}</p></div></div>
-      <p><strong>{review.data.parcel_count} colli</strong> · {review.data.package_type === 'fragile' ? 'Fragile' : review.data.package_type === 'other' ? review.data.package_description : 'Standard'} · {contentCategories[review.data.category]} {review.data.content_description}</p>
+      <p><strong>{review.data.parcel_count} colli</strong> · {review.data.package_type === 'fragile' ? 'Fragile' : review.data.package_type === 'other' ? review.data.package_description : 'Standard'} · {contentLabel(review.data)}</p>
       {review.data.customer_notes && <p>Istruzioni: {review.data.customer_notes}</p>}
-      <p>Metodo di pagamento: {{cash:'Contanti',card:'Carta tramite POS',bank_transfer:'Bonifico',other:'Altro'}[review.data.payment_method]}</p>
       <p className="review-note"><Icon name="shield-check"/> La richiesta viene inviata solo dopo la conferma. Gli importi sono verificati dal sistema.</p><dl className="checkout-amounts"><div><dt>Valore del pacco</dt><dd>{money(review.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{money(review.shipping_price_cents)}</dd></div><div className="checkout-total"><dt>Totale finale</dt><dd>{money(review.total_cents)}</dd></div></dl>
       <p className="muted">Il totale somma il valore dichiarato e la spedizione. Questa conferma non esegue un pagamento e non attiva un contrassegno.</p>
-      <p className="muted">{review.quote.reason} {review.quote.delivery_time} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
+      <p className="muted">{review.data.shipping_type === 'external' ? 'Fuori regione' : 'Regionale'} · {review.quote.carrier_name} · {review.quote.reason} {review.quote.delivery_time} {review.quote.delivery_days_min && `Consegna prevista in ${review.quote.delivery_days_min}–${review.quote.delivery_days_max} giorni lavorativi dal ritiro, festività escluse dalla stima.`} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
       {!review.checkout_token && <p role="alert">Non possiamo confermare un costo affidabile. Controlla la destinazione o contatta EA Express per la tariffa.</p>}
-      <Feedback error={error}/><div className="actions"><IconButton action="edit" label="Modifica richiesta" disabled={busy} onClick={()=>{setReview(null);setError(null);}} /><IconButton action={order ? "edit" : "add"} label="Conferma richiesta" text loading={busy} disabled={!review.checkout_token || error?.status===409} onClick={confirm} /></div>
+      <Feedback error={error}/><div className="actions"><IconButton action="edit" label="Modifica richiesta" disabled={busy} onClick={()=>{setReview(null);setError(null);}} /><IconButton action="send" icon="send" label="Conferma richiesta" text loading={busy} disabled={!review.checkout_token || error?.status===409} onClick={confirm} /></div>
     </section>}
     <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors} className="order-form" onSubmit={submit}>
       <div>
         <section className="panel">
           <h2>
-            <span className="step">01</span> Mittente e ritiro
+            <span className="step">01</span> Punto di ritiro
           </h2>
           <SenderFields identity={order || user} nameField="store_name" />
           <div className="form-grid">
@@ -118,6 +127,42 @@ function OrderForm({ order, pickups }) {
             {field("pickup_street_number", "Numero civico", { maxLength:20 })}
             {field("pickup_postal_code", "CAP ritiro", { pattern:"[0-9]{5}",maxLength:5,inputMode:"numeric" })}
           </div>
+        </section>
+        <section className="panel">
+          <h2>
+            <span className="step">02</span> Punto di consegna
+          </h2>
+          <div className="form-grid">
+            <Field label="Tipo di spedizione"><select name="shipping_type" value={shippingType} onChange={event=>setShippingType(event.target.value)}><option value="regional">Regionale · rete EA Express</option><option value="external">Fuori regione · vettore esterno</option></select></Field>
+            {field("recipient_name", "Nome destinatario", { maxLength: 150 })}
+            {field("recipient_phone", "Telefono destinatario", {
+              type: "tel",
+              maxLength: 30,
+              minLength: 6,
+            })}
+          </div>
+          <div className="form-grid">
+            {field("delivery_address", "Indirizzo di consegna",{onChange:event=>setStreet(event.target.value)})}
+            {field("delivery_zone","Zona / quartiere (facoltativo)",{required:false,maxLength:100,onChange:event=>setZone(event.target.value)})}
+            {field("delivery_city", "Città di consegna", { maxLength:100,onChange:event=>setCity(event.target.value) })}
+            {field("delivery_street_number", "Numero civico", {maxLength:20})}
+            {field("delivery_postal_code", "CAP consegna", {required:false,help:"Compilato automaticamente se il comune ha un solo CAP.",pattern:"[0-9]{5}",maxLength:5,inputMode:"numeric",onChange:event=>setPostal(event.target.value)})}
+            {field("delivery_province", "Provincia", {onChange:event=>setProvince(event.target.value),required:shippingType==='external',maxLength:100})}
+            {field("delivery_region", "Regione", {onChange:event=>setRegion(event.target.value),required:shippingType==='external',maxLength:100})}
+            {field(
+              "delivery_window",
+              "Preferenza oraria di consegna (facoltativa)",
+              {
+                required: false,
+                type: "time",
+                step: 60,
+                defaultValue: /^\d{2}:\d{2}$/.test(order?.delivery_window || "") ? order.delivery_window : "",
+                help: order?.delivery_window && !/^\d{2}:\d{2}$/.test(order.delivery_window) ? `Preferenza precedente: ${order.delivery_window}. Seleziona un orario per sostituirla.` : "Orario indicativo, da confermare con il corriere.",
+              },
+            )}
+          </div>
+        </section>
+        <section className="panel"><h2><span className="step">03</span> Data e orario</h2>
           <div className="form-grid">
             {field("pickup_date", "Data del ritiro", {
               type: "date",
@@ -138,38 +183,7 @@ function OrderForm({ order, pickups }) {
         </section>
         <section className="panel">
           <h2>
-            <span className="step">02</span> A chi consegniamo
-          </h2>
-          <div className="form-grid">
-            {field("recipient_name", "Nome destinatario", { maxLength: 150 })}
-            {field("recipient_phone", "Telefono destinatario", {
-              type: "tel",
-              maxLength: 30,
-              minLength: 6,
-            })}
-          </div>
-          <div className="form-grid">
-            {field("delivery_address", "Indirizzo di consegna",{onChange:event=>setStreet(event.target.value)})}
-            {field("delivery_zone","Zona / quartiere (facoltativo)",{required:false,maxLength:100,onChange:event=>setZone(event.target.value)})}
-            {field("delivery_city", "Città di consegna", { maxLength:100,onChange:event=>setCity(event.target.value) })}
-            {field("delivery_street_number", "Numero civico", {maxLength:20})}
-            {field("delivery_postal_code", "CAP consegna", {pattern:"[0-9]{5}",maxLength:5,inputMode:"numeric",onChange:event=>setPostal(event.target.value)})}
-            {field(
-              "delivery_window",
-              "Preferenza oraria di consegna (facoltativa)",
-              {
-                required: false,
-                type: "time",
-                step: 60,
-                defaultValue: /^\d{2}:\d{2}$/.test(order?.delivery_window || "") ? order.delivery_window : "",
-                help: order?.delivery_window && !/^\d{2}:\d{2}$/.test(order.delivery_window) ? `Preferenza precedente: ${order.delivery_window}. Seleziona un orario per sostituirla.` : "Orario indicativo, da confermare con il corriere.",
-              },
-            )}
-          </div>
-        </section>
-        <section className="panel">
-          <h2>
-            <span className="step">03</span> Cosa spediamo
+            <span className="step">04</span> Pacco e indicazioni
           </h2>
           <div className="form-grid">
             {field("parcel_value", "Valore del pacco (€)", {
@@ -185,7 +199,7 @@ function OrderForm({ order, pickups }) {
               help: "Valore dichiarato del contenuto. Non è il costo di spedizione né un importo da riscuotere.",
             })}
             <Field label="Contenuto">
-              <select name="category" defaultValue={order?.category || "other"}>
+              <select name="category" value={category} onChange={event=>setCategory(event.target.value)}>
                 {Object.entries(contentCategories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </Field>
@@ -199,12 +213,9 @@ function OrderForm({ order, pickups }) {
               </select>
             </Field>
           </div>
-          {field("content_description", "Descrivi il contenuto (facoltativo)", {
-            required: false,
-            maxLength: 255,
-            placeholder: "Es. campioni di tessuto, ceramiche artigianali…",
-            help: "Puoi specificare il contenuto di qualsiasi categoria oppure scegliere Altro.",
-          })}
+          {category === 'custom' ? field("content_description", "Scrivi il contenuto del pacco", {
+            required: true, maxLength: 255, placeholder: "Es. ricambi per automobile",
+          }) : <input type="hidden" name="content_description" value=""/>}
           <div className="form-grid">{field("parcel_count","Numero colli",{type:"number",min:1,max:100,defaultValue:order?.parcel_count||1})}<Field label="Caratteristiche del pacco"><select name="package_type" value={packageType} onChange={event=>setPackageType(event.target.value)}><option value="standard">Standard</option><option value="fragile">Fragile</option><option value="other">Altro</option></select></Field></div>{packageType==='other' && field("package_description","Descrizione caratteristiche",{maxLength:255})}
           <Field label="Istruzioni per il corriere (facoltative)">
             <textarea
@@ -217,25 +228,30 @@ function OrderForm({ order, pickups }) {
           </Field>
         </section>
       </div>
-      <aside className="panel form-summary">
-        <h2>{order ? "Salva la richiesta" : "Invia ai rider"}</h2>
+      <section className="panel booking-tariff">
+        <h2><span className="step">05</span> Tariffa</h2>
         <p className="muted">
           Controlla indirizzi, contatto e orario. Potrai modificare la richiesta
           fino alla presa in carico.
         </p>
-        <Field label="Metodo di pagamento"><select name="payment_method" defaultValue={order?.payment?.method || ''} required><option value="">Seleziona il metodo</option><option value="cash">Contanti</option><option value="card">Carta tramite POS</option><option value="bank_transfer">Bonifico</option><option value="other">Altro</option></select></Field>
-        <ShippingQuote city={city} postal={postal} zone={zone} street={street}/><Feedback error={error} />
+        <ShippingQuote province={province} region={region} onPostalResolved={resolvePostal} city={city} postal={postal} zone={zone} street={street} shippingType={shippingType}/><Feedback error={error} />
         {order && error?.status === 409 && (
           <Link className="button secondary full" to={`${base}/${order.id}`}>
             Ricarica il dettaglio aggiornato
           </Link>
         )}
-        <IconButton action={order ? "edit" : "add"} label={order ? "Rivedi modifiche" : "Rivedi richiesta"} type="submit" text loading={busy} />
-        <Link className="cancel-link" to={order ? `${base}/${order.id}` : base}>
-          Annulla
-        </Link>
-      </aside>
-    </Form></div></>
+      </section>
+      <div className="booking-final-actions">
+        <IconButton icon="send" action="send" label="Invia" type="submit" text loading={busy} />
+        <button type="button" className="button danger" disabled={busy} onClick={()=>setCancelOpen(true)}><Icon name="trash"/> Annulla</button>
+      </div>
+    </Form></div>
+    <Modal open={cancelOpen} title="Annullare la richiesta?" description="I dati inseriti in questa prenotazione andranno persi." danger onClose={()=>setCancelOpen(false)}>
+      <footer className="modal-actions">
+        <button type="button" className="button modal-back" onClick={()=>setCancelOpen(false)}><Icon name="arrow-left"/> Continua compilazione</button>
+        <button type="button" className="button danger" onClick={()=>{bookingForm.current?.reset();setReview(null);setError(null);setCancelOpen(false);navigate('/dashboard',{replace:true});}}><Icon name="trash"/> Conferma annullamento</button>
+      </footer>
+    </Modal></>
   );
 }
 function EditForm({ id, pickups }) {

@@ -48,3 +48,7 @@ export function today() {
     .map((type) => parts.find((part) => part.type === type).value)
     .join("-");
 }
+
+export function displayName(order) {
+  return order.display_name?.trim() || order.store_name?.trim() || order.reference;
+}

@@ -69,7 +69,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
             placeholder="Riferimento, destinatario, città"
             defaultValue={values.q || ""}
           />
-          <Field label="Tipo mittente"><select name="sender_type" defaultValue={values.sender_type || ""}><option value="">Tutti</option><option value="business">Attività commerciale</option><option value="private">Privato</option><option value="online_shop">Shop online</option></select></Field><Field label="Stato">
+          <Field label="Servizio"><select name="shipping_type" defaultValue={values.shipping_type || ""}><option value="">Tutti</option><option value="regional">Regionali</option><option value="external">Fuori regione</option></select></Field><Field label="Tipo mittente"><select name="sender_type" defaultValue={values.sender_type || ""}><option value="">Tutti</option><option value="business">Attività commerciale</option><option value="private">Privato</option><option value="online_shop">Shop online</option></select></Field><Field label="Stato">
             <select name="status" defaultValue={values.status || ""}>
               <option value="">Tutti gli stati</option>
               {Object.entries(statuses).map(([key, label]) => (

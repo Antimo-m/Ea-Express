@@ -3,7 +3,7 @@ import { attachFormPopovers } from '../services/form-popovers';
 import { cloneElement, useContext, useId } from "react";
 import { FormErrorsContext } from "../context/FormErrorsContext";
 import { Link } from "react-router";
-import { date } from "../utils/format";
+import { date, displayName } from "../utils/format";
 export function Icon({ name, ...props }) {
   return <i className={`bi bi-${name}`} aria-hidden="true" {...props} />;
 }
@@ -11,9 +11,12 @@ export function Header({
   eyebrow = "Il tuo spazio operativo",
   title,
   description,
+  backTo,
   children,
 }) {
   return (
+    <>
+    {backTo && <nav className="page-back" aria-label="Navigazione pagina"><Link className="back-link" to={backTo}><Icon name="arrow-left"/> Torna indietro</Link></nav>}
     <header className="page-heading">
       <div>
         <p className="eyebrow">{eyebrow}</p>
@@ -22,6 +25,7 @@ export function Header({
       </div>
       <div className="actions">{children}</div>
     </header>
+    </>
   );
 }
 export function Status({ order }) {
@@ -190,7 +194,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
   return (
     <div className="order-list">
       <div className="order-table-head">
-        <span>Spedizione / destinatario</span>
+        <span>Cliente / spedizione</span>
         <span>Percorso</span>
         <span>Ritiro</span>
         <span>Stato</span>
@@ -199,8 +203,9 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
       {orders.map((order) => (
         <Link className="order-row" key={order.id} to={`${base}/${order.id}`}>
           <div>
-            <strong className="reference" title={order.reference} aria-label={order.reference}>{order.reference.length > 20 ? `EA-…${order.reference.slice(-10)}` : order.reference}</strong>
-            <span>{order.recipient_name}</span>
+            <strong className="order-display-name">{displayName(order)}</strong>
+            <small className="order-code" title={order.reference}>{order.reference}</small>
+            <span>Destinatario: {order.recipient_name}</span>
             {messages && (
               <span
                 className={

@@ -11,7 +11,7 @@ import {
   Empty,
   Status,
 } from "../components/UI";
-import { date } from "../utils/format";
+import { date, displayName } from "../utils/format";
 export default function DashboardPage() {
   const resource = useApi(dashboard, {}, true);
   const { user } = useAuth();
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                           {order.pickup_from}–{order.pickup_to}
                         </span>
                       </div>
-                      <h3>{order.pickup_city}</h3>
+                      <h3>{displayName(order)}</h3>
                       <p>{order.pickup_address}</p>
                       <Status order={order} />
                     </Link>

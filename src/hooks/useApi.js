@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-export function useApi(loader, params = {}, realtime = false) {
+export function useApi(loader, params = {}, realtime = false, refreshInterval = 0) {
   const key = JSON.stringify(params);
   const [revision, setRevision] = useState(0);
   const [result, setResult] = useState({});
@@ -26,6 +26,13 @@ export function useApi(loader, params = {}, realtime = false) {
     window.addEventListener('ea:workspace-updated', update);
     return () => window.removeEventListener('ea:workspace-updated', update);
   }, [key, realtime]);
+  useEffect(() => {
+    if (!refreshInterval) return;
+    const refresh = () => { if (!document.hidden) setRevision(value => value + 1); };
+    const timer = setInterval(refresh, refreshInterval);
+    window.addEventListener('focus', refresh);
+    return () => { clearInterval(timer); window.removeEventListener('focus', refresh); };
+  }, [refreshInterval]);
   const loading = result.key !== key;
   return {
     data: loading ? undefined : result.data,

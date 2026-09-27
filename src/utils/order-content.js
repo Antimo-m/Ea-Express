@@ -1,4 +1,5 @@
 export const contentCategories = {
+  custom: 'Scrivi il contenuto',
   clothing: 'Abbigliamento',
   documents: 'Documenti',
   books: 'Libri e cancelleria',
@@ -14,6 +15,7 @@ export const contentCategories = {
 
 export function contentLabel(order) {
   if (order.category_label) return order.category_label;
+  if (order.category === 'custom') return order.content_description || 'Contenuto non specificato';
   const label = contentCategories[order.category] || order.category;
   return order.content_description ? `${label}: ${order.content_description}` : label;
 }

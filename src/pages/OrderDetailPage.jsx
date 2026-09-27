@@ -7,9 +7,8 @@ import { getOrder, cancelOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
 import { Header, State, Status, Feedback, Icon, Empty } from "../components/UI";
 import ShippingPrice from "../components/ShippingPrice";
-import PaymentAgreement from "../components/PaymentAgreement";
 import MessageThread from "../components/MessageThread";
-import { date, money } from "../utils/format";
+import { date, money, displayName } from "../utils/format";
 function Detail({ order, reload, pickups, messages }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [success, setSuccess] = useState(useLocation().state?.success || "");
@@ -21,25 +20,14 @@ function Detail({ order, reload, pickups, messages }) {
   }
   return (
     <>
-      <Link className="back-link" to={messages ? "/messages" : base}>
-        <Icon name="arrow-left" />
-        {messages
-          ? "Tutte le conversazioni"
-          : pickups
-            ? "Tutti i ritiri"
-            : "Tutte le spedizioni"}
-      </Link>
       <Header
-        eyebrow={order.reference}
-        title={
-          messages
-            ? `Conversazione con ${order.courier?.name || "il corriere"}`
-            : `${order.pickup_city} → ${order.delivery_city}`
-        }
-        description={`Destinatario: ${order.recipient_name}`}
+        backTo={messages ? "/messages" : base}
+        eyebrow={messages ? "CONVERSAZIONE" : "SPEDIZIONE"}
+        title={messages ? `Conversazione · ${displayName(order)}` : displayName(order)}
+        description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city} · Destinatario: ${order.recipient_name}`}
       >
         <IconButton action="print" label="Stampa etichetta" to={`/shipments/${order.id}/label`} />
-        <Status order={order} />
+        <Status order={order} /><span className="service-badge">{order.shipping_type === "external" ? "Fuori regione" : "Regionale"}</span>
         {order.can_edit && (
           <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.id}/edit`} />
         )}
@@ -80,6 +68,7 @@ function Detail({ order, reload, pickups, messages }) {
               </div>
             </section>
             <section className="panel">
+              {order.shipping_type === 'external' && <div className="carrier-summary"><h2>Consegna con vettore esterno</h2><dl className="facts"><div><dt>Vettore</dt><dd>{order.carrier_name || 'Da confermare'}</dd></div><div><dt>Tracking vettore</dt><dd>{order.carrier_tracking || 'Non ancora disponibile'}</dd></div><div><dt>Stato vettore</dt><dd>{{booked:'Prenotata',handed_over:'Affidata al vettore',in_transit:'In transito',delivery_issue:'Problema di consegna',delivered:'Consegnata'}[order.carrier_status] || 'In attesa di affidamento'}</dd></div>{order.estimated_delivery_from && <div><dt>Consegna stimata</dt><dd>{date(order.estimated_delivery_from)} – {date(order.estimated_delivery_to)}</dd></div>}</dl><p className="muted small">Stima dal ritiro, da confermare con il vettore. Gli aggiornamenti sono registrati da EA Express.</p></div>}
               <h2>Ogni passo, in ordine</h2>
               {order.events?.length ? (
                 <ol className="timeline">
@@ -175,7 +164,7 @@ function Detail({ order, reload, pickups, messages }) {
             )}
             {order.can_cancel && (
               <section className="panel cancellation"><h3>Gestisci la richiesta</h3><IconButton action="delete" label="Annulla richiesta" onClick={() => setCancelOpen(true)} />
-                <ConfirmDeleteModal onReload={reload} open={cancelOpen} name={order.reference} actionLabel="Annulla richiesta" description="La richiesta sarà annullata e resterà consultabile nello storico." onClose={() => setCancelOpen(false)} onConfirm={cancel}>
+                <ConfirmDeleteModal onReload={reload} open={cancelOpen} name={displayName(order)} actionLabel="Annulla richiesta" description="La richiesta sarà annullata e resterà consultabile nello storico." onClose={() => setCancelOpen(false)} onConfirm={cancel}>
                   <label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label>
                 </ConfirmDeleteModal>
               </section>
@@ -184,7 +173,7 @@ function Detail({ order, reload, pickups, messages }) {
         </div>
       )}
       {order.packages?.length > 0 && <section className="panel"><h2>I tuoi pacchi</h2>{order.packages.map((item, index) => <p key={index}><strong>Pacco {index + 1}</strong> · {item.weight_kg} kg · {item.length_cm} × {item.width_cm} × {item.height_cm} cm</p>)}</section>}
-      <ShippingPrice order={order} reload={reload}/><PaymentAgreement order={order} reload={reload} />
+      <ShippingPrice order={order} reload={reload}/>
       <MessageThread id={order.id} />
     </>
   );

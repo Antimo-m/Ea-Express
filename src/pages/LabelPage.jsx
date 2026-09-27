@@ -1,17 +1,17 @@
 import IconButton from "../components/IconButton";
 import { contentLabel } from "../utils/order-content";
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { getOrder } from '../api/shipments';
 import { useApi } from '../hooks/useApi';
-import { Header, State, Icon, Field } from '../components/UI';
+import { Header, State, Field } from '../components/UI';
 import { date, money } from '../utils/format';
 function Label({ order }) {
   const [format, setFormat] = useState('a6');
   return <>
     <div className="print-toolbar">
       <Header title="Documento di spedizione" description="Etichetta da applicare al pacco o ricevuta completa da conservare. La stampa include soltanto il documento.">
-        <Link className="button secondary" to={`/shipments/${order.id}`}><Icon name="arrow-left" /> Torna alla spedizione</Link>
+        <IconButton action="back" to={`/shipments/${order.id}`} label="Torna alla spedizione" text />
         <IconButton action="print" label={format === 'a6' ? 'Stampa etichetta' : 'Stampa ricevuta'} onClick={() => window.print()} />
       </Header>
       <div className="form-grid">
@@ -21,12 +21,13 @@ function Label({ order }) {
       <p className="muted small">Per un foglio pulito disattiva le intestazioni e i piè di pagina aggiunti dal browser.</p>
     </div>
     <article className={`parcel-label document-${format}`}>
-      <header className="logistic-header"><div><strong>EA-EXPRESS</strong><small>{format === 'a6' ? 'ETICHETTA DI SPEDIZIONE' : 'RICEVUTA DI SPEDIZIONE'}</small></div><b>COLLI<br/>{order.parcel_count}</b></header>
+      <header className="logistic-header"><div><img src="/brand.svg" alt="EA Express" width="110" height="59"/><small>{format === 'a6' ? 'ETICHETTA DI SPEDIZIONE' : 'RICEVUTA DI SPEDIZIONE'}</small></div><b>COLLI<br/>{order.parcel_count}</b></header>
       <div className="label-reference"><small>CODICE SPEDIZIONE</small><strong>{order.reference}</strong></div>
-      <section className="label-destination"><small>DESTINATARIO / CONSEGNARE A</small><dl className="label-address"><div><dt>Nome destinatario:</dt><dd>{order.recipient_name}</dd></div><div><dt>Indirizzo di consegna:</dt><dd>{order.delivery_address} {order.delivery_street_number}</dd></div><div><dt>Città di consegna:</dt><dd>{order.delivery_postal_code} {order.delivery_city}</dd></div><div><dt>Numero di cellulare:</dt><dd>{order.recipient_phone}</dd></div></dl></section>
+      <section className="label-destination"><small>DESTINATARIO / CONSEGNARE A</small><dl className="label-address"><div><dt>Nome destinatario:</dt><dd>{order.recipient_name}</dd></div><div><dt>Indirizzo di consegna:</dt><dd>{order.delivery_address} {order.delivery_street_number}</dd></div><div><dt>Città di consegna:</dt><dd>{order.delivery_city}</dd></div><div><dt>CAP:</dt><dd>{order.delivery_postal_code || "Non indicato"}</dd></div><div><dt>Numero di cellulare:</dt><dd>{order.recipient_phone}</dd></div>{order.delivery_province && <div><dt>Provincia:</dt><dd>{order.delivery_province}</dd></div>}{order.delivery_region && <div><dt>Regione:</dt><dd>{order.delivery_region}</dd></div>}</dl></section>
       <section className="label-sender"><small>MITTENTE / RITIRARE DA</small><dl className="label-address"><div><dt>Nome mittente:</dt><dd>{order.store_name}</dd></div><div><dt>Indirizzo di ritiro:</dt><dd>{order.pickup_address} {order.pickup_street_number}</dd></div><div><dt>Città di ritiro:</dt><dd>{order.pickup_postal_code} {order.pickup_city}</dd></div></dl></section>
       <section className="label-facts"><div><small>RITIRO PROGRAMMATO</small><strong>{date(order.pickup_date)}</strong><span>Orario: {order.pickup_from} – {order.pickup_to}</span></div><div><small>CARATTERISTICHE</small><strong>{order.package_type==='fragile'?'FRAGILE':order.package_type==='other'?order.package_description:'Standard'}</strong></div></section>
       {format === 'a4' && <section className="receipt-details"><h3>Informazioni di consegna</h3><dl><div><dt>Stato al momento della stampa</dt><dd>{order.status_label}</dd></div><div><dt>Corriere</dt><dd>{order.courier?.name || 'Da assegnare'}</dd></div><div><dt>Contenuto</dt><dd>{contentLabel(order)}</dd></div><div><dt>Valore merce dichiarato</dt><dd>{order.parcel_value_cents == null ? 'Non dichiarato' : money(order.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{order.price_cents == null ? 'Tariffa da verificare' : money(order.price_cents)}</dd></div></dl>{order.customer_notes && <div className="receipt-instructions"><h3>Istruzioni per il corriere</h3><p>{order.customer_notes}</p></div>}</section>}
+      <section className="label-service"><dl className="label-address"><div><dt>Contenuto:</dt><dd>{contentLabel(order)}</dd></div><div><dt>Servizio:</dt><dd>{order.shipping_type === 'external' ? 'Fuori regione' : 'Regionale'}</dd></div>{order.carrier_name && <div><dt>Vettore:</dt><dd>{order.carrier_name}</dd></div>}{order.carrier_tracking && <div><dt>Tracking vettore:</dt><dd>{order.carrier_tracking}</dd></div>}</dl></section>
       <footer>Conservare il codice per identificare la spedizione.{format === 'a4' && ' Documento operativo non fiscale.'}</footer>
     </article>
   </>;

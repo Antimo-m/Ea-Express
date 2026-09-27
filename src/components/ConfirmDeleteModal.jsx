@@ -18,7 +18,7 @@ export default function ConfirmDeleteModal({ open, name, description, actionLabe
   return <Modal open={open} title={`${actionLabel}: ${name}`} description={description || `Sei sicuro di voler eliminare «${name}»?`} danger busy={busy || loading} onClose={close}>
     <form onSubmit={confirm}>
       <div className="modal-content-area"><Feedback error={error} />{error?.status === 409 && onReload && <button type="button" className="button secondary" onClick={() => { close(); onReload(); }}>Ricarica dati aggiornati</button>}{children}</div>
-      <footer className="modal-actions"><button type="button" className="button secondary" disabled={busy || loading} onClick={close}>Annulla</button><button className="button danger" disabled={busy || loading || error?.status === 409} aria-busy={busy || loading}><Icon name="trash" />{busy || loading ? 'Attendi…' : actionLabel}</button></footer>
+      <footer className="modal-actions"><button type="button" className="button modal-back" disabled={busy || loading} onClick={close}><Icon name="arrow-left"/> Torna indietro</button><button className="button danger" disabled={busy || loading || error?.status === 409} aria-busy={busy || loading}><Icon name="trash" />{busy || loading ? 'Attendi…' : actionLabel}</button></footer>
     </form>
   </Modal>;
 }

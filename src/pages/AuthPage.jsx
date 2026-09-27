@@ -59,7 +59,7 @@ export default function AuthPage({ mode = "login" }) {
     <div className="auth-shell">
       <section className="auth-story">
         <Link to="/login" className="brand">
-          <img src="/brand.svg" alt="" />
+          <img className="brand-logo" src="/brand.svg" alt="EA Express" width="155" height="83"/>
           <span>EA-Express</span>
         </Link>
         <div>
@@ -176,7 +176,7 @@ export default function AuthPage({ mode = "login" }) {
                 <Link to="/register">Crea il tuo account</Link>
               </>
             ) : (
-              <Link to="/login">Torna all’accesso</Link>
+              <Link className="back-link" to="/login">Torna all’accesso</Link>
             )}
           </p>
         </div>
