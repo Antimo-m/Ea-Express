@@ -51,7 +51,6 @@ function OrderForm({ order, pickups }) {
     setError(null);
     setBusy(true);
     const data = Object.fromEntries(new FormData(event.currentTarget));
-    if (order?.delivery_window && !/^\d{2}:\d{2}$/.test(order.delivery_window) && !data.delivery_window) data.delivery_window = order.delivery_window;
     data.parcel_count = Number(data.parcel_count);
 
 
@@ -105,12 +104,12 @@ function OrderForm({ order, pickups }) {
     {review && <section className="panel checkout-review" aria-label="Revisione richiesta">
       <p className="eyebrow">PRIMA DELLA CONFERMA</p><h2>Controlla la richiesta</h2>
       <div className="form-grid"><div><h3>Mittente e ritiro</h3><p>{review.data.store_name || user.name}<br/>{review.data.pickup_address} {review.data.pickup_street_number}<br/>{review.data.pickup_postal_code} {review.data.pickup_city}</p><p>{review.data.pickup_date} · {review.data.pickup_from}–{review.data.pickup_to}</p></div>
-      <div><h3>Destinatario e consegna</h3><p>{review.data.recipient_name}<br/>{review.data.recipient_phone}<br/>{review.data.delivery_address} {review.data.delivery_street_number}<br/>{review.data.delivery_postal_code} {review.data.delivery_city} {review.data.delivery_zone}</p><p>{review.data.delivery_window && `Preferenza: ${review.data.delivery_window}`}</p></div></div>
+      <div><h3>Destinatario e consegna</h3><p>{review.data.recipient_name}<br/>{review.data.recipient_phone}<br/>{review.data.delivery_address} {review.data.delivery_street_number}<br/>{review.data.delivery_postal_code} {review.data.delivery_city} {review.data.delivery_zone}</p></div></div>
       <p><strong>{review.data.parcel_count} colli</strong> · {review.data.package_type === 'fragile' ? 'Fragile' : review.data.package_type === 'other' ? review.data.package_description : 'Standard'} · {contentLabel(review.data)}</p>
       {review.data.customer_notes && <p>Istruzioni: {review.data.customer_notes}</p>}
       <p className="review-note"><Icon name="shield-check"/> La richiesta viene inviata solo dopo la conferma. Gli importi sono verificati dal sistema.</p><dl className="checkout-amounts"><div><dt>Valore del pacco</dt><dd>{money(review.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{money(review.shipping_price_cents)}</dd></div><div className="checkout-total"><dt>Totale finale</dt><dd>{money(review.total_cents)}</dd></div></dl>
       <p className="muted">Il totale somma il valore dichiarato e la spedizione. Questa conferma non esegue un pagamento e non attiva un contrassegno.</p>
-      <p className="muted">{review.data.shipping_type === 'external' ? 'Fuori regione' : 'Regionale'} · {review.quote.carrier_name} · {review.quote.reason} {review.quote.delivery_time} {review.quote.delivery_days_min && `Consegna prevista in ${review.quote.delivery_days_min}–${review.quote.delivery_days_max} giorni lavorativi dal ritiro, festività escluse dalla stima.`} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
+      <p className="muted">{review.data.shipping_type === 'external' ? 'Fuori regione' : 'Regionale'} · Rete EA-Express · {review.quote.reason} {review.quote.delivery_time} {review.quote.delivery_days_min && `Consegna prevista in ${review.quote.delivery_days_min}–${review.quote.delivery_days_max} giorni lavorativi dal ritiro, festività escluse dalla stima.`} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
       {!review.checkout_token && <p role="alert">Non possiamo confermare un costo affidabile. Controlla la destinazione o contatta EA Express per la tariffa.</p>}
       <Feedback error={error}/><div className="actions"><IconButton action="edit" label="Modifica richiesta" disabled={busy} onClick={()=>{setReview(null);setError(null);}} /><IconButton action="send" icon="send" label="Conferma richiesta" text loading={busy} disabled={!review.checkout_token || error?.status===409} onClick={confirm} /></div>
     </section>}
@@ -133,7 +132,7 @@ function OrderForm({ order, pickups }) {
             <span className="step">02</span> Punto di consegna
           </h2>
           <div className="form-grid">
-            <Field label="Tipo di spedizione"><select name="shipping_type" value={shippingType} onChange={event=>setShippingType(event.target.value)}><option value="regional">Regionale · rete EA Express</option><option value="external">Fuori regione · vettore esterno</option></select></Field>
+            <Field label="Tipo di spedizione"><select name="shipping_type" value={shippingType} onChange={event=>setShippingType(event.target.value)}><option value="regional">Regionale · Rete EA-Express</option><option value="external">Fuori regione · Rete EA-Express</option></select></Field>
             {field("recipient_name", "Nome destinatario", { maxLength: 150 })}
             {field("recipient_phone", "Telefono destinatario", {
               type: "tel",
@@ -144,23 +143,13 @@ function OrderForm({ order, pickups }) {
           <div className="form-grid">
             {field("delivery_address", "Indirizzo di consegna",{onChange:event=>setStreet(event.target.value)})}
             {field("delivery_zone","Zona / quartiere (facoltativo)",{required:false,maxLength:100,onChange:event=>setZone(event.target.value)})}
-            {field("delivery_city", "Città di consegna", { maxLength:100,onChange:event=>setCity(event.target.value) })}
+            {field("delivery_city", "Comune di consegna", { maxLength:100,onChange:event=>setCity(event.target.value) })}
             {field("delivery_street_number", "Numero civico", {maxLength:20})}
             {field("delivery_postal_code", "CAP consegna", {required:false,help:"Compilato automaticamente se il comune ha un solo CAP.",pattern:"[0-9]{5}",maxLength:5,inputMode:"numeric",onChange:event=>setPostal(event.target.value)})}
             {field("delivery_province", "Provincia", {onChange:event=>setProvince(event.target.value),required:shippingType==='external',maxLength:100})}
             {field("delivery_region", "Regione", {onChange:event=>setRegion(event.target.value),required:shippingType==='external',maxLength:100})}
-            {field(
-              "delivery_window",
-              "Preferenza oraria di consegna (facoltativa)",
-              {
-                required: false,
-                type: "time",
-                step: 60,
-                defaultValue: /^\d{2}:\d{2}$/.test(order?.delivery_window || "") ? order.delivery_window : "",
-                help: order?.delivery_window && !/^\d{2}:\d{2}$/.test(order.delivery_window) ? `Preferenza precedente: ${order.delivery_window}. Seleziona un orario per sostituirla.` : "Orario indicativo, da confermare con il corriere.",
-              },
-            )}
           </div>
+          <ShippingQuote province={province} region={region} onPostalResolved={resolvePostal} city={city} postal={postal} zone={zone} street={street} shippingType={shippingType}/>
         </section>
         <section className="panel"><h2><span className="step">03</span> Data e orario</h2>
           <div className="form-grid">
@@ -234,7 +223,7 @@ function OrderForm({ order, pickups }) {
           Controlla indirizzi, contatto e orario. Potrai modificare la richiesta
           fino alla presa in carico.
         </p>
-        <ShippingQuote province={province} region={region} onPostalResolved={resolvePostal} city={city} postal={postal} zone={zone} street={street} shippingType={shippingType}/><Feedback error={error} />
+        <Feedback error={error} />
         {order && error?.status === 409 && (
           <Link className="button secondary full" to={`${base}/${order.id}`}>
             Ricarica il dettaglio aggiornato

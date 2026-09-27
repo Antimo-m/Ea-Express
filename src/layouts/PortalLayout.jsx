@@ -14,7 +14,7 @@ const groups = [
     ['/shipments', 'box-seam', 'Spedizioni e storico'], ['/couriers', 'bicycle', 'Corrieri'],
     ['/messages', 'chat-left-text', 'Messaggi'],
   ]],
-  ['Amministrazione e contabilità', [['/statistics', 'bar-chart', 'Statistiche e spese']]],
+  ['Attività del negozio', [['/statistics', 'bar-chart', 'Statistiche']]],
   ['Configurazione commerciale', [['/rates', 'tags', 'Listini']]],
   ['Account e sistema', [['/profile', 'person-circle', 'Profilo e sicurezza'], ['/settings', 'sliders', 'Impostazioni'], ['/notifications', 'bell', 'Notifiche']]],
 ];
