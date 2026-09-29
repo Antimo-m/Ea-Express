@@ -9,6 +9,7 @@ import { Link, useNavigate, useParams } from "react-router";
 import { createOrder, getOrder, updateOrder, reviewOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
 import SenderFields from "../components/SenderFields";
+import SenderAddressPreference from "../components/SenderAddressPreference";
 import { useAuth } from "../hooks/useAuth";
 import { Header, Field, Feedback, State, Icon, Form } from "../components/UI";
 import { today, money } from "../utils/format";
@@ -41,6 +42,13 @@ function OrderForm({ order, pickups }) {
   const submitting = useRef(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [senderSelection, setSenderSelection] = useState(null);
+  function applySenderAddress(address) {
+    setSenderSelection({ identity: address || user, key: (senderSelection?.key || 0) + 1 });
+    for (const field of ["pickup_address", "pickup_city", "pickup_street_number", "pickup_postal_code"]) {
+      bookingForm.current.elements[field].value = address?.[field] || "";
+    }
+  }
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const base = pickups ? "/pickups" : "/shipments";
@@ -119,7 +127,8 @@ function OrderForm({ order, pickups }) {
           <h2>
             <span className="step">01</span> Punto di ritiro
           </h2>
-          <SenderFields identity={order || user} nameField="store_name" />
+          <SenderAddressPreference initial={order} formRef={bookingForm} onUse={applySenderAddress} />
+          <SenderFields key={senderSelection?.key || 0} identity={senderSelection?.identity || order || user} nameField="store_name" />
           <div className="form-grid">
             {field("pickup_address", "Indirizzo di ritiro")}
             {field("pickup_city", "Città di ritiro", { maxLength: 100 })}
