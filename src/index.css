@@ -2121,8 +2121,8 @@ textarea[aria-invalid="true"] {
   margin-bottom: 22px;
 }
 .auth-form .sender-selector label {
-  flex: 1;
-  white-space: nowrap;
+  flex: 1 1 160px;
+  white-space: normal;
   font-size: 12px;
 }
 .auth-form .form-grid > .field {
@@ -3903,4 +3903,23 @@ input, select, textarea { border-radius: var(--ea-radius-control); }
  .interactive-trend .chart-legend button { min-height:44px; }
  .interactive-plot .chart-tick { font-size:10px; }
  .chart-selector > span { grid-column:1/-1; }
+}
+
+/* Fieldsets have an intrinsic minimum width; allow the sender choices to wrap inside narrow forms. */
+.sender-fields, .sender-selector, .auth-form, .auth-form-wrap {
+  min-width: 0;
+}
+.sender-fields, .sender-selector { max-width: 100%; }
+.sender-selector { width: 100%; }
+.sender-selector label { flex: 1 1 140px; max-width: 100%; }
+.sender-selector label span { min-width: 0; overflow-wrap: anywhere; }
+.sender-selector input, .sender-selector i { flex-shrink: 0; }
+.label-total { break-inside: avoid; display: flex; flex-direction: column; gap: 5px; }
+.label-total strong { font-size: 22px; }
+@media print {
+  .parcel-label.document-a6 { line-height: 1.25; }
+  .parcel-label.document-a6 small { margin-bottom: 3px; }
+  .parcel-label.document-a6 section { padding: 4px 0; }
+  .parcel-label.document-a6 .label-total { gap: 2px; }
+  .parcel-label.document-a6 .label-total strong { font-size: 18px; }
 }

@@ -21,6 +21,8 @@ import NotificationsPage from "./pages/NotificationsPage";
 import LabelPage from "./pages/LabelPage";
 import RatesPage from "./pages/RatesPage";
 import StatisticsPage from "./pages/StatisticsPage";
+import PendingPage from "./pages/PendingPage";
+import PendingDetailPage from "./pages/PendingDetailPage";
 import ProfilePage from "./pages/ProfilePage";
 import "bootstrap-icons/font/bootstrap-icons.css";
 function Session() {
@@ -74,6 +76,8 @@ export default function App() {
                   path="messages/:id"
                   element={<OrderDetailPage messages />}
                 />
+                <Route path="pending" element={<PendingPage />} />
+                <Route path="pending/:id" element={<PendingDetailPage />} />
                 <Route path="couriers" element={<CouriersPage />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
