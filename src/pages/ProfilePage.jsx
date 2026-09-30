@@ -40,6 +40,7 @@ function AccountForm({ kind, user, onUpdate }) {
     } catch (error) {
       setError(error);
     } finally {
+      if (kind === "profile") form.elements.namedItem("current_password").value = "";
       setBusy(false);
     }
   }
@@ -66,6 +67,13 @@ function AccountForm({ kind, user, onUpdate }) {
             defaultValue={user.email}
             required
             autoComplete="email"
+          />
+          <Field
+            label="Password attuale (richiesta per cambiare email)"
+            name="current_password"
+            type="password"
+            autoComplete="current-password"
+            maxLength={72}
           />
         </>
       ) : kind === "password" ? (
