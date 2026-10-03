@@ -1,3 +1,4 @@
+import ThemeToggle from "../components/ThemeToggle";
 import IconButton from "../components/IconButton";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
@@ -140,7 +141,7 @@ export default function PortalLayout() {
             EA-Express <span>/</span> <strong>Portale clienti</strong>
           </span>
           <div className="topbar-actions">
-            <NotificationSound />
+            <ThemeToggle /><NotificationSound />
             <Link className="account" to="/profile">
               <span className="avatar">{initials(user.name)}</span>
               <span>
@@ -164,6 +165,13 @@ export default function PortalLayout() {
           <span>Ogni consegna, una connessione.</span>
         </footer>
       </div>
+      <nav className="portal-mobile-nav" aria-label="Navigazione rapida" inert={mobile && open}>
+        <NavLink to="/dashboard"><Icon name="house"/><span>Home</span></NavLink>
+        <NavLink to="/shipments"><Icon name="box-seam"/><span>Spedizioni</span></NavLink>
+        <Link to="/pickups/new" className="mobile-create" aria-label="Prenota un ritiro"><Icon name="plus-lg"/></Link>
+        <NavLink to="/pickups"><Icon name="calendar2-week"/><span>Ritiri</span></NavLink>
+        <NavLink to="/profile"><Icon name="person"/><span>Profilo</span></NavLink>
+      </nav>
     </div>
   );
 }

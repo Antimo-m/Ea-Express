@@ -1,6 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { attachFormPopovers } from '../services/form-popovers';
-import { cloneElement, useContext, useId } from "react";
+import { cloneElement, useContext, useEffect, useId, useRef } from "react";
 import { FormErrorsContext } from "../context/FormErrorsContext";
 import { Link } from "react-router";
 import { date, displayName } from "../utils/format";
@@ -53,10 +51,20 @@ export function Empty({
   );
 }
 export function Feedback({ error, success }) {
+  const errorRef = useRef(null);
+  const successRef = useRef(null);
+  useEffect(() => {
+    const messages = [errorRef.current, successRef.current].filter(Boolean);
+    messages.forEach(message => { message.hidden = false; });
+    const timer = setTimeout(() => {
+      messages.forEach(message => { message.hidden = true; });
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [error, success]);
   return (
     <>
       {error && (
-        <div role="alert" className="alert error">
+        <div ref={errorRef} role="alert" className="alert error">
           <Icon name="exclamation-circle" />
           <div>
             {error.message}
@@ -71,7 +79,7 @@ export function Feedback({ error, success }) {
         </div>
       )}
       {success && (
-        <div className="alert success" role="status">
+        <div ref={successRef} className="alert success" role="status">
           <Icon name="check-circle" />
           {success}
         </div>
@@ -112,8 +120,6 @@ export function Form({ errors, ...props }) {
   );
 }
 export function Field({ label, name, children, help, width, ...props }) {
-  const controlRoot = useRef(null);
-  useEffect(() => attachFormPopovers(controlRoot.current), []);
   const errors = useContext(FormErrorsContext);
   const id = useId();
   const fieldName = name || children?.props?.name;
@@ -139,7 +145,7 @@ export function Field({ label, name, children, help, width, ...props }) {
     "aria-describedby": described,
   };
   return (
-    <div ref={controlRoot} className={`field field-${size}`}>
+    <div className={`field field-${size}`}>
       <label htmlFor={id}>{label}</label>
       {children ? (
         cloneElement(children, accessibility)

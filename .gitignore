@@ -43,3 +43,7 @@ dist/
 /playwright-report/
 *.test.*
 *.spec.*
+
+!/tests/
+/tests/*
+!/tests/tracking.test.mjs

@@ -8,7 +8,7 @@ export default function Modal({ open, title, description, busy = false, danger =
     if (!open) return;
     const origin = document.activeElement;
     node.showModal();
-    node.querySelector('input, textarea, button')?.focus();
+    node.querySelector('input:not([type="hidden"]):not(.ea-picker-source):not(:disabled), .ea-picker-trigger:not(:disabled), textarea:not(:disabled), button:not(:disabled)')?.focus();
     const trap = event => {
       if (event.key !== 'Tab') return;
       const controls = [...node.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]')].filter(control => control.getClientRects().length);

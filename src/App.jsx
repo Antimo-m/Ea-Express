@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { attachFormPopovers } from './services/form-popovers';
 import {
   BrowserRouter,
   Routes,
@@ -34,6 +36,7 @@ function Protected() {
   return user ? <PortalLayout /> : <Navigate to="/login" replace />;
 }
 export default function App() {
+  useEffect(() => attachFormPopovers(document), []);
   return (
     <ErrorBoundary>
       <BrowserRouter>

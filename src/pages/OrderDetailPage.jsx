@@ -1,8 +1,9 @@
+import LiveTracking from "../components/LiveTracking";
 import IconButton from "../components/IconButton";
 import ConfirmDeleteModal from "../components/ConfirmDeleteModal";
 import { contentLabel } from "../utils/order-content";
 import { useState } from "react";
-import { Link, useLocation, useParams } from "react-router";
+import { useLocation, useParams } from "react-router";
 import { getOrder, cancelOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
 import { Header, State, Status, Feedback, Icon, Empty } from "../components/UI";
@@ -34,6 +35,7 @@ function Detail({ order, reload, pickups, messages }) {
       </Header>
       <Feedback success={success} />
 
+      {!messages && <div className="order-focus"><LiveTracking key={order.id} orderId={order.id}/><aside className="order-focus-summary"><span className="eyebrow">{order.reference}</span><Status order={order}/><h2>{order.recipient_name}</h2><p>{order.delivery_address} {order.delivery_street_number}, {order.delivery_city}</p><strong>{order.courier?.name || 'Rider da assegnare'}</strong>{order.estimated_at && <p>Arrivo stimato: {date(order.estimated_at, true)}</p>}<IconButton action="message" icon="chat-dots" label="Contatta il corriere" to={`/messages/${order.id}`} /></aside></div>}
       {!messages && (
         <div className="detail-grid">
           <div>
@@ -148,13 +150,7 @@ function Detail({ order, reload, pickups, messages }) {
                   </div>
                 )}
               </dl>
-              <Link
-                className="button secondary full"
-                to={`/messages/${order.id}`}
-              >
-                <Icon name="chat-dots" />
-                Contatta corriere
-              </Link>
+              <IconButton action="message" icon="chat-dots" label="Contatta il corriere" to={`/messages/${order.id}`} />
             </section>
             {order.customer_notes && (
               <section className="panel notes">

@@ -1,3 +1,4 @@
+import LiveTracking from "../components/LiveTracking";
 import IconButton from "../components/IconButton";
 import { Link } from "react-router";
 import { dashboard } from "../api/workspace";
@@ -72,6 +73,7 @@ export default function DashboardPage() {
                 <Icon name="arrow-right" />
               </Link>
             )}
+            {data.live_order && <div className="order-focus"><LiveTracking key={data.live_order.id} orderId={data.live_order.id}/><aside className="order-focus-summary"><span className="eyebrow">IN PRIMO PIANO</span><Status order={data.live_order}/><h2>{data.live_order.recipient_name}</h2><p>{data.live_order.delivery_address}, {data.live_order.delivery_city}</p><strong>{data.live_order.courier?.name || 'Rider da assegnare'}</strong><Link className="button" to={`/shipments/${data.live_order.id}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside></div>}
             <div className="dashboard-grid">
               <section className="panel flush">
                 <div className="section-heading">
