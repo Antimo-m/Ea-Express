@@ -170,21 +170,23 @@ export function Pagination({ meta, onPage }) {
   return (
     <nav className="pagination" aria-label="Paginazione">
       <button
-        className="button secondary"
+        className="icon-button"
+        aria-label="Pagina precedente"
         disabled={meta.current_page <= 1}
         onClick={() => onPage(meta.current_page - 1)}
       >
-        Precedente
+        <Icon name="arrow-left"/>
       </button>
       <span>
-        {meta.current_page} di {meta.last_page}
+        {meta.current_page} / {meta.last_page}
       </span>
       <button
-        className="button secondary"
+        className="icon-button"
+        aria-label="Pagina successiva"
         disabled={meta.current_page >= meta.last_page}
         onClick={() => onPage(meta.current_page + 1)}
       >
-        Successiva
+        <Icon name="arrow-right"/>
       </button>
     </nav>
   );
@@ -207,7 +209,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
         <span />
       </div>
       {orders.map((order) => (
-        <Link className="order-row" key={order.id} to={`${base}/${order.id}`}>
+        <Link className="order-row" key={order.slug} to={`${base}/${order.slug}`}>
           <div>
             <strong className="order-display-name">{displayName(order)}</strong>
             <small className="order-code" title={order.reference}>{order.reference}</small>
@@ -232,7 +234,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
               {order.pickup_city} <Icon name="arrow-right" />{" "}
               {order.delivery_city}
             </strong>
-            <span>{order.courier?.name || "In attesa di assegnazione"}</span>
+            <span>{order.rider?.name || "In attesa di assegnazione"}</span>
           </div>
           <div>
             <strong>{date(order.pickup_date)}</strong>

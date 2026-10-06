@@ -18,7 +18,6 @@ import DashboardPage from "./pages/DashboardPage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderFormPage from "./pages/OrderFormPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
-import CouriersPage from "./pages/CouriersPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import LabelPage from "./pages/LabelPage";
 import RatesPage from "./pages/RatesPage";
@@ -59,29 +58,28 @@ export default function App() {
               <Route element={<Protected />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="rates" element={<RatesPage/>}/><Route path="statistics" element={<StatisticsPage/>}/><Route path="dashboard" element={<DashboardPage />} />
-                <Route path="shipments/:id/label" element={<LabelPage />} />
+                <Route path="shipments/:slug/label" element={<LabelPage />} />
                 <Route path="shipments" element={<OrdersPage />} />
                 <Route path="shipments/new" element={<OrderFormPage />} />
-                <Route path="shipments/:id" element={<OrderDetailPage />} />
-                <Route path="shipments/:id/edit" element={<OrderFormPage />} />
+                <Route path="shipments/:slug" element={<OrderDetailPage />} />
+                <Route path="shipments/:slug/edit" element={<OrderFormPage />} />
                 <Route path="pickups" element={<OrdersPage pickups />} />
                 <Route path="pickups/new" element={<OrderFormPage pickups />} />
                 <Route
-                  path="pickups/:id"
+                  path="pickups/:slug"
                   element={<OrderDetailPage pickups />}
                 />
                 <Route
-                  path="pickups/:id/edit"
+                  path="pickups/:slug/edit"
                   element={<OrderFormPage pickups />}
                 />
                 <Route path="messages" element={<OrdersPage messages />} />
                 <Route
-                  path="messages/:id"
+                  path="messages/:slug"
                   element={<OrderDetailPage messages />}
                 />
                 <Route path="pending" element={<PendingPage />} />
-                <Route path="pending/:id" element={<PendingDetailPage />} />
-                <Route path="couriers" element={<CouriersPage />} />
+                <Route path="pending/:slug" element={<PendingDetailPage />} />
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="settings" element={<ProfilePage settings />} />

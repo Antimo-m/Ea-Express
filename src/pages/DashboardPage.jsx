@@ -73,7 +73,7 @@ export default function DashboardPage() {
                 <Icon name="arrow-right" />
               </Link>
             )}
-            {data.live_order && <div className="order-focus"><LiveTracking key={data.live_order.id} orderId={data.live_order.id}/><aside className="order-focus-summary"><span className="eyebrow">IN PRIMO PIANO</span><Status order={data.live_order}/><h2>{data.live_order.recipient_name}</h2><p>{data.live_order.delivery_address}, {data.live_order.delivery_city}</p><strong>{data.live_order.courier?.name || 'Rider da assegnare'}</strong><Link className="button" to={`/shipments/${data.live_order.id}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside></div>}
+            {data.live_order && <div className="order-focus"><LiveTracking key={data.live_order.slug} orderId={data.live_order.slug}/><aside className="order-focus-summary"><span className="eyebrow">IN PRIMO PIANO</span><Status order={data.live_order}/><h2>{data.live_order.recipient_name}</h2><p>{data.live_order.delivery_address}, {data.live_order.delivery_city}</p><strong>{data.live_order.rider?.name || 'Rider da assegnare'}</strong><Link className="button" to={`/shipments/${data.live_order.slug}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside></div>}
             <div className="dashboard-grid">
               <section className="panel flush">
                 <div className="section-heading">
@@ -98,8 +98,8 @@ export default function DashboardPage() {
                   data.next_pickups.map((order) => (
                     <Link
                       className="pickup-card"
-                      key={order.id}
-                      to={`/pickups/${order.id}`}
+                      key={order.slug}
+                      to={`/pickups/${order.slug}`}
                     >
                       <div className="pickup-date">
                         <strong>{date(order.pickup_date)}</strong>

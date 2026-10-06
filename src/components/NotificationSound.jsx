@@ -10,7 +10,7 @@ export default function NotificationSound() {
   const [state, setState] = useState({ enabled: false, unread: 0 });
   useEffect(() => {
     const current = createNotificationMonitor({
-      scope: `customer:${user.id}`,
+      scope: `customer:${user.slug}`,
       load: notificationFeed,
       onChange: (next) => setState((previous) => ({ ...previous, ...next })),
     });
@@ -18,7 +18,7 @@ export default function NotificationSound() {
     const update = () => current.refresh();
     window.addEventListener('ea:workspace-updated', update);
     return () => { current.dispose(); window.removeEventListener('ea:workspace-updated', update); };
-  }, [user.id]);
+  }, [user.slug]);
   return (
     <>
     <button

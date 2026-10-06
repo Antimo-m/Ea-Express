@@ -15,7 +15,7 @@ function Detail({ order, reload, pickups, messages }) {
   const [success, setSuccess] = useState(useLocation().state?.success || "");
   const base = pickups ? "/pickups" : "/shipments";
   async function cancel(data) {
-    await cancelOrder(order.id, { version: order.version, reason: data.get('reason') });
+    await cancelOrder(order.slug, { version: order.version, reason: data.get('reason') });
     setSuccess('Richiesta annullata.');
     reload();
   }
@@ -27,15 +27,15 @@ function Detail({ order, reload, pickups, messages }) {
         title={messages ? `Conversazione · ${displayName(order)}` : displayName(order)}
         description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city} · Destinatario: ${order.recipient_name}`}
       >
-        <IconButton action="print" label="Stampa etichetta" to={`/shipments/${order.id}/label`} />
+        <IconButton action="print" label="Stampa etichetta" to={`/shipments/${order.slug}/label`} />
         <Status order={order} /><span className="service-badge">{order.shipping_type === "external" ? "Fuori regione" : "Regionale"}</span>
         {order.can_edit && (
-          <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.id}/edit`} />
+          <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.slug}/edit`} />
         )}
       </Header>
       <Feedback success={success} />
 
-      {!messages && <div className="order-focus"><LiveTracking key={order.id} orderId={order.id}/><aside className="order-focus-summary"><span className="eyebrow">{order.reference}</span><Status order={order}/><h2>{order.recipient_name}</h2><p>{order.delivery_address} {order.delivery_street_number}, {order.delivery_city}</p><strong>{order.courier?.name || 'Rider da assegnare'}</strong>{order.estimated_at && <p>Arrivo stimato: {date(order.estimated_at, true)}</p>}<IconButton action="message" icon="chat-dots" label="Contatta il corriere" to={`/messages/${order.id}`} /></aside></div>}
+      {!messages && <div className="order-focus"><LiveTracking key={order.slug} orderId={order.slug}/><aside className="order-focus-summary"><span className="eyebrow">{order.reference}</span><Status order={order}/><h2>{order.recipient_name}</h2><p>{order.delivery_address} {order.delivery_street_number}, {order.delivery_city}</p><strong>{order.rider?.name || 'Rider da assegnare'}</strong>{order.estimated_at && <p>Arrivo stimato: {date(order.estimated_at, true)}</p>}<IconButton action="message" icon="chat-dots" label="Contatta il rider" to={`/messages/${order.slug}`} /></aside></div>}
       {!messages && (
         <div className="detail-grid">
           <div>
@@ -75,7 +75,7 @@ function Detail({ order, reload, pickups, messages }) {
               {order.events?.length ? (
                 <ol className="timeline">
                   {order.events.map((event) => (
-                    <li key={event.id}>
+                    <li key={event.slug}>
                       <span className="timeline-dot" />
                       <div>
                         <strong>{event.label}</strong>
@@ -116,8 +116,8 @@ function Detail({ order, reload, pickups, messages }) {
                   </dd>
                 </div>
                 <div>
-                  <dt>Corriere</dt>
-                  <dd>{order.courier?.name || "Da assegnare"}</dd>
+                  <dt>Rider</dt>
+                  <dd>{order.rider?.name || "Da assegnare"}</dd>
                 </div>
                 <div>
                   <dt>pacchi</dt>
@@ -150,7 +150,7 @@ function Detail({ order, reload, pickups, messages }) {
                   </div>
                 )}
               </dl>
-              <IconButton action="message" icon="chat-dots" label="Contatta il corriere" to={`/messages/${order.id}`} />
+              <IconButton action="message" icon="chat-dots" label="Contatta il rider" to={`/messages/${order.slug}`} />
             </section>
             {order.customer_notes && (
               <section className="panel notes">
@@ -170,18 +170,18 @@ function Detail({ order, reload, pickups, messages }) {
       )}
       {order.packages?.length > 0 && <section className="panel"><h2>I tuoi pacchi</h2>{order.packages.map((item, index) => <p key={index}><strong>Pacco {index + 1}</strong> · {item.weight_kg} kg · {item.length_cm} × {item.width_cm} × {item.height_cm} cm</p>)}</section>}
       <ShippingPrice order={order} reload={reload}/>
-      <MessageThread id={order.id} />
+      <MessageThread slug={order.slug} />
     </>
   );
 }
 export default function OrderDetailPage({ pickups = false, messages = false }) {
-  const { id } = useParams();
-  const resource = useApi(getOrder, { id }, true);
+  const { slug } = useParams();
+  const resource = useApi(getOrder, { slug }, true);
   return (
     <State resource={resource}>
       {(data) => (
         <Detail
-          key={id}
+          key={slug}
           order={data.data}
           reload={resource.reload}
           pickups={pickups}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import IconButton from '../components/IconButton';
+import FilterToolbar from '../components/FilterToolbar';
+import { useSearchParams } from 'react-router';
 import TrendChart from '../components/TrendChart';
 import { request, query } from '../api/client';
 import { useApi } from '../hooks/useApi';
@@ -9,15 +10,14 @@ const load = params => request(`/statistics${query(params)}`);
 const percentage = value => value === null ? 'Nessuna base di confronto' : `${value > 0 ? '+' : ''}${value}% sul periodo precedente`;
 export default function StatisticsPage() {
   const [selectedType,setSelectedType] = useState('regional');
-  const [filters,setFilters] = useState({period:'custom',date_basis:'activity',from:today().slice(0,8)+'01',to:today()});
+  const [params,setFilters] = useSearchParams();
+  const defaults = {from:today().slice(0,8)+'01',to:today()};
+  const filters = {...defaults,...Object.fromEntries(params),period:'custom',date_basis:'activity'};
   const resource = useApi(load,filters,true,30000);
   return <>
     <Header eyebrow="LA TUA ATTIVITÀ" title="Statistiche" description="Ricavi dalle consegne, volume di lavoro e crescita del tuo negozio."/>
-    <form key={`${filters.from}-${filters.to}`} className="statistics-filters" aria-label="Periodo delle statistiche" onSubmit={event => {event.preventDefault();setFilters({...Object.fromEntries(new FormData(event.currentTarget)),period:'custom',date_basis:'activity'});}}>
-      <Field name="from" label="Data iniziale" type="date" defaultValue={filters.from} required/>
-      <Field name="to" label="Data finale" type="date" defaultValue={filters.to} required/>
-      <IconButton action="search" label="Cerca nel periodo" type="submit"/>
-    </form>
+    <FilterToolbar key={params.toString()} label="Periodo delle statistiche" onApply={setFilters} onReset={() => setFilters({})} count={Number(filters.from !== defaults.from || filters.to !== defaults.to)}
+      primary={<><Field name="from" label="Data iniziale" type="date" defaultValue={filters.from} required/><Field name="to" label="Data finale" type="date" defaultValue={filters.to} required/></>}/>
     <State resource={resource}>{data => <>
       <div className="statistics-context"><p>Attività dal <strong>{chartDate(data.from)}</strong> al <strong>{chartDate(data.to)}</strong></p><span>Confronto: {chartDate(data.previous_from)} — {chartDate(data.previous_to)}</span></div>
       <section aria-label="Ricavi del negozio">

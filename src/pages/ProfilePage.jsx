@@ -120,7 +120,7 @@ function AccountForm({ kind, user, onUpdate }) {
           </label>
           <label className="preference">
             <span>
-              <strong>Messaggi del corriere</strong>
+              <strong>Messaggi del rider</strong>
               <small>Una notifica quando arriva un nuovo messaggio.</small>
             </span>
             <input
@@ -132,7 +132,7 @@ function AccountForm({ kind, user, onUpdate }) {
         </>
       )}
       <Feedback error={error} success={success} />
-      <IconButton action="edit" label={kind === "password" ? "Aggiorna password" : kind === "preferences" ? "Salva preferenze" : "Salva profilo"} type="submit" loading={busy} />
+      <IconButton action="confirm" label={kind === "password" ? "Aggiorna password" : kind === "preferences" ? "Salva preferenze" : "Salva profilo"} type="submit" loading={busy} />
     </Form>
   );
 }

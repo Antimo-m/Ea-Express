@@ -11,7 +11,7 @@ function Label({ order }) {
   return <>
     <div className="print-toolbar">
       <Header title="Documento di spedizione" description="Etichetta da applicare al pacco o ricevuta completa da conservare. La stampa include soltanto il documento.">
-        <IconButton action="back" to={`/shipments/${order.id}`} label="Torna alla spedizione" text />
+        <IconButton action="back" to={`/shipments/${order.slug}`} label="Torna alla spedizione" text />
         <IconButton action="print" label={format === 'a6' ? 'Stampa etichetta' : 'Stampa ricevuta'} onClick={() => window.print()} />
       </Header>
       <div className="form-grid">
@@ -26,7 +26,7 @@ function Label({ order }) {
       <section className="label-sender"><small>MITTENTE / RITIRARE DA</small><dl className="label-address"><div><dt>Nome mittente:</dt><dd>{order.store_name}</dd></div><div><dt>Indirizzo di ritiro:</dt><dd>{order.pickup_address} {order.pickup_street_number}</dd></div><div><dt>Città di ritiro:</dt><dd>{order.pickup_postal_code} {order.pickup_city}</dd></div></dl></section>
       <section className="label-destination"><small>DESTINATARIO / CONSEGNARE A</small><dl className="label-address"><div><dt>Nome destinatario:</dt><dd>{order.recipient_name}</dd></div><div><dt>Indirizzo di consegna:</dt><dd>{order.delivery_address} {order.delivery_street_number}</dd></div><div><dt>Comune di consegna:</dt><dd>{order.delivery_city}</dd></div><div><dt>CAP:</dt><dd>{order.delivery_postal_code || "Non indicato"}</dd></div><div><dt>Numero di cellulare:</dt><dd>{order.recipient_phone}</dd></div>{order.delivery_province && <div><dt>Provincia:</dt><dd>{order.delivery_province}</dd></div>}{order.delivery_region && <div><dt>Regione:</dt><dd>{order.delivery_region}</dd></div>}</dl></section>
       <section className="label-facts"><div><small>RITIRO PROGRAMMATO</small><strong>{date(order.pickup_date)}</strong><span>Orario: {order.pickup_from} – {order.pickup_to}</span></div><div><small>CARATTERISTICHE</small><strong>{order.package_type==='fragile'?'FRAGILE':order.package_type==='other'?order.package_description:'Standard'}</strong></div></section>
-      {format === 'a4' && <section className="receipt-details"><h3>Informazioni di consegna</h3><dl><div><dt>Stato al momento della stampa</dt><dd>{order.status_label}</dd></div><div><dt>Corriere</dt><dd>{order.courier?.name || 'Da assegnare'}</dd></div><div><dt>Contenuto</dt><dd>{contentLabel(order)}</dd></div><div><dt>Valore merce dichiarato</dt><dd>{order.parcel_value_cents == null ? 'Non dichiarato' : money(order.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{order.price_cents == null ? 'Tariffa da verificare' : money(order.price_cents)}</dd></div></dl>{order.customer_notes && <div className="receipt-instructions"><h3>Istruzioni per il corriere</h3><p>{order.customer_notes}</p></div>}</section>}
+      {format === 'a4' && <section className="receipt-details"><h3>Informazioni di consegna</h3><dl><div><dt>Stato al momento della stampa</dt><dd>{order.status_label}</dd></div><div><dt>Rider</dt><dd>{order.rider?.name || 'Da assegnare'}</dd></div><div><dt>Contenuto</dt><dd>{contentLabel(order)}</dd></div><div><dt>Valore merce dichiarato</dt><dd>{order.parcel_value_cents == null ? 'Non dichiarato' : money(order.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{order.price_cents == null ? 'Tariffa da verificare' : money(order.price_cents)}</dd></div></dl>{order.customer_notes && <div className="receipt-instructions"><h3>Istruzioni per il rider</h3><p>{order.customer_notes}</p></div>}</section>}
       <section className="label-service"><dl className="label-address"><div><dt>Contenuto:</dt><dd>{contentLabel(order)}</dd></div><div><dt>Servizio:</dt><dd>{order.shipping_type === 'external' ? 'Fuori regione' : 'Regionale'}</dd></div><div><dt>Rete:</dt><dd>EA-Express</dd></div>{order.carrier_tracking && <div><dt>Tracking spedizione:</dt><dd>{order.carrier_tracking}</dd></div>}</dl></section>
       <section className="label-total"><small>TOTALE FINALE · SPEDIZIONE INCLUSA</small><strong>{order.total_cents == null ? "Da confermare" : money(order.total_cents)}</strong></section>
       <footer>Conservare il codice per identificare la spedizione.{format === 'a4' && ' Documento operativo non fiscale.'}</footer>
@@ -34,7 +34,7 @@ function Label({ order }) {
   </>;
 }
 export default function LabelPage() {
-  const { id } = useParams();
-  const resource = useApi(getOrder, { id });
+  const { slug } = useParams();
+  const resource = useApi(getOrder, { slug });
   return <State resource={resource}>{data => <Label order={data.data} />}</State>;
 }

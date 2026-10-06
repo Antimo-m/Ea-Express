@@ -4,10 +4,10 @@ import { useApi } from "../hooks/useApi";
 import { Header, State, Empty } from "../components/UI";
 import { date, money } from "../utils/format";
 
-const loadPending = ({ id }) => request(`/pending/${id}`);
+const loadPending = ({ slug }) => request(`/pending/${slug}`);
 export default function PendingDetailPage() {
-  const { id } = useParams();
-  const resource = useApi(loadPending, { id }, false, 30000);
+  const { slug } = useParams();
+  const resource = useApi(loadPending, { slug }, false, 30000);
   return <>
     <Header title="Dettaglio sospeso" description="Consulta il saldo e lo storico dei pagamenti registrati da EA Express." />
     <Link to="/pending">Torna ai sospesi</Link>
@@ -26,7 +26,7 @@ export default function PendingDetailPage() {
         </dl>
       </article>
       <section className="panel"><h2>Storico pagamenti</h2>
-        {account.settlements.length ? account.settlements.map(payment => <div key={payment.id}>
+        {account.settlements.length ? account.settlements.map(payment => <div key={payment.slug}>
           <p><strong>{money(payment.amount_cents)}</strong> · {date(payment.created_at, true)}</p>
           {payment.updated_at !== payment.created_at && <p className="muted">Aggiornato il {date(payment.updated_at, true)}</p>}
         </div>) : <Empty title="Nessun pagamento registrato" text="Qui troverai i pagamenti registrati da EA Express." />}

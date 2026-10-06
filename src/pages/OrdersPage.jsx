@@ -1,3 +1,4 @@
+import FilterToolbar from "../components/FilterToolbar";
 import IconButton from "../components/IconButton";
 import { useSearchParams } from "react-router";
 import { listOrders } from "../api/shipments";
@@ -12,21 +13,13 @@ import {
 import { statuses } from "../utils/format";
 export default function OrdersPage({ pickups = false, messages = false }) {
   const [params, setParams] = useSearchParams();
-  const values = Object.fromEntries(params);
+  const values = Object.fromEntries([...params].filter(([key]) => ["q","status","from","to","shipping_type","sender_type","has_messages","page"].includes(key)));
   const resource = useApi(listOrders, {
     ...values,
     ...(pickups ? { kind: "pickup" } : {}),
     ...(messages ? { has_messages: values.has_messages || "0" } : {}),
   }, true);
   const base = pickups ? "/pickups" : messages ? "/messages" : "/shipments";
-  function filter(event) {
-    event.preventDefault();
-    setParams(
-      Object.fromEntries(
-        [...new FormData(event.currentTarget)].filter(([, value]) => value),
-      ),
-    );
-  }
   return (
     <>
       <Header
@@ -41,67 +34,24 @@ export default function OrdersPage({ pickups = false, messages = false }) {
           pickups
             ? "Organizza i ritiri ancora da effettuare."
             : messages
-              ? "Scegli una spedizione per leggere o inviare un messaggio al corriere."
+              ? "Scegli una spedizione per leggere o inviare un messaggio al rider."
               : "Ogni richiesta, dal tuo negozio a destinazione."
         }
       >
         <IconButton action="add" to={pickups ? "/pickups/new" : "/shipments/new"} label={pickups ? "Programma ritiro" : "Nuova spedizione"} />
       </Header>
       <section className="panel flush">
-        <form className="filters" onSubmit={filter} key={params.toString()}>
-          {values.courier && (
-            <input type="hidden" name="courier" value={values.courier} />
-          )}
-          {messages && (
-            <Field label="Conversazioni">
-              <select
-                name="has_messages"
-                defaultValue={values.has_messages || "0"}
-              >
-                <option value="0">Tutte le spedizioni</option>
-                <option value="1">Con messaggi</option>
-              </select>
-            </Field>
-          )}
-          <Field
-            label="Cerca"
-            name="q"
-            placeholder="Riferimento, destinatario, città"
-            defaultValue={values.q || ""}
-          />
-          <Field label="Servizio"><select name="shipping_type" defaultValue={values.shipping_type || ""}><option value="">Tutti</option><option value="regional">Regionali</option><option value="external">Fuori regione</option></select></Field><Field label="Tipo mittente"><select name="sender_type" defaultValue={values.sender_type || ""}><option value="">Tutti</option><option value="business">Attività commerciale</option><option value="private">Privato</option><option value="online_shop">Shop online</option></select></Field><Field label="Stato">
-            <select name="status" defaultValue={values.status || ""}>
-              <option value="">Tutti gli stati</option>
-              {Object.entries(statuses).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field
-            label="Ritiro dal"
-            name="from"
-            type="date"
-            defaultValue={values.from || ""}
-          />
-          <Field
-            label="Al"
-            name="to"
-            type="date"
-            defaultValue={values.to || ""}
-          />
-          <IconButton action="search" label="Filtra risultati" type="submit" />
-          {params.size > 0 && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => setParams({})}
-            >
-              Azzera
-            </button>
-          )}
-        </form>
+        <FilterToolbar key={params.toString()} count={Object.entries(values).filter(([key,value]) => key !== 'page' && key !== 'q' && value && !(key === 'has_messages' && value === '0')).length}
+          onApply={setParams} onReset={() => setParams({})}
+          search={<Field label="Cerca" name="q" placeholder="Cerca ordine, destinatario o città…" defaultValue={values.q || ""} maxLength={100} />}
+          primary={<Field label="Stato"><select name="status" defaultValue={values.status || ""}><option value="">Tutti gli stati</option>{Object.entries(statuses).map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></Field>}
+          secondary={<>
+            <Field label="Ritiro dal" name="from" type="date" defaultValue={values.from || ""}/>
+            <Field label="Al" name="to" type="date" defaultValue={values.to || ""}/>
+            <Field label="Servizio"><select name="shipping_type" defaultValue={values.shipping_type || ""}><option value="">Tutti</option><option value="regional">Regionali</option><option value="external">Fuori regione</option></select></Field>
+            <Field label="Tipo mittente"><select name="sender_type" defaultValue={values.sender_type || ""}><option value="">Tutti</option><option value="private">Privato</option><option value="business">Attività commerciale</option><option value="online_shop">Shop online</option></select></Field>
+            {messages && <Field label="Conversazioni"><select name="has_messages" defaultValue={values.has_messages || "0"}><option value="0">Tutte le spedizioni</option><option value="1">Con messaggi</option></select></Field>}
+          </>}/>
         <State resource={resource}>
           {(data) => (
             <>

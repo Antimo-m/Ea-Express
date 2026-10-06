@@ -4,9 +4,9 @@ import { listMessages, sendMessage, readMessages } from "../api/messages";
 import { useApi } from "../hooks/useApi";
 import { State, Feedback, Empty, Icon, Pagination } from "./UI";
 import { date } from "../utils/format";
-export default function MessageThread({ id }) {
+export default function MessageThread({ slug }) {
   const [page, setPage] = useState(1);
-  const resource = useApi(listMessages, { id, page }, true);
+  const resource = useApi(listMessages, { slug, page }, true);
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -19,13 +19,13 @@ export default function MessageThread({ id }) {
     const container = list.current;
     if (!container || !resource.data) return;
     if (nearEnd.current) container.scrollTop = container.scrollHeight;
-    return observeMessageReceipts(container, resource.data.data, (ids, state) => readMessages(id, ids, state), 'customer', setError);
-  }, [id, resource.data]);
+    return observeMessageReceipts(container, resource.data.data, (ids, state) => readMessages(slug, ids, state), 'customer', setError);
+  }, [slug, resource.data]);
   useEffect(() => {
-    const incoming = event => { if (event.detail.kind === 'messages' && event.detail.order_id === Number(id) && (!nearEnd.current || page !== 1)) setNewMessages(true); };
+    const incoming = event => { if (event.detail.kind === 'messages' && event.detail.order_slug === slug && (!nearEnd.current || page !== 1)) setNewMessages(true); };
     window.addEventListener('ea:workspace-updated', incoming);
     return () => window.removeEventListener('ea:workspace-updated', incoming);
-  }, [id, page]);
+  }, [slug, page]);
   async function submit(event) {
     event.preventDefault();
     if (!body.trim() || submitting.current) return;
@@ -34,7 +34,7 @@ export default function MessageThread({ id }) {
     setBusy(true);
     setError(null);
     try {
-      await sendMessage(id, body.trim(), submission.current.key);
+      await sendMessage(slug, body.trim(), submission.current.key);
       submission.current = null;
       setBody("");
       nearEnd.current = true;
@@ -52,7 +52,7 @@ export default function MessageThread({ id }) {
       <div className="section-heading">
         <div>
           <h2>
-            <Icon name="chat-left-text" /> In contatto con il corriere
+            <Icon name="chat-left-text" /> In contatto con il rider
           </h2>
           <p className="muted">
             Una conversazione dedicata a questa spedizione. Il pagamento è confermato soltanto dalla registrazione dell’incasso nel gestionale.
@@ -76,11 +76,11 @@ export default function MessageThread({ id }) {
                 [...data.data].reverse().map((message) => (
                   <article
                     className={`message ${message.sender === "customer" ? "outgoing" : ""}`}
-                    key={message.id}
-                    data-message-id={message.id}
+                    key={message.slug}
+                    data-message-id={message.slug}
                   >
                     <strong>
-                      {message.sender === "customer" ? "Tu" : "Corriere"}
+                      {message.sender === "customer" ? "Tu" : "Rider"}
                     </strong>
                     <p>{message.body}</p>
                     <small>
@@ -104,7 +104,7 @@ export default function MessageThread({ id }) {
       <Feedback error={error} />
       <form className="message-compose" onSubmit={submit}>
         <label className="sr-only" htmlFor="message-body">
-          Messaggio al corriere
+          Messaggio al rider
         </label>
         <textarea
           id="message-body"

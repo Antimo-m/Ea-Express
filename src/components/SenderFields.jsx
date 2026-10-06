@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Field, Icon } from "./UI";
 export default function SenderFields({ identity = {}, nameField = "name" }) {
-  const [type, setType] = useState(identity.sender_type || "business");
+  const [type, setType] = useState(identity.sender_type || identity.customer_type || "business");
   const [senderName, setSenderName] = useState(identity.store_name || identity.name || "");
   const suggestions = useId();
   const [businessType, setBusinessType] = useState(
@@ -13,10 +13,10 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
   return (
     <div className="sender-fields">
       <fieldset className="sender-selector">
-        <legend>Chi spedisce?</legend>
+        <legend>Tipo mittente</legend>
         {[
-          ["business", "shop", "Attività commerciale"],
           ["private", "person", "Privato"],
+          ["business", "shop", "Attività commerciale"],
           ["online_shop", "bag", "Shop online"],
         ].map(([value, icon, label]) => (
           <label key={value} className={type === value ? "selected" : ""}>
@@ -25,7 +25,7 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
               name="sender_type"
               value={value}
               checked={type === value}
-              onChange={() => { setType(value); setSenderName(""); }}
+              onChange={() => setType(value)}
             />
             <Icon name={icon} />
             <span>{label}</span>
@@ -36,6 +36,7 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
         label={
           type === "private" ? "Nome e cognome del mittente" : "Nome attività"
         }
+        width={nameField === "store_name" ? "name" : undefined}
         name={nameField}
         value={senderName}
         onChange={event => setSenderName(event.target.value)}
@@ -44,16 +45,17 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
         required
         autoComplete={type === "private" ? "name" : "organization"}
       />
-      {type !== "private" && (
-        <div className="form-grid">
+      {type === "business" && (
+        <div className={nameField === "store_name" ? "booking-grid booking-business" : "form-grid"}>
           <Field
-            label="Tipologia di attività"
+            label="Tipologia attività"
+            width={nameField === "store_name" ? "business" : undefined}
             name="business_type"
             value={businessType}
             onChange={(event) => setBusinessType(event.target.value)}
             maxLength={100}
             list={suggestions}
-            placeholder="Es. fiorista, artigiano, e-commerce"
+            placeholder="Scegli o scrivi liberamente"
             help="Scegli un suggerimento oppure scrivi liberamente."
           />
           <datalist id={suggestions}>
@@ -70,6 +72,7 @@ export default function SenderFields({ identity = {}, nameField = "name" }) {
           </datalist>
           <Field
             label="Di cosa ti occupi? (facoltativo)"
+            width={nameField === "store_name" ? "description" : undefined}
             name="business_description"
             value={description}
             onChange={(event) => setDescription(event.target.value)}

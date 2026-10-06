@@ -12,7 +12,7 @@ import { initials } from "../utils/format";
 const groups = [
   ['Operatività', [
     ['/dashboard', 'grid-1x2', 'Panoramica'], ['/pickups', 'calendar2-week', 'Ritiri'],
-    ['/shipments', 'box-seam', 'Spedizioni e storico'], ['/couriers', 'bicycle', 'Corrieri'],
+    ['/shipments', 'box-seam', 'Spedizioni e storico'],
     ['/messages', 'chat-left-text', 'Messaggi'],
   ]],
   ['Attività del negozio', [['/statistics', 'bar-chart', 'Statistiche'], ['/pending', 'hourglass-split', 'Sospesi']]],
@@ -21,7 +21,7 @@ const groups = [
 ];
 export default function PortalLayout() {
   const { user, logout } = useAuth();
-  useEffect(() => connectWorkspace(request), [user.id]);
+  useEffect(() => connectWorkspace(request), [user.slug]);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);

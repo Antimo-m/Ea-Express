@@ -20,7 +20,7 @@ export function useApi(loader, params = {}, realtime = false, refreshInterval = 
     if (!realtime) return;
     const update = (event) => {
       const params = JSON.parse(key);
-      if (params.id && event.detail.order_id && Number(params.id) !== event.detail.order_id) return;
+      if (params.slug && event.detail.order_slug && String(params.slug) !== event.detail.order_slug) return;
       setRevision(value => value + 1);
     };
     window.addEventListener('ea:workspace-updated', update);

@@ -16,9 +16,9 @@ import {
   Pagination,
 } from "../components/UI";
 import { date } from "../utils/format";
-function GroupHistory({ id, onRead, busy }) {
+function GroupHistory({ slug, onRead, busy }) {
   const [page, setPage] = useState(1);
-  const resource = useApi(notificationHistory, { id, page }, true);
+  const resource = useApi(notificationHistory, { slug, page }, true);
   return (
     <div className="notification-history">
       <State resource={resource}>
@@ -80,7 +80,7 @@ function NotificationGroup({ group, onRead, busy }) {
         )}
         <Icon name="chevron-down" />
       </summary>
-      {open && <GroupHistory id={group.order_id} onRead={onRead} busy={busy} />}
+      {open && <GroupHistory slug={group.order_slug} onRead={onRead} busy={busy} />}
     </details>
   );
 }
@@ -101,7 +101,7 @@ export default function NotificationsPage() {
         await readNotification(item.id);
         window.dispatchEvent(new CustomEvent('ea:workspace-updated', { detail: { kind: 'notifications' } }));
         navigate(
-          `/${item.is_message ? "messages" : "shipments"}/${item.order_id}`,
+          `/${item.is_message ? "messages" : "shipments"}/${item.order_slug}`,
         );
       } else {
         await readAllNotifications();
@@ -136,7 +136,7 @@ export default function NotificationsPage() {
             {data.data.length ? (
               data.data.map((group) => (
                 <NotificationGroup
-                  key={group.order_id}
+                  key={group.order_slug}
                   group={group}
                   onRead={read}
                   busy={busy}

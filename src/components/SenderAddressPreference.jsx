@@ -1,3 +1,4 @@
+import IconButton from "./IconButton";
 import { useEffect, useState } from "react";
 import { request } from "../api/client";
 import { Feedback } from "./UI";
@@ -72,7 +73,7 @@ export default function SenderAddressPreference({ formRef, onUse, initial }) {
       </div></>}
     {!saved && ready && <p>Compila il mittente qui sotto. Potrai salvarlo per i prossimi ritiri.</p>}
     {ready && complete && !matches && <div><p>{saved ? "Vuoi aggiornare il preferito con il mittente inserito?" : "Vuoi salvare questo indirizzo come indirizzo preferito?"}</p><button type="button" className="button secondary" disabled={busy || error?.status === 409} onClick={save}>{saved ? "Salva modifiche al preferito" : "Salva come indirizzo preferito"}</button><p className="muted">Facoltativo. Vengono salvati solo i dati del mittente.</p></div>}
-    {confirmDelete && <div role="group" aria-label="Conferma eliminazione preferito"><p>Eliminare il preferito? Gli ordini precedenti non cambieranno.</p><div className="actions"><button type="button" className="button danger" disabled={busy} onClick={remove}>Conferma eliminazione</button><button type="button" className="button secondary" disabled={busy} onClick={() => setConfirmDelete(false)}>Mantieni preferito</button></div></div>}
+    {confirmDelete && <div role="group" aria-label="Conferma eliminazione preferito"><p>Eliminare il preferito? Gli ordini precedenti non cambieranno.</p><div className="actions"><IconButton action="confirm" label="Conferma eliminazione" loading={busy} onClick={remove} /><button type="button" className="button secondary" disabled={busy} onClick={() => setConfirmDelete(false)}>Mantieni preferito</button></div></div>}
     <Feedback error={error} />
     {error && <button type="button" className="button secondary" disabled={busy} onClick={reload}>Ricarica preferito</button>}
     {message && <p role="status">{message}</p>}

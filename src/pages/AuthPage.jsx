@@ -72,7 +72,7 @@ export default function AuthPage({ mode = "login" }) {
             <em>insieme.</em>
           </h1>
           <p>
-            Ritiri, spedizioni e corrieri.
+            Ritiri, spedizioni e rider.
             <br />
             Tutto il tuo lavoro, in un unico spazio.
           </p>

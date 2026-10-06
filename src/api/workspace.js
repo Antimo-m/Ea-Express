@@ -1,6 +1,5 @@
 import { request, query } from "./client";
 export const dashboard = () => request("/dashboard");
-export const couriers = () => request("/couriers");
 export const notifications = (params) =>
   request(`/notifications${query(params)}`);
 export const readNotification = (id) =>
@@ -9,5 +8,5 @@ export const readAllNotifications = () =>
   request("/notifications/read-all", { method: "PATCH" });
 
 export const notificationFeed = () => request("/notifications/feed");
-export const notificationHistory = ({ id, page }) =>
-  request(`/notifications/orders/${id}${query({ page })}`);
+export const notificationHistory = ({ slug, page }) =>
+  request(`/notifications/orders/${slug}${query({ page })}`);

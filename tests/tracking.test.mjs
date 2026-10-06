@@ -34,14 +34,14 @@ test('Il canale GPS aggiorna solo il proprio ordine e rimuove dati dopo una revo
   const tick = () => new Promise(resolve => setImmediate(resolve));
   try {
     await tick();
-    window.dispatchEvent(new CustomEvent('ea:rider-location', { detail: { order_id: 8 } }));
+    window.dispatchEvent(new CustomEvent('ea:rider-location', { detail: { order_slug: 8 } }));
     await tick();
     assert.equal(calls, 1);
-    window.dispatchEvent(new CustomEvent('ea:rider-location', { detail: { order_id: 7 } }));
+    window.dispatchEvent(new CustomEvent('ea:rider-location', { detail: { order_slug: 7 } }));
     await tick();
     assert.equal(calls, 2);
     assert.equal(value, null);
-    window.dispatchEvent(new CustomEvent('ea:rider-location', { detail: { order_id: 7 } }));
+    window.dispatchEvent(new CustomEvent('ea:rider-location', { detail: { order_slug: 7 } }));
     await tick();
     assert.equal(calls, 2);
   } finally { stop(); globalThis.window = previousWindow; globalThis.document = previousDocument; }
