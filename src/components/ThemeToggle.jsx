@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Icon } from './UI';
 export default function ThemeToggle() {
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('ea:theme') || 'dark'; } catch { return 'dark'; }
+    try { return localStorage.getItem('ea:theme') === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
   });
   useEffect(() => {
     document.documentElement.dataset.eaTheme = theme;

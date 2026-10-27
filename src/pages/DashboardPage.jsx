@@ -1,4 +1,5 @@
-import LiveTracking from "../components/LiveTracking";
+import MetricTile from '../components/MetricTile';
+import DataPanel from '../components/DataPanel';
 import IconButton from "../components/IconButton";
 import { Link } from "react-router";
 import { dashboard } from "../api/workspace";
@@ -19,15 +20,15 @@ export default function DashboardPage() {
   return (
     <>
       <Header
-        eyebrow="TUTTO PRONTO PER PARTIRE"
+        eyebrow="EA-EXPRESS · IL TUO NEGOZIO"
         title={`Ciao, ${user.name}.`}
         description="Richieste, ritiri e consegne: le tue priorità a colpo d’occhio."
       />
-      <section className="dashboard-actions"><div><h2>Il prossimo ritiro parte da qui</h2><p>Prepara la richiesta e verifica il totale prima di confermare.</p></div><div className="actions"><IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text /><Link to="/rates" className="button secondary"><Icon name="geo-alt"/> Consulta le tariffe</Link></div></section>
+      <section className="dashboard-actions" aria-labelledby="booking-title"><div><span className="eyebrow">01 / PRENOTAZIONE</span><h2 id="booking-title">Organizza il prossimo ritiro</h2><p>Indica dove ritirare e consegnare. Controlla il totale prima di confermare.</p></div><div className="actions"><IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text /><Link to="/rates" className="button secondary"><Icon name="geo-alt"/> Consulta le tariffe</Link></div></section>
       <State resource={resource}>
         {(data) => (
           <>
-            <section className="metrics" aria-label="Riepilogo operativo">
+            <section className="portal-metric-grid" aria-label="Riepilogo operativo">
               {[
                 [
                   "Spedizioni attive",
@@ -54,16 +55,7 @@ export default function DashboardPage() {
                   "/shipments",
                 ],
               ].map(([label, value, icon, to]) => (
-                <Link className="metric" to={to} key={label}>
-                  <span className="metric-icon">
-                    <Icon name={icon} />
-                  </span>
-                  <span>{label}</span>
-                  <strong>
-                    {value}
-                    <Icon name="arrow-up-right" />
-                  </strong>
-                </Link>
+                <MetricTile key={label} label={label} value={value} icon={icon} to={to} tone={label === 'Richiedono attenzione' && value > 0 ? 'attention' : 'neutral'} />
               ))}
             </section>
             {data.metrics.unread > 0 && (
@@ -73,22 +65,11 @@ export default function DashboardPage() {
                 <Icon name="arrow-right" />
               </Link>
             )}
-            {data.live_order && <div className="order-focus"><LiveTracking key={data.live_order.slug} orderId={data.live_order.slug}/><aside className="order-focus-summary"><span className="eyebrow">IN PRIMO PIANO</span><Status order={data.live_order}/><h2>{data.live_order.recipient_name}</h2><p>{data.live_order.delivery_address}, {data.live_order.delivery_city}</p><strong>{data.live_order.rider?.name || 'Rider da assegnare'}</strong><Link className="button" to={`/shipments/${data.live_order.slug}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside></div>}
+            {data.live_order && <aside className="order-focus-summary" aria-label="Spedizione in primo piano"><div><span className="eyebrow">IN PRIMO PIANO</span><h2>{data.live_order.recipient_name}</h2><p>{data.live_order.delivery_address}, {data.live_order.delivery_city}</p></div><div><Status order={data.live_order}/><p>{data.live_order.rider?.name || 'Rider da assegnare'}</p></div><Link className="button secondary" to={`/shipments/${data.live_order.slug}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside>}
             <div className="dashboard-grid">
-              <section className="panel flush">
-                <div className="section-heading">
-                  <div>
-                    <h2>Spedizioni recenti</h2>
-                    <p className="muted">
-                      Le ultime richieste e il loro stato.
-                    </p>
-                  </div>
-                  <Link to="/shipments">
-                    Vedi tutte <Icon name="arrow-right" />
-                  </Link>
-                </div>
+              <DataPanel title="Spedizioni recenti" description="Le ultime richieste e il loro stato." className="data-panel--flush" actions={<Link to="/shipments">Vedi tutte <Icon name="arrow-right" /></Link>}>
                 <OrderList orders={data.recent} />
-              </section>
+              </DataPanel>
               <section className="panel pickup-panel">
                 <div className="section-heading">
                   <h2>I prossimi ritiri</h2>

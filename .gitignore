@@ -24,6 +24,12 @@ dist/
 
 # Materiale riservato e dati operativi.
 /docs/
+*.txt
+!/public/ibmplexmono-OFL.txt
+!/public/ibmplexsans-OFL.txt
+!/public/source-sans-3-OFL.txt
+!/public/spacegrotesk-OFL.txt
+!/public/robots.txt
 *.csv
 *.pdf
 *.docx
@@ -47,3 +53,5 @@ dist/
 !/tests/
 /tests/*
 !/tests/tracking.test.mjs
+
+!/tests/portal.browser.test.mjs

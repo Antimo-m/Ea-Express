@@ -4,6 +4,7 @@ const icons = { message: 'chat-dots', confirm: 'check-lg', back: 'arrow-left', s
 export default function IconButton({ action = 'neutral', icon, label, to, loading = false, disabled = false, text = false, className = '', type = 'button', ...props }) {
   if (icon === 'arrow-left' && action === 'neutral') action = 'back';
   if (action === 'confirm') { icon = 'check-lg'; text = false; }
+  if (action === 'add') { icon = 'plus-lg'; text = false; }
   if (action === 'message') text = false;
   if (action === 'edit' && (!icon || ['pencil', 'pencil-square'].includes(icon))) text = false;
   const content = <><span className="action-icon" aria-hidden="true"><Icon name={icon || icons[action] || 'three-dots'} />{action === 'print-multiple' && <span className="print-plus">+</span>}</span>{text && <span>{label}</span>}</>;

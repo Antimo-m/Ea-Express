@@ -47,6 +47,7 @@ function AccountForm({ kind, user, onUpdate }) {
   return (
     <Form
       errors={error?.errors}
+      id={kind === "profile" ? "profile-data" : kind === "password" ? "profile-security" : "profile-preferences"}
       className="panel account-form"
       onSubmit={submit}
     >
@@ -148,6 +149,7 @@ export default function ProfilePage({ settings = false }) {
             : "Aggiorna i tuoi dati e la sicurezza dell’account."
         }
       />
+      {!settings && <nav className="account-section-nav" aria-label="Sezioni del profilo"><a className="button secondary" href="#profile-data">Dati del mittente</a><a className="button secondary" href="#profile-security">Password e sicurezza</a></nav>}
       <div className="profile-grid">
         {settings ? (
           <AccountForm kind="preferences" user={user} onUpdate={setUser} />

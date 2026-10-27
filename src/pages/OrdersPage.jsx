@@ -1,3 +1,4 @@
+import DataPanel from "../components/DataPanel";
 import FilterToolbar from "../components/FilterToolbar";
 import IconButton from "../components/IconButton";
 import { useSearchParams } from "react-router";
@@ -40,7 +41,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
       >
         <IconButton action="add" to={pickups ? "/pickups/new" : "/shipments/new"} label={pickups ? "Programma ritiro" : "Nuova spedizione"} />
       </Header>
-      <section className="panel flush">
+      <DataPanel title={messages ? "Conversazioni per spedizione" : pickups ? "Ritiri programmati" : "Registro spedizioni"} description={messages ? "Apri una spedizione per ritrovare il confronto con il rider." : "Stato, percorso e fascia di ritiro per ogni richiesta."} className="orders-register data-panel--flush" count={resource.data?.meta?.total}>
         <FilterToolbar key={params.toString()} count={Object.entries(values).filter(([key,value]) => key !== 'page' && key !== 'q' && value && !(key === 'has_messages' && value === '0')).length}
           onApply={setParams} onReset={() => setParams({})}
           search={<Field label="Cerca" name="q" placeholder="Cerca ordine, destinatario o città…" defaultValue={values.q || ""} maxLength={100} />}
@@ -63,7 +64,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
             </>
           )}
         </State>
-      </section>
+      </DataPanel>
     </>
   );
 }

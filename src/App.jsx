@@ -47,14 +47,6 @@ export default function App() {
                 path="/register"
                 element={<AuthPage key="register" mode="register" />}
               />
-              <Route
-                path="/forgot-password"
-                element={<AuthPage key="forgot" mode="forgot" />}
-              />
-              <Route
-                path="/reset-password"
-                element={<AuthPage key="reset" mode="reset" />}
-              />
               <Route element={<Protected />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="rates" element={<RatesPage/>}/><Route path="statistics" element={<StatisticsPage/>}/><Route path="dashboard" element={<DashboardPage />} />

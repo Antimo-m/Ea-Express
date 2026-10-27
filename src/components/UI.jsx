@@ -28,8 +28,9 @@ export function Header({
 }
 export function Status({ order }) {
   return (
-    <span className={`status status-${order.status}`}>
-      {order.status_label}
+    <span className="order-statuses">
+      <span className={`status status-${order.status}`}>{order.status_label}</span>
+      {order.delay?.reported && <span className="status status-delay" title={order.delay.reported_at ? `Segnalato il ${date(order.delay.reported_at, true)}` : undefined}><Icon name="exclamation-triangle" /> {order.delay.label || "Ritardo segnalato"}</span>}
     </span>
   );
 }
@@ -54,7 +55,7 @@ export function Feedback({ error, success }) {
   const errorRef = useRef(null);
   const successRef = useRef(null);
   useEffect(() => {
-    const messages = [errorRef.current, successRef.current].filter(Boolean);
+    const messages = [successRef.current].filter(Boolean);
     messages.forEach(message => { message.hidden = false; });
     const timer = setTimeout(() => {
       messages.forEach(message => { message.hidden = true; });
@@ -209,7 +210,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
         <span />
       </div>
       {orders.map((order) => (
-        <Link className="order-row" key={order.slug} to={`${base}/${order.slug}`}>
+        <Link className={`order-row ${order.delay?.active ? "has-delay" : ""}`} key={order.slug} to={`${base}/${order.slug}`}>
           <div>
             <strong className="order-display-name">{displayName(order)}</strong>
             <small className="order-code" title={order.reference}>{order.reference}</small>

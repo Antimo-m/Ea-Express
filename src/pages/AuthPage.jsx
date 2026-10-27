@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
-import { forgotPassword, resetPassword } from "../api/auth";
+import IconButton from "../components/IconButton";
 import SenderFields from "../components/SenderFields";
+import Brand from "../components/Brand";
 import { Field, Feedback, Icon, Form } from "../components/UI";
 export default function AuthPage({ mode = "login" }) {
   const { user, authenticate } = useAuth();
-  const [params] = useSearchParams();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState("");
   const sending = useRef(false);
   const [retryAt, setRetryAt] = useState(0);
   const [now, setNow] = useState(Date.now);
@@ -20,33 +19,19 @@ export default function AuthPage({ mode = "login" }) {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [retryAt]);
-  const create = mode === "register",
-    forgot = mode === "forgot",
-    reset = mode === "reset";
-  if (user && !reset) return <Navigate to="/dashboard" replace />;
+  const create = mode === "register";
+  if (user) return <Navigate to="/dashboard" replace />;
   async function submit(event) {
     event.preventDefault();
     if (sending.current || Date.now() < retryAt) return;
     sending.current = true;
     setBusy(true);
     setError(null);
-    setSuccess("");
     const data = Object.fromEntries(new FormData(event.currentTarget));
     data.email = data.email.toLowerCase().trim();
     try {
-      if (forgot) {
-        const result = await forgotPassword(data);
-        setSuccess(
-          result.message ||
-            "Se l’account è disponibile, riceverai le istruzioni per recuperare la password.",
-        );
-      } else if (reset) {
-        await resetPassword({ ...data, token: params.get("token") });
-        setSuccess("Password aggiornata. Puoi accedere con la nuova password.");
-      } else {
-        await authenticate(data, create);
-        navigate("/dashboard", { replace: true });
-      }
+      await authenticate(data, create);
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       setError(error);
       if (error.status === 429) { setNow(Date.now()); setRetryAt(Date.now() + (error.retryAfter || 60) * 1000); }
@@ -59,17 +44,16 @@ export default function AuthPage({ mode = "login" }) {
     <div className="auth-shell">
       <section className="auth-story">
         <Link to="/login" className="brand">
-          <img className="brand-logo" src="/brand.svg" alt="EA Express" width="155" height="83"/>
-          <span>EA-Express</span>
+          <Brand />
         </Link>
         <div>
-          <p className="eyebrow">DAL TUO NEGOZIO. A DESTINAZIONE.</p>
+          <p className="eyebrow">EA-EXPRESS / PORTALE CLIENTI</p>
           <h1>
-            Il prossimo passo
+            Il tuo prossimo
             <br />
-            lo facciamo
+            ritiro.
             <br />
-            <em>insieme.</em>
+            <em>Sotto controllo.</em>
           </h1>
           <p>
             Ritiri, spedizioni e rider.
@@ -94,26 +78,15 @@ export default function AuthPage({ mode = "login" }) {
       </section>
       <section className="auth-form-wrap">
         <div className="auth-form">
+          <Link className="auth-mobile-brand" to="/login"><Brand caption="PORTALE CLIENTI" /></Link>
           <p className="eyebrow">BENVENUTO IN EA-EXPRESS</p>
           <h2>
-            {create
-              ? "Facciamo strada."
-              : forgot
-                ? "Recupera l’accesso"
-                : reset
-                  ? "Scegli una nuova password"
-                  : "Bentornato."}
+            {create ? "Facciamo strada." : "Bentornato."}
           </h2>
           <p className="muted">
-            {create
-              ? "Spedisci come attività o privato, da un unico account."
-              : forgot
-                ? "Inserisci l’email del tuo account cliente."
-                : reset
-                  ? "Usa almeno 12 caratteri per proteggere il tuo account."
-                  : "Accedi e dai il via alla tua giornata."}
+            {create ? "Spedisci come attività o privato, da un unico account." : "Accedi e dai il via alla tua giornata."}
           </p>
-          <Feedback error={error} success={success} />
+          <Feedback error={error} />
           <Form errors={error?.errors} onSubmit={submit}>
             {create && <SenderFields />}
             <Field
@@ -123,21 +96,16 @@ export default function AuthPage({ mode = "login" }) {
               autoComplete="username"
               required
               maxLength={255}
-              defaultValue={reset ? params.get("email") || "" : ""}
             />
-            {!forgot && (
-              <Field
-                label="Password"
-                name="password"
-                type="password"
-                autoComplete={
-                  create || reset ? "new-password" : "current-password"
-                }
-                minLength={create || reset ? 12 : undefined}
-                required
-              />
-            )}
-            {(create || reset) && (
+            <Field
+              label="Password"
+              name="password"
+              type="password"
+              autoComplete={create ? "new-password" : "current-password"}
+              minLength={create ? 12 : undefined}
+              required
+            />
+            {create && (
               <Field
                 label="Conferma password"
                 name="password_confirmation"
@@ -147,26 +115,7 @@ export default function AuthPage({ mode = "login" }) {
                 required
               />
             )}
-            {mode === "login" && (
-              <Link className="form-link" to="/forgot-password">
-                Password dimenticata?
-              </Link>
-            )}
-            <button
-              className={`button full ${create ? "auth-create" : reset ? "auth-edit" : ""}`}
-              disabled={busy || remaining > 0 || (reset && !params.get("token"))}
-            >
-              {busy
-                ? "Attendi…"
-                : create
-                  ? "Crea account cliente"
-                  : forgot
-                    ? "Invia istruzioni"
-                    : reset
-                      ? "Aggiorna password"
-                      : "Accedi al tuo spazio"}
-              <Icon name={create ? "plus-lg" : reset ? "pencil" : forgot ? "envelope" : "arrow-right"} />
-            </button>
+            {create ? <IconButton action="add" type="submit" label="Crea account cliente" loading={busy} disabled={remaining > 0} /> : <button className="button full" disabled={busy || remaining > 0}>{busy ? "Attendi…" : "Accedi al tuo spazio"}<Icon name="arrow-right" /></button>}
             {remaining > 0 && <p className="muted" role="status">Puoi riprovare tra {Math.ceil(remaining / 60)} minuti.</p>}
           </Form>
           <p className="auth-switch">

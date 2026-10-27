@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-const query = "(max-width: 760px)";
+const query = "(max-width: 767px)";
 function subscribe(callback) {
   const media = window.matchMedia(query);
   media.addEventListener("change", callback);

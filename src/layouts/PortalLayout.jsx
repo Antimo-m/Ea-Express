@@ -1,4 +1,5 @@
 import ThemeToggle from "../components/ThemeToggle";
+import Brand from "../components/Brand";
 import IconButton from "../components/IconButton";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
@@ -30,7 +31,7 @@ export default function PortalLayout() {
   const mobile = useMobile();
   const location = useLocation();
   useEffect(() => {
-    document.title = "EA-Express · Portale clienti";
+    document.title = "EA-EXPRESS · Portale clienti";
     window.scrollTo(0, 0);
   }, [location.pathname]);
   useEffect(() => {
@@ -105,11 +106,7 @@ export default function PortalLayout() {
           <Icon name="x-lg" />
         </button>
         <Link className="brand" to="/dashboard" onClick={() => setOpen(false)}>
-          <img className="brand-logo" src="/brand.svg" alt="EA Express" width="155" height="83"/>{" "}
-          <span>
-            EA<span className="brand-light">-Express</span>
-            <small>BUSINESS</small>
-          </span>
+          <Brand caption="PORTALE CLIENTI" />
         </Link>
         <IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text className="portal-create" onClick={() => setOpen(false)} />
         <nav aria-label="Navigazione principale">
@@ -138,11 +135,11 @@ export default function PortalLayout() {
             <Icon name="list" />
           </button>
           <span className="topbar-label">
-            EA-Express <span>/</span> <strong>Portale clienti</strong>
+            EA-Express <span>/</span> <strong>Ritiri e spedizioni</strong>
           </span>
           <div className="topbar-actions">
             <ThemeToggle /><NotificationSound />
-            <Link className="account" to="/profile">
+            <Link className="account" to="/profile" aria-label={`Apri profilo di ${user.name}`}>
               <span className="avatar">{initials(user.name)}</span>
               <span>
                 <strong>{user.name}</strong>
@@ -162,13 +159,13 @@ export default function PortalLayout() {
         </main>
         <footer className="footer">
           <span>EA-Express</span>
-          <span>Ogni consegna, una connessione.</span>
+          <span>EA-EXPRESS · Portale clienti</span>
         </footer>
       </div>
       <nav className="portal-mobile-nav" aria-label="Navigazione rapida" inert={mobile && open}>
         <NavLink to="/dashboard"><Icon name="house"/><span>Home</span></NavLink>
         <NavLink to="/shipments"><Icon name="box-seam"/><span>Spedizioni</span></NavLink>
-        <Link to="/pickups/new" className="mobile-create" aria-label="Prenota un ritiro"><Icon name="plus-lg"/></Link>
+        <IconButton action="add" to="/pickups/new" className="mobile-create" label="Prenota un ritiro" />
         <NavLink to="/pickups"><Icon name="calendar2-week"/><span>Ritiri</span></NavLink>
         <NavLink to="/profile"><Icon name="person"/><span>Profilo</span></NavLink>
       </nav>
