@@ -2,6 +2,8 @@ export function createNotificationMonitor({
   scope,
   load,
   onChange = () => {},
+  initialEnabled,
+  saveEnabled,
 }) {
   const key = `ea:notification-sound:${scope}`;
   const seenKey = `ea:notification-seen:${scope}`;
@@ -19,13 +21,17 @@ export function createNotificationMonitor({
       /* Le preferenze restano disponibili nella scheda corrente. */
     }
   };
-  let enabled = read(key, false),
+  let enabled = initialEnabled ?? read(key, false),
     baseline = true,
     stopped = false,
     running = false,
     timer,
     context;
-  let seen = read(seenKey, []);
+  const readSeen = () => {
+    const cache = read(seenKey, {});
+    return cache.expires > Date.now() && Array.isArray(cache.items) ? cache.items : [];
+  };
+  let seen = readSeen();
   function tone() {
     if (!context || context.state !== "running") return;
     const oscillator = context.createOscillator(),
@@ -58,14 +64,14 @@ export function createNotificationMonitor({
   }
   async function consume(result) {
     if (stopped) return;
-    const stored = new Set([...seen, ...read(seenKey, [])]);
+    const stored = new Set([...seen, ...readSeen()]);
     const fresh = result.items.some(
       (item) => !item.read && !stored.has(item.id),
     );
     seen = [
       ...new Set([...stored, ...result.items.map((item) => item.id)]),
     ].slice(-1000);
-    write(seenKey, seen);
+    write(seenKey, {items: seen, expires: Date.now() + 7 * 24 * 60 * 60 * 1000});
     if (!baseline && fresh && enabled) tone();
     baseline = false;
     onChange({ enabled, unread: result.unread, available: true });
@@ -90,7 +96,7 @@ export function createNotificationMonitor({
     if (!document.hidden) poll();
   }
   function storage(event) {
-    if (event.key === key) {
+    if (!saveEnabled && event.key === key) {
       enabled = read(key, false);
       onChange({ enabled });
     }
@@ -105,11 +111,17 @@ export function createNotificationMonitor({
       return enabled;
     },
     async toggle() {
-      enabled = !enabled;
-      write(key, enabled);
+      const next = !enabled;
+      if (saveEnabled) await saveEnabled(next);
+      else write(key, next);
+      enabled = next;
       await unlock();
       onChange({ enabled });
       return enabled;
+    },
+    setEnabled(value) {
+      enabled = Boolean(value);
+      onChange({enabled});
     },
     refresh: poll,
     dispose() {

@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import IconButton from "../components/IconButton";
 import SenderFields from "../components/SenderFields";
 import Brand from "../components/Brand";
+import PrivacyLinks from "../components/PrivacyLinks";
 import { Field, Feedback, Icon, Form } from "../components/UI";
 export default function AuthPage({ mode = "login" }) {
   const { user, authenticate } = useAuth();
@@ -41,13 +42,13 @@ export default function AuthPage({ mode = "login" }) {
     }
   }
   return (
-    <div className="auth-shell">
+    <div className={`auth-shell portal-auth ${create ? 'is-registration' : 'is-login'}`}>
       <section className="auth-story">
         <Link to="/login" className="brand">
           <Brand />
         </Link>
         <div>
-          <p className="eyebrow">EA-EXPRESS / PORTALE CLIENTI</p>
+          <p className="eyebrow">EA-Express / PORTALE CLIENTI</p>
           <h1>
             Il tuo prossimo
             <br />
@@ -79,15 +80,15 @@ export default function AuthPage({ mode = "login" }) {
       <section className="auth-form-wrap">
         <div className="auth-form">
           <Link className="auth-mobile-brand" to="/login"><Brand caption="PORTALE CLIENTI" /></Link>
-          <p className="eyebrow">BENVENUTO IN EA-EXPRESS</p>
+          <p className="auth-access-label"><Icon name="person-badge" /> Portale clienti</p>
           <h2>
-            {create ? "Facciamo strada." : "Bentornato."}
+            {create ? "Crea il tuo account" : "Accedi al tuo spazio"}
           </h2>
           <p className="muted">
             {create ? "Spedisci come attività o privato, da un unico account." : "Accedi e dai il via alla tua giornata."}
           </p>
           <Feedback error={error} />
-          <Form errors={error?.errors} onSubmit={submit}>
+          <Form errors={error?.errors} onSubmit={submit} aria-busy={busy}>
             {create && <SenderFields />}
             <Field
               label="Email"
@@ -128,6 +129,7 @@ export default function AuthPage({ mode = "login" }) {
               <Link className="back-link" to="/login">Torna all’accesso</Link>
             )}
           </p>
+          <PrivacyLinks />
         </div>
       </section>
     </div>

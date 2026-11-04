@@ -10,7 +10,7 @@ export default function PendingDetailPage() {
   const { slug } = useParams();
   const resource = useApi(loadPending, { slug }, false, 30000);
   return <>
-    <Header backTo="/pending" title="Dettaglio sospeso" description="Consulta il saldo e lo storico dei pagamenti registrati da EA Express." />
+    <Header backTo="/pending" title="Dettaglio sospeso" description="Consulta il saldo e lo storico dei pagamenti registrati da EA-Express." />
     <State resource={resource}>{({ data: account }) => <>
       <DataPanel title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>}>
         <dl className="facts">
@@ -27,7 +27,7 @@ export default function PendingDetailPage() {
         {account.settlements.length ? account.settlements.map(payment => <article className="settlement-row" key={payment.slug}>
           <strong>{money(payment.amount_cents)}</strong><time dateTime={payment.created_at}>{date(payment.created_at, true)}</time>
           {payment.updated_at !== payment.created_at && <p className="muted">Aggiornato il {date(payment.updated_at, true)}</p>}
-        </article>) : <Empty title="Nessun pagamento registrato" text="Qui troverai i pagamenti registrati da EA Express." />}
+        </article>) : <Empty title="Nessun pagamento registrato" text="Qui troverai i pagamenti registrati da EA-Express." />}
       </DataPanel>
     </>}</State>
   </>;

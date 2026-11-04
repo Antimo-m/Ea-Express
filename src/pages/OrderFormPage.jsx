@@ -1,8 +1,9 @@
 import IconButton from "../components/IconButton";
 import { attachBookingRules } from '../services/booking-rules';
 import { request } from '../api/client';
-import { contentCategories, contentLabel } from "../utils/order-content";
+import { contentCategories } from "../utils/order-content";
 import Modal from "../components/Modal";
+import CheckoutReview from "../components/CheckoutReview";
 import ShippingQuote from "../components/ShippingQuote";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -12,9 +13,10 @@ import SenderFields from "../components/SenderFields";
 import SenderAddressPreference from "../components/SenderAddressPreference";
 import { useAuth } from "../hooks/useAuth";
 import { Header, Field, Feedback, State, Icon, Form } from "../components/UI";
-import { today, money } from "../utils/format";
+import { today } from "../utils/format";
 function OrderForm({ order, pickups }) {
   const bookingForm = useRef(null);
+  const senderPreference = useRef(null);
   useEffect(() => {
     let disposed = false;
     let cleanup;
@@ -42,13 +44,11 @@ function OrderForm({ order, pickups }) {
   const submitting = useRef(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [senderSelection, setSenderSelection] = useState(null);
-  function applySenderAddress(address) {
-    setSenderSelection({ identity: address || user, key: (senderSelection?.key || 0) + 1 });
+  const applySenderAddress = useCallback(address => {
     for (const field of ["pickup_address", "pickup_city", "pickup_street_number", "pickup_postal_code"]) {
       bookingForm.current.elements[field].value = address?.[field] || "";
     }
-  }
+  }, []);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const base = pickups ? "/pickups" : "/shipments";
@@ -79,6 +79,7 @@ function OrderForm({ order, pickups }) {
     try {
       const data = {...review.data,checkout_token:review.checkout_token};
       const result = order ? await updateOrder(order.slug,data) : await createOrder(data);
+      await senderPreference.current?.offerSave(review.data, review.checkout_token);
       navigate(`${base}/${result.data.slug}`, {replace:true,state:{success:order ? "Richiesta aggiornata." : "Richiesta confermata e inviata ai rider."}});
     } catch (failure) { setError(failure); if (failure.errors?.pickup_from || failure.errors?.pickup_date) setReview(previous => ({...previous,checkout_token:null})); }
     finally { submitting.current=false; setBusy(false); }
@@ -100,6 +101,9 @@ function OrderForm({ order, pickups }) {
       {...extra}
     />
   );
+  if (!["private", "business", "online_shop"].includes(user.sender_type)) {
+    return <section className="panel"><h2>Completa i dati del mittente</h2><p>Seleziona la tua tipologia nel profilo prima di programmare un ritiro.</p><Link className="button" to="/profile">Completa il profilo</Link></section>;
+  }
   if (order && !order.can_edit)
     return (
       <div className="panel">
@@ -116,26 +120,15 @@ function OrderForm({ order, pickups }) {
   return (
     <>
     <nav className="form-progress" aria-label="Avanzamento prenotazione"><span>{review ? '1. Dati del ritiro' : <strong>1. Dati del ritiro</strong>}</span><Icon name="chevron-right"/><span>{review ? <strong>2. Riepilogo e conferma</strong> : '2. Riepilogo e conferma'}</span></nav>
-    {review && <section className="panel checkout-review" aria-label="Revisione richiesta">
-      <p className="eyebrow">PRIMA DELLA CONFERMA</p><h2>Controlla la richiesta</h2>
-      <div className="form-grid"><div><h3>Mittente e ritiro</h3><p>{review.data.store_name || user.name}<br/>{review.data.pickup_address} {review.data.pickup_street_number}<br/>{review.data.pickup_postal_code} {review.data.pickup_city}</p><p>{review.data.pickup_date} · {review.data.pickup_from}–{review.data.pickup_to}</p></div>
-      <div><h3>Destinatario e consegna</h3><p>{review.data.recipient_name}<br/>{review.data.recipient_phone}<br/>{review.data.delivery_address} {review.data.delivery_street_number}<br/>{review.data.delivery_postal_code} {review.data.delivery_city} {review.data.delivery_zone}</p></div></div>
-      <p><strong>{review.data.parcel_count} colli</strong> · {review.data.package_type === 'fragile' ? 'Fragile' : review.data.package_type === 'other' ? review.data.package_description : 'Standard'} · {contentLabel(review.data)}</p>
-      {review.data.customer_notes && <p>Istruzioni: {review.data.customer_notes}</p>}
-      <p className="review-note"><Icon name="shield-check"/> La richiesta viene inviata solo dopo la conferma. Gli importi sono verificati dal sistema.</p><dl className="checkout-amounts"><div><dt>Valore del pacco</dt><dd>{money(review.parcel_value_cents)}</dd></div><div><dt>Costo spedizione</dt><dd>{money(review.shipping_price_cents)}</dd></div><div className="checkout-total"><dt>Totale finale</dt><dd>{money(review.total_cents)}</dd></div></dl>
-      <p className="muted">Il totale somma il valore dichiarato e la spedizione. Questa conferma non esegue un pagamento e non attiva un contrassegno.</p>
-      <p className="muted">{review.data.shipping_type === 'external' ? 'Fuori regione' : 'Regionale'} · Rete EA-Express · {review.quote.reason} {review.quote.delivery_time} {review.quote.delivery_days_min && `Consegna prevista in ${review.quote.delivery_days_min}–${review.quote.delivery_days_max} giorni lavorativi dal ritiro, festività escluse dalla stima.`} {review.quote.source_reference && `Fonte: ${review.quote.source_reference}`}</p>
-      {!review.checkout_token && <p role="alert">Non possiamo confermare un costo affidabile. Controlla la destinazione o contatta EA Express per la tariffa.</p>}
-      <Feedback error={error}/><div className="checkout-actions"><button type="button" className="button secondary" disabled={busy} onClick={()=>{setReview(null);setError(null);}}>Torna indietro</button><button type="button" className="button checkout-continue" aria-busy={busy || undefined} disabled={busy || !review.checkout_token || error?.status===409} onClick={confirm}>{busy ? "Conferma in corso…" : "Conferma richiesta"}</button></div>
-    </section>}
+    {review && <CheckoutReview review={review} user={user} busy={busy} error={error} onBack={() => { setReview(null); setError(null); }} onConfirm={confirm} />}
     <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors} className="order-form booking-form" onSubmit={submit}>
       <div>
         <section className="panel">
           <h2>
             <span className="step">01</span> Punto di ritiro
           </h2>
-          <SenderAddressPreference initial={order} formRef={bookingForm} onUse={applySenderAddress} />
-          <SenderFields key={senderSelection?.key || 0} identity={senderSelection?.identity || order || user} nameField="store_name" />
+          <SenderAddressPreference ref={senderPreference} initial={order} formRef={bookingForm} onUse={applySenderAddress} />
+          <SenderFields identity={{...user, ...order, business_type: user.business_type, business_description: user.business_description}} nameField="store_name" selectableType={false} profileType={user.sender_type} />
           <div className="booking-grid booking-address">
             {field("pickup_address", "Indirizzo di ritiro")}
             {field("pickup_street_number", "Civico", { maxLength: 20 })}
@@ -218,7 +211,7 @@ function OrderForm({ order, pickups }) {
         )}
       </section>
       <div className="booking-final-actions">
-        <IconButton icon="send" action="send" label="Invia" type="submit" text loading={busy} />
+        <button className="button booking-review-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? "Verifica in corso…" : "Prosegui al riepilogo"}<Icon name="arrow-right" /></button>
         <button type="button" className="button danger" disabled={busy} onClick={()=>setCancelOpen(true)}><Icon name="trash"/> Annulla</button>
       </div>
     </Form></div>

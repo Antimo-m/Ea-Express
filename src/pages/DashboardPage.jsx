@@ -20,7 +20,7 @@ export default function DashboardPage() {
   return (
     <>
       <Header
-        eyebrow="EA-EXPRESS · IL TUO NEGOZIO"
+        eyebrow="EA-Express · IL TUO NEGOZIO"
         title={`Ciao, ${user.name}.`}
         description="Richieste, ritiri e consegne: le tue priorità a colpo d’occhio."
       />

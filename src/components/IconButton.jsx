@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { Icon } from './UI';
-const icons = { message: 'chat-dots', confirm: 'check-lg', back: 'arrow-left', send: 'send', add: 'plus-lg', edit: 'pencil', delete: 'trash', search: 'search', print: 'printer', 'print-multiple': 'printer' };
+const icons = { message: 'chat-dots', confirm: 'check-lg', back: 'arrow-left', send: 'send', add: 'plus-lg', edit: 'pencil', delete: 'trash', search: 'search', reset: 'arrow-counterclockwise', print: 'printer', 'print-multiple': 'printer' };
 export default function IconButton({ action = 'neutral', icon, label, to, loading = false, disabled = false, text = false, className = '', type = 'button', ...props }) {
   if (icon === 'arrow-left' && action === 'neutral') action = 'back';
   if (action === 'confirm') { icon = 'check-lg'; text = false; }

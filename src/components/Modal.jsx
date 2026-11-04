@@ -22,7 +22,7 @@ export default function Modal({ open, title, description, busy = false, danger =
     return () => { document.removeEventListener('keydown', trap); node.close(); if (origin?.isConnected) origin.focus(); };
   }, [open]);
   return <dialog ref={dialog} className={`ea-modal ${danger ? 'ea-modal-danger' : ''}`} aria-labelledby={`${id}-title`} aria-describedby={description ? `${id}-description` : undefined} aria-busy={busy} onCancel={event => {event.preventDefault(); if (!busy) onClose();}}>
-    <header className="modal-heading"><div><h2 id={`${id}-title`}>{title}</h2>{description && <p id={`${id}-description`}>{description}</p>}</div><button type="button" className="icon-button" aria-label="Chiudi finestra" data-tooltip="Chiudi" disabled={busy} onClick={onClose}><Icon name="x-lg"/></button></header>
+    <header className="modal-heading"><div><h2 id={`${id}-title`}>{title}</h2>{description && <p id={`${id}-description`}>{description}</p>}</div><button type="button" className="icon-button" aria-label="Chiudi finestra" data-tooltip="Chiudi" data-tooltip-placement="below-end" disabled={busy} onClick={onClose}><Icon name="x-lg"/></button></header>
     {children}
   </dialog>;
 }

@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { request } from "../api/client";
 import { AuthContext } from "./AuthContext";
 import * as api from "../api/auth";
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const customerSlug = user?.slug;
+  const updateDisplayPreferences = useCallback(async (data) => {
+    const result = await request('/display-preferences', {method: 'PATCH', data});
+    setUser(previous => previous?.slug === customerSlug ? ({...previous, portal_preferences: {...previous.portal_preferences, ...Object.fromEntries(Object.keys(data).map(key => [key, result.data[key]]))}}) : previous);
+    return result.data;
+  }, [customerSlug]);
   useEffect(() => {
     let active = true;
     api
@@ -48,7 +55,7 @@ export default function AuthProvider({ children }) {
   }
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, reload, authenticate, logout, setUser }}
+      value={{ user, loading, error, reload, authenticate, logout, setUser, updateDisplayPreferences }}
     >
       {children}
     </AuthContext.Provider>

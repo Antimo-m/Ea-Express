@@ -1,5 +1,6 @@
 import ThemeToggle from "../components/ThemeToggle";
 import Brand from "../components/Brand";
+import PrivacyLinks from "../components/PrivacyLinks";
 import IconButton from "../components/IconButton";
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
@@ -23,15 +24,23 @@ const groups = [
 export default function PortalLayout() {
   const { user, logout } = useAuth();
   useEffect(() => connectWorkspace(request), [user.slug]);
-  const [open, setOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const toggle = useRef(null);
   const navigation = useRef(null);
-  const mobile = useMobile();
+  const mobile = useMobile("(max-width: 991px)");
   const location = useLocation();
+  const open = mobile && menuPath === location.key;
+  const setOpen = value => setMenuPath(value ? location.key : null);
   useEffect(() => {
-    document.title = "EA-EXPRESS · Portale clienti";
+    const media = window.matchMedia("(max-width: 991px)");
+    const close = () => setMenuPath(null);
+    media.addEventListener("change", close);
+    return () => media.removeEventListener("change", close);
+  }, []);
+  useEffect(() => {
+    document.title = "EA-Express · Portale clienti";
     window.scrollTo(0, 0);
   }, [location.pathname]);
   useEffect(() => {
@@ -39,15 +48,22 @@ export default function PortalLayout() {
     const previousOverflow = document.body.style.overflow;
     const toggleButton = toggle.current;
     document.body.style.overflow = "hidden";
-    navigation.current?.querySelector("button")?.focus();
+    const panel = navigation.current;
+    let active = true;
+    Promise.all(panel.getAnimations().map(animation => animation.finished.catch(() => {}))).then(() => {
+      if (active) panel.querySelector("button")?.focus();
+    });
     const key = (event) => {
       if (event.key === "Tab") {
-        const elements = navigation.current.querySelectorAll(
+        const elements = [...navigation.current.querySelectorAll(
           "a[href], button:not([disabled])",
-        );
+        )].filter(element => element.getClientRects().length);
         const first = elements[0],
           last = elements[elements.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
+        if (!navigation.current.contains(document.activeElement)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        } else if (event.shiftKey && document.activeElement === first) {
           event.preventDefault();
           last.focus();
         } else if (!event.shiftKey && document.activeElement === last) {
@@ -56,15 +72,16 @@ export default function PortalLayout() {
         }
       }
       if (event.key === "Escape") {
-        setOpen(false);
+        setMenuPath(null);
         toggleButton?.focus();
       }
     };
     window.addEventListener("keydown", key);
     return () => {
+      active = false;
       window.removeEventListener("keydown", key);
       document.body.style.overflow = previousOverflow;
-      toggleButton?.focus();
+      if (toggleButton?.getClientRects().length) toggleButton.focus();
     };
   }, [open, mobile]);
   async function signOut() {
@@ -85,6 +102,7 @@ export default function PortalLayout() {
       {open && (
         <button
           className="nav-backdrop"
+          tabIndex={-1}
           aria-label="Chiudi menu"
           onClick={() => setOpen(false)}
         />
@@ -98,28 +116,32 @@ export default function PortalLayout() {
         inert={mobile && !open}
         className={`sidebar ${open ? "is-open" : ""}`}
       >
-        <button
-          className="icon-button sidebar-close"
-          aria-label="Chiudi navigazione"
-          onClick={() => setOpen(false)}
-        >
-          <Icon name="x-lg" />
-        </button>
-        <Link className="brand" to="/dashboard" onClick={() => setOpen(false)}>
-          <Brand caption="PORTALE CLIENTI" />
-        </Link>
-        <IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text className="portal-create" onClick={() => setOpen(false)} />
-        <nav aria-label="Navigazione principale">
-          {groups.map(([title, items]) => <section className="nav-group" key={title} aria-label={title}>
-            <h2 className="nav-caption">{title}</h2>
-            {items.map(([to, icon, label]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}><Icon name={icon} />{label}</NavLink>)}
-          </section>)}
-        </nav>
-        <div className="sidebar-bottom">
-          <button className="logout" disabled={busy} onClick={signOut}>
-            <Icon name="box-arrow-right" />
-            {busy ? "Uscita…" : "Esci"}
+        <div className="sidebar-brand">
+          <button
+            className="icon-button sidebar-close"
+            aria-label="Chiudi navigazione"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="x-lg" />
           </button>
+          <Link className="brand" to="/dashboard" onClick={() => setOpen(false)}>
+            <Brand caption="PORTALE CLIENTI" />
+          </Link>
+        </div>
+        <div className="sidebar-content">
+          <IconButton action="add" to="/pickups/new" label="Prenota un ritiro" text className="portal-create" onClick={() => setOpen(false)} />
+          <nav aria-label="Navigazione principale">
+            {groups.map(([title, items]) => <section className="nav-group" key={title} aria-label={title}>
+              <h2 className="nav-caption">{title}</h2>
+              {items.map(([to, icon, label]) => <NavLink key={to} to={to} onClick={() => setOpen(false)}><Icon name={icon} />{label}</NavLink>)}
+            </section>)}
+          </nav>
+          <div className="sidebar-bottom">
+            <button className="logout" disabled={busy} onClick={signOut}>
+              <Icon name="box-arrow-right" />
+              {busy ? "Uscita…" : "Esci"}
+            </button>
+          </div>
         </div>
       </aside>
       <div className="workspace" inert={mobile && open}>
@@ -159,7 +181,7 @@ export default function PortalLayout() {
         </main>
         <footer className="footer">
           <span>EA-Express</span>
-          <span>EA-EXPRESS · Portale clienti</span>
+          <PrivacyLinks/>
         </footer>
       </div>
       <nav className="portal-mobile-nav" aria-label="Navigazione rapida" inert={mobile && open}>

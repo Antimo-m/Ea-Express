@@ -19,7 +19,7 @@ export default function StatisticsPage() {
     <Header eyebrow="LA TUA ATTIVITÀ" title="Statistiche" description="Ricavi dalle consegne, volume di lavoro e crescita del tuo negozio."/>
     <FilterToolbar key={params.toString()} label="Periodo delle statistiche" onApply={setFilters} onReset={() => setFilters({})} count={Number(filters.from !== defaults.from || filters.to !== defaults.to)}
       primary={<><Field name="from" label="Data iniziale" type="date" defaultValue={filters.from} required/><Field name="to" label="Data finale" type="date" defaultValue={filters.to} required/></>}/>
-    <State resource={resource}>{data => <>
+    <State resource={resource}>{data => <div className="statistics-workspace">
       <div className="statistics-context"><p>Attività dal <strong>{chartDate(data.from)}</strong> al <strong>{chartDate(data.to)}</strong></p><span>Confronto: {chartDate(data.previous_from)} — {chartDate(data.previous_to)}</span></div>
       <section aria-label="Ricavi del negozio">
         <div className="statistics-earnings">{[
@@ -37,6 +37,6 @@ export default function StatisticsPage() {
       <TrendChart key={`revenue-${data.from}-${data.to}`} summary={data.chart_summaries.revenue} title="Quanto generano le consegne?" description="Ogni punto mostra il netto delle consegne completate in quel giorno. La somma dei giorni coincide con il totale del periodo." points={data.trend} currency series={[{key:'net_cents',label:'Ricavo netto del negozio',color:'var(--ea-success)'}]}/>
       <div className="statistics-charts"><section className="panel service-distribution"><span className="chart-eyebrow">TIPOLOGIA DI SERVIZIO</span><h2>Dove spedisco di più?</h2>{[['regional','Regionali',data.regional_count],['external','Fuori regione',data.external_count]].map(([type,label,count])=><button type="button" className="volume-row" key={type} aria-pressed={selectedType===type} onClick={()=>setSelectedType(type)}><span>{label}</span><meter min="0" max={Math.max(1,data.total)} value={count} aria-label={`${label}: ${count} su ${data.total}`}/><strong>{count}</strong></button>)}<div className="service-detail" role="status"><strong>{selectedType==='regional'?'Regionali':'Fuori regione'}</strong><p>{selectedType==='regional'?data.regional_count:data.external_count} richieste su {data.total} nel periodo selezionato.</p></div><p className="muted small">Include tutte le richieste, anche annullate o rifiutate. Il servizio è sempre Rete EA-Express.</p></section>
       <TrendChart key={`months-${data.from}-${data.to}`} summary={data.chart_summaries.months} title="Come cambia il volume di lavoro?" description={data.comparison_note} points={data.months.map(point=>({...point,date:point.month}))} monthly bars series={[{key:'shipments',label:'Ordini',color:'var(--ea-info)'}]}/></div>
-    </>}</State>
+    </div>}</State>
   </>;
 }

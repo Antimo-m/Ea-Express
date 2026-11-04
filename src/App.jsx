@@ -25,6 +25,7 @@ import StatisticsPage from "./pages/StatisticsPage";
 import PendingPage from "./pages/PendingPage";
 import PendingDetailPage from "./pages/PendingDetailPage";
 import ProfilePage from "./pages/ProfilePage";
+import PrivacyPage from "./pages/PrivacyPage";
 import "bootstrap-icons/font/bootstrap-icons.css";
 function Session() {
   const auth = useAuth();
@@ -41,6 +42,8 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            <Route path="/cookies" element={<PrivacyPage />} />
+            <Route path="/privacy" element={<PrivacyPage privacy />} />
             <Route element={<Session />}>
               <Route path="/login" element={<AuthPage key="login" />} />
               <Route

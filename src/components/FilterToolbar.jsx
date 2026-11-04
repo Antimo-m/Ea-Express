@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useMobile } from '../hooks/useMobile';
 import Modal from './Modal';
+import IconButton from './IconButton';
 import { Icon } from './UI';
 
 export default function FilterToolbar({ search, primary, secondary, count = 0, onApply, onReset, label = 'Filtri' }) {
@@ -16,13 +17,13 @@ export default function FilterToolbar({ search, primary, secondary, count = 0, o
     onApply(Object.fromEntries([...new FormData(event.currentTarget)].filter(([, value]) => value !== '')));
     setOpen(false);
   }
-  const apply = <button className="icon-button" type="submit" aria-label="Applica filtri" data-tooltip="Applica filtri"><Icon name="search" /></button>;
-  const reset = <button className="icon-button" type="button" aria-label="Ripristina filtri" data-tooltip="Ripristina filtri" onClick={() => { form.current?.reset(); onReset(); setOpen(false); }}><Icon name="arrow-counterclockwise" /></button>;
+  const apply = <IconButton action="search" type="submit" label="Applica filtri" />;
+  const reset = <IconButton action="reset" label="Ripristina filtri" onClick={() => { form.current?.reset(); onReset(); setOpen(false); }} />;
   return <form ref={form} className={`portal-filter-toolbar ${search ? 'has-search' : ''}`} aria-label={label} onSubmit={submit}>
     {search && <div className="portal-filter-search"><Icon name="search" />{search}</div>}
     {!mobile && <div className="portal-filter-primary">{primary}</div>}
     <div className="portal-filter-actions">
-      {(mobile || secondary) && <button type="button" className="button secondary" aria-haspopup="dialog" onClick={() => setOpen(true)}><Icon name="sliders" />{mobile ? 'Filtri' : 'Altri filtri'}{count > 0 && ` · ${count}`}</button>}
+      {(mobile || secondary) && <button type="button" className="button secondary filter-more" aria-haspopup="dialog" onClick={() => setOpen(true)}><Icon name="sliders" />{mobile ? 'Filtri' : 'Altri filtri'}{count > 0 && ` · ${count}`}</button>}
       {!mobile && apply}
       {reset}
     </div>
