@@ -1,10 +1,21 @@
-import { useId, useState } from "react";
+import { useState } from "react";
+import SuggestedTextField from "./SuggestedTextField";
 import { Field, Icon } from "./UI";
+
+function SenderTypeChoice({ value, icon, label, selected, onChange }) {
+  return (
+    <label className={`sender-type-choice${selected ? " selected" : ""}`}>
+      <input type="radio" name="sender_type" value={value} checked={selected} onChange={onChange} />
+      <Icon name={icon} />
+      <span>{label}</span>
+    </label>
+  );
+}
+
 export default function SenderFields({ identity = {}, nameField = "name", selectableType = true, profileType }) {
   const [selectedType, setType] = useState(identity.sender_type || identity.customer_type || "business");
   const type = selectableType ? selectedType : profileType;
   const [senderName, setSenderName] = useState(identity.store_name || identity.name || "");
-  const suggestions = useId();
   const [businessType, setBusinessType] = useState(
     identity.business_type || "",
   );
@@ -15,23 +26,15 @@ export default function SenderFields({ identity = {}, nameField = "name", select
     <div className="sender-fields">
       {selectableType ? <fieldset className="sender-selector">
         <legend>Tipo mittente</legend>
+        <div className="sender-type-options">
         {[
           ["private", "person", "Privato"],
           ["business", "shop", "Attività commerciale"],
           ["online_shop", "bag", "Shop online"],
         ].map(([value, icon, label]) => (
-          <label key={value} className={type === value ? "selected" : ""}>
-            <input
-              type="radio"
-              name="sender_type"
-              value={value}
-              checked={type === value}
-              onChange={() => setType(value)}
-            />
-            <Icon name={icon} />
-            <span>{label}</span>
-          </label>
+          <SenderTypeChoice key={value} value={value} icon={icon} label={label} selected={type === value} onChange={() => setType(value)} />
         ))}
+        </div>
       </fieldset> : <p className="sender-profile-type"><Icon name={type === "private" ? "person" : type === "online_shop" ? "bag" : "shop"} /> <strong>{{private: "Privato", business: "Attività commerciale", online_shop: "Shop online"}[type] || "Completa il profilo"}</strong><span>Dal tuo profilo</span></p>}
       <Field
         label={
@@ -48,7 +51,7 @@ export default function SenderFields({ identity = {}, nameField = "name", select
       />
       {type === "business" && (
         <div className={nameField === "store_name" ? "booking-grid booking-business" : "form-grid"}>
-          <Field
+          <SuggestedTextField
             label="Tipologia attività"
             width={nameField === "store_name" ? "business" : undefined}
             name="business_type"
@@ -56,22 +59,10 @@ export default function SenderFields({ identity = {}, nameField = "name", select
             onChange={(event) => setBusinessType(event.target.value)}
             readOnly={!selectableType}
             maxLength={100}
-            list={suggestions}
+            suggestions={["Abbigliamento", "Alimentari", "Fiorista", "Artigianato", "E-commerce", "Documenti e servizi"]}
             placeholder="Scegli o scrivi liberamente"
             help={selectableType ? "Scegli un suggerimento oppure scrivi liberamente." : "Tipologia attività salvata nel profilo."}
           />
-          <datalist id={suggestions}>
-            {[
-              "Abbigliamento",
-              "Alimentari",
-              "Fiorista",
-              "Artigianato",
-              "E-commerce",
-              "Documenti e servizi",
-            ].map((value) => (
-              <option key={value} value={value} />
-            ))}
-          </datalist>
           <Field
             label="Di cosa ti occupi? (facoltativo)"
             width={nameField === "store_name" ? "description" : undefined}

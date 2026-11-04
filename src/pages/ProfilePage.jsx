@@ -1,4 +1,6 @@
 import IconButton from "../components/IconButton";
+import { ApiError } from "../api/client";
+import { validatePortalText } from "../services/text-policy";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -26,6 +28,10 @@ function AccountForm({ kind, user, onUpdate }) {
     setSuccess("");
     setBusy(true);
     try {
+      if (kind === "profile") {
+        const errors = await validatePortalText(data);
+        if (Object.keys(errors).length) { setError(new ApiError(422, errors)); return; }
+      }
       const result = await {
         profile: updateProfile,
         password: updatePassword,

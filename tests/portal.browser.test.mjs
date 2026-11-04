@@ -38,12 +38,16 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
   let browser, socket, authenticated = true, errorMode = false, emptyMode = false, loadingMode = false;
   const writes = [];
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
+  let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
+  const rateRequests = [];
+  const policyMessage = 'Il testo inserito contiene termini non consentiti. Modifica il contenuto per continuare.';
   const server = createServer((request, response) => {
     const url = new URL(request.url, 'http://localhost');
     const path = url.pathname.replace('/api/v1/customer', '');
     if (url.pathname.startsWith('/api/')) {
       response.setHeader('Content-Type', 'application/json');
       const json = body => response.end(JSON.stringify(body));
+      if (path === '/text-policy') { json({version:1,terms:['cocaina','hashish','fuck','cazzo'],substitutions:{0:'o',1:'i',3:'e',4:'a',5:'s',7:'t','@':'a','$':'s'},message:policyMessage}); return; }
       if (path === '/auth/me') { response.statusCode = authenticated ? 200 : 401; json(authenticated ? { user } : {}); return; }
       if (path === '/privacy') { json({version:'2026-10-28',reviewed:false,controller:{name:null,address:null,email:null},same_site:'lax',secure:false,cookies:[{name:'ea_express_customer_session',purpose:'Accesso autenticato al portale clienti',minutes:120,http_only:true,session_only:false},{name:'XSRF-TOKEN',purpose:'Protezione delle richieste da CSRF',minutes:120,http_only:false,session_only:false}]}); return; }
       if (path === '/csrf') { json({ csrf_token: 'test-token' }); return; }
@@ -52,6 +56,12 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         request.on('end', () => {
           const data = body ? JSON.parse(body) : {};
           writes.push({ path, data });
+          if (path === '/auth/register') {
+            if (registrationError) { response.statusCode = 422; json({errors:{business_type:[policyMessage]}}); }
+            else { authenticated = true; json({user}); }
+            return;
+          }
+          if (path.endsWith('/checkout') && contentError) { response.statusCode = 422; json({errors:{content_description:[policyMessage]}}); return; }
           if (path.endsWith('/checkout')) { json({data: {...data, sender_type: user.sender_type}, quote: {available: true, price_cents: 500, reason: 'Tariffa del listino verificata.', delivery_time: 'Entro due giorni lavorativi'}, parcel_value_cents: 12500, shipping_price_cents: 500, total_cents: 13000, checkout_token: crypto.randomUUID()}); return; }
           if (path === '/orders' && confirmationStatus) { response.statusCode = confirmationStatus; json({errors: confirmationStatus === 422 ? {pickup_date: ['La data non è più disponibile.']} : {}}); return; }
           if (path === '/display-preferences') { user.portal_preferences = {...user.portal_preferences,...data}; json({data:user.portal_preferences}); return; }
@@ -71,14 +81,14 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       if (path === '/statistics') { json(statistics); return; }
       if (path === '/pending') { json({ data: emptyMode ? [] : [pending], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
       if (path.startsWith('/pending/')) { json({ data: pending }); return; }
-      if (path === '/rates') { json({ areas: ['Campania'], rates: { ...meta, data: emptyMode ? [] : [{ slug, city: 'Caserta e provincia', area: 'Campania', zone: 'Centro storico e periferia', postal_codes: ['81100', '81020'], price_cents: 500, shipping_type: 'regional', delivery_time: 'Entro due giorni lavorativi' }] } }); return; }
+      if (path === '/rates') { rateRequests.push(Object.fromEntries(url.searchParams)); const page = Number(url.searchParams.get('page') || 1); const rate = { slug, city: `Caserta e provincia · pagina ${page}`, area: 'Campania', zone: 'Centro storico e periferia', postal_codes: ['81100', '81020'], price_cents: 500, shipping_type: 'regional', delivery_time: 'Entro due giorni lavorativi' }; json({ areas: ['Campania'], rates: { ...meta, current_page:page, data: emptyMode ? [] : ratesPaginationMode ? Array.from({length:18},(_,i)=>({...rate,slug:`${slug}-${i}`})) : [rate] } }); return; }
       if (path === '/notifications') { json({ data: emptyMode ? [] : [{ order_slug: slug, customer_name: user.name, reference: order.reference, total: 3, unread: 1, latest_at: '2026-10-23T12:00:00Z' }], meta }); return; }
       if (path.startsWith('/notifications/orders/')) { json({ data: [
         { id: '514f7189-32ed-475f-937b-50e06c331bb7', title: 'Ritardo segnalato dal rider per la spedizione in consegna al destinatario', is_message: false, created_at: '2026-10-23T12:00:00Z', read_at: null, order_slug: slug },
         { id: '467de175-a71a-453d-989e-aab3da0a1c74', title: 'Nuovo messaggio dal team sulla tua spedizione', is_message: true, created_at: '2026-10-23T11:00:00Z', read_at: '2026-10-23T11:30:00Z', order_slug: slug },
         { id: '17d37f24-5b9a-4cc3-afcc-97df66731bb5', title: 'Spedizione affidata al rider e pronta per la consegna', is_message: false, created_at: '2026-10-23T10:00:00Z', read_at: '2026-10-23T10:30:00Z', order_slug: slug },
       ], meta: { ...meta, current_page: Number(url.searchParams.get('page') || 1) } }); return; }
-      if (path === '/booking-rules') { json({ server_now: new Date().toISOString() }); return; }
+      if (path === '/booking-rules') { const now = new Date(bookingNow || Date.now()); json({ server_now: now.toISOString(), timezone:'Europe/Rome', lead_minutes:1, minimum_pickup:new Date(Math.ceil((now.getTime()+60000)/60000)*60000).toISOString() }); return; }
       if (path === '/sender-address') { json({ data: savedAddress }); return; }
       json({ enabled: false, data: [] }); return;
     }
@@ -108,6 +118,15 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     const waitFor = async expression => { for (let index = 0; index < 100; index++) { if (await evaluate(`return Boolean(${expression});`)) return; await new Promise(resolve => setTimeout(resolve, 30)); } throw new Error(`Not ready: ${expression}`); };
     const navigate = async path => { await evaluate('window.__previous = true;'); await send('Page.navigate', { url: origin + path }); await waitFor('!window.__previous && document.readyState === "complete" && !document.querySelector(".skeletons") && document.querySelector("h1, .auth-form h2")'); await evaluate('return document.fonts.ready.then(() => true);'); };
     const viewport = width => send('Emulation.setDeviceMetricsOverride', { width, height: ({320:568,360:800,375:812,390:844,430:932,768:1024})[width] || 900, deviceScaleFactor: 1, mobile: width < 768 });
+    const fillInputs = values => evaluate(`const values=${JSON.stringify(values)}; for(const [name,value] of Object.entries(values)){const input=document.querySelector('[name="'+name+'"]');if(!input)continue;const prototype=input.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(input,String(value));input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}`);
+    const useTextPicker = async (name, value, suggested = false) => {
+      await evaluate(`document.querySelector('input[name="${name}"]').parentElement.querySelector('.ea-picker-trigger').click();`);
+      await waitFor('document.querySelector(".ea-picker-popup input")');
+      await evaluate(`const input=document.querySelector('.ea-picker-popup input');input.value=${JSON.stringify(value)};input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();`);
+      if (suggested) await send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowDown',code:'ArrowDown',windowsVirtualKeyCode:40});
+      await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+      await waitFor('!document.querySelector(".ea-picker-popup")');
+    };
     const check = async (path, width) => {
       const result = await evaluate(`return { width: innerWidth, scroll: document.documentElement.scrollWidth, errors: [...document.querySelectorAll('.error-boundary')].map(n => n.textContent), heading: document.querySelector('.page-heading') ? getComputedStyle(document.querySelector('.page-heading')).position : 'static', add: [...document.querySelectorAll('.action-add')].filter(n => n.getClientRects().length).map(n => ({ label: n.getAttribute('aria-label'), text: n.textContent.trim(), width: n.getBoundingClientRect().width, height: n.getBoundingClientRect().height, plus: !!n.querySelector('.bi-plus-lg') })), overflow: [...document.querySelectorAll('main *')].filter(n => {const r=n.getBoundingClientRect();return r.width && r.right>innerWidth+1 && getComputedStyle(n).position !== 'fixed';}).slice(0,5).map(n => n.className) };`);
       assert.ok(result.scroll <= result.width + 1, `${path} @ ${width}: horizontal overflow ${JSON.stringify(result)}`);
@@ -264,12 +283,99 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await navigate(`/pending/${slug}`);
       assert.match(await evaluate('return document.querySelector(".settlement-row").textContent;'), /50,00/);
     });
+    await t.test('listini: cambio pagina scorre ai risultati e conserva filtri senza ricaricare', async () => {
+      ratesPaginationMode = true;
+      try {
+        for (const width of [375,1440]) {
+          await viewport(width); await navigate('/rates?q=Caserta&shipping_type=regional&area=Campania');
+          await waitFor('document.querySelectorAll(".rate-card").length === 18');
+          await evaluate('window.__ratesDocument=document;document.querySelector(".pagination").scrollIntoView({block:"end"});');
+          assert.ok(await evaluate('return window.scrollY;') > 200);
+          await evaluate(`document.querySelector('button[aria-label="Pagina successiva"]').click();`);
+          await waitFor('document.querySelector(".pagination span")?.textContent.includes("2 / 2")');
+          await waitFor('document.querySelector(".rate-card").getBoundingClientRect().top >= 0 && document.querySelector(".rate-card").getBoundingClientRect().top < innerHeight');
+          assert.equal(await evaluate('return document === window.__ratesDocument;'), true);
+          assert.deepEqual(rateRequests.at(-1),{q:'Caserta',shipping_type:'regional',area:'Campania',page:'2'});
+          await evaluate('document.querySelector(".rate-card:nth-child(12)").scrollIntoView({block:"start"});window.__rateScroll=scrollY;window.dispatchEvent(new CustomEvent("ea:workspace-updated",{detail:{}}));');
+          await waitFor('!document.querySelector(".skeletons")');
+          assert.ok(await evaluate('return Math.abs(scrollY-window.__rateScroll);') < 2);
+          await check('/rates page2',width);
+        }
+      } finally { ratesPaginationMode = false; }
+    });
+    await t.test('ritiro: orario automatico, scelta manuale, data futura e mezzanotte', async () => {
+      authenticated = true;
+      bookingNow = '2026-11-04T10:35:20+01:00';
+      try {
+        await viewport(390); await navigate('/pickups/new');
+        await waitFor('document.querySelector("input[name=pickup_from]").value === "10:37"');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_date]").value;'),'2026-11-04');
+        assert.match(await evaluate('return document.querySelector("input[name=pickup_from]").closest(".field").textContent;'),/minuto/);
+        bookingNow = '2026-11-04T10:45:20+01:00';
+        await evaluate('window.dispatchEvent(new Event("focus"));');
+        await waitFor('document.querySelector("input[name=pickup_from]").value === "10:47"');
+        await fillInputs({pickup_from:'12:00',pickup_to:'13:00'});
+        bookingNow = '2026-11-04T11:00:20+01:00';
+        await evaluate('window.dispatchEvent(new Event("focus"));');
+        await waitFor('document.querySelector("input[name=pickup_from]").min === "11:02"');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").value;'),'12:00');
+        bookingNow = '2026-11-04T12:00:20+01:00';
+        await evaluate('window.dispatchEvent(new Event("focus"));');
+        await waitFor('!document.querySelector("input[name=pickup_from]").validity.valid');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").value;'),'12:00');
+        await fillInputs({pickup_date:'2026-11-05',pickup_from:'09:00',pickup_to:'10:00'});
+        await waitFor('document.querySelector("input[name=pickup_from]").validity.valid');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").min;'),'');
+        await fillInputs({pickup_to:'08:00'});
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_to]").validity.valid;'),false);
+        bookingNow = '2026-11-04T23:58:20+01:00';
+        await navigate('/pickups/new');
+        await waitFor('document.querySelector("input[name=pickup_date]").value === "2026-11-05"');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").value;'),'00:00');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_to]").validity.valid;'),true);
+        await check('/pickup midnight',390);
+      } finally { bookingNow = null; }
+    });
     await t.test('checkout: riepilogo, ritorno con dati preservati e conferma singola con scelta indirizzo', async () => {
       const fillBooking = async () => {
         await evaluate(`const values=${JSON.stringify({...order, parcel_value: '125.00', pickup_date: new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+86400000))})}; const form=document.querySelector('.booking-form'); for(const [name,value] of Object.entries(values)){ const input=form.elements.namedItem(name);if(!input || !['INPUT','TEXTAREA'].includes(input.tagName))continue; const prototype=input.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype,'value').set.call(input,String(value));input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true})); }`);
         await evaluate('document.querySelector(".booking-review-button").click();');
         await waitFor('document.querySelector(".checkout-v2")');
       };
+      await viewport(390); await navigate('/pickups/new'); await fillBooking();
+      assert.equal(writes.filter(write=>write.path.endsWith('/checkout')).at(-1).data.category,'custom');
+      await evaluate('document.querySelector(".checkout-actions .button-back").click();');
+      const contentField = await evaluate('const input=document.querySelector("input[name=content_description]");return {count:document.querySelectorAll(".booking-content input:not([type=hidden])").length,suggestions:[...input.list.options].map(option=>option.value),labels:[...document.querySelectorAll(".booking-content label")].map(label=>label.textContent)};');
+      assert.equal(contentField.count,1);
+      assert.ok(contentField.suggestions.includes('Abbigliamento'));
+      assert.ok(!contentField.labels.includes('Contenuto del pacco'));
+      await fillInputs({content_description:'H.a.s.h.i.s.h'});
+      await waitFor('document.querySelector("input[name=content_description]").getAttribute("aria-invalid") === "true"');
+      const beforeInvalid = writes.filter(write=>write.path.endsWith('/checkout')).length;
+      await evaluate('document.querySelector(".booking-form").requestSubmit();');
+      assert.equal(writes.filter(write=>write.path.endsWith('/checkout')).length,beforeInvalid);
+      assert.equal(await evaluate('return document.querySelector("input[name=content_description]").value;'),'H.a.s.h.i.s.h');
+      await fillInputs({content_description:'Ricambi per elettrodomestici'});
+      contentError = true;
+      try {
+        await evaluate('document.querySelector(".booking-form").requestSubmit();');
+        await waitFor('document.querySelector("input[name=content_description]").getAttribute("aria-invalid") === "true"');
+        assert.equal(writes.filter(write=>write.path.endsWith('/checkout')).length,beforeInvalid+1);
+        assert.equal(await evaluate('return document.querySelector("input[name=recipient_name]").value;'),order.recipient_name);
+      } finally { contentError = false; }
+      await useTextPicker('content_description','Abbigliamento',true);
+      await evaluate('document.querySelector(".booking-form").requestSubmit();');
+      await waitFor('document.querySelector(".checkout-v2")');
+      const suggested = writes.filter(write=>write.path.endsWith('/checkout')).at(-1).data;
+      assert.equal(suggested.category,'clothing');
+      assert.equal(suggested.content_description,'');
+      const historicalBusiness = user.business_type;
+      try {
+        user.business_type = 'cocaina';
+        await navigate('/pickups/new'); await fillBooking();
+        assert.equal(await evaluate('return document.querySelector("input[name=business_type]").readOnly;'),true);
+        assert.ok(await evaluate('return !!document.querySelector(".checkout-v2");'));
+      } finally { user.business_type = historicalBusiness; }
       for (const width of [320, 768, 1440]) {
         await viewport(width); await navigate('/pickups/new'); await fillBooking();
         await check('/checkout', width);
@@ -387,6 +493,39 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       authenticated = false;
       for (const width of [320, 390, 768, 1440]) { await viewport(width); for (const path of ['/login', '/register']) { await navigate(path); await check(path, width); if (process.env.EA_PORTAL_SCREENSHOT_DIR) { const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR,`${path.slice(1)}-${width}.png`),Buffer.from(shot.data,'base64')); } assert.equal(await evaluate('return !!document.querySelector("a[href*=forgot],input[name=token]");'), false); } }
       assert.equal(writes.some(write => /forgot|reset-password/.test(write.path)), false);
+    });
+    await t.test('registrazione: opzioni uniformi e validazione accessibile senza perdere i dati', async () => {
+      authenticated = false;
+      for (const width of [320,390,768,1440]) {
+        await viewport(width); await navigate('/register');
+        const options = await evaluate('return [...document.querySelectorAll(".sender-selector label")].map(node=>{const r=node.getBoundingClientRect(),s=getComputedStyle(node);return {width:r.width,height:r.height,padding:s.padding,border:s.borderRadius};});');
+        assert.equal(options.length,3);
+        assert.ok(options.every(option=>Math.abs(option.width-options[0].width)<1 && option.padding===options[0].padding && option.border===options[0].border && option.height>=44),JSON.stringify({width,options}));
+        const gap = await evaluate('const field=document.querySelector(".field"),label=field.querySelector("label").getBoundingClientRect(),input=field.querySelector("input").getBoundingClientRect();return input.top-label.bottom;');
+        assert.ok(gap>=3 && gap<=8,`registration label gap ${gap}`);
+        const picker = await evaluate('const field=document.querySelector("input[name=business_type]").closest(".field"),r=field.querySelector(".ea-picker-trigger").getBoundingClientRect();return {width:r.width,field:field.getBoundingClientRect().width,height:r.height};');
+        assert.ok(Math.abs(picker.width-picker.field)<1 && picker.height>=44,JSON.stringify(picker));
+        await check('/register',width);
+      }
+      await fillInputs({name:'Negozio dimostrativo',email:'registrazione@example.test',password:'UnaPasswordDiProva123!',password_confirmation:'UnaPasswordDiProva123!'});
+      await useTextPicker('business_type','C0.C4.1.N4');
+      await waitFor('document.querySelector("input[name=business_type]").getAttribute("aria-invalid") === "true"');
+      const before = writes.filter(write=>write.path==='/auth/register').length;
+      await evaluate('document.querySelector(".auth-form form").dispatchEvent(new Event("submit",{bubbles:true,cancelable:true}));');
+      await waitFor('document.querySelector("input[name=business_type]").getAttribute("aria-invalid") === "true"');
+      assert.equal(writes.filter(write=>write.path==='/auth/register').length,before);
+      assert.equal(await evaluate('return document.querySelector("input[name=business_type]").value;'),'C0.C4.1.N4');
+      const error = await evaluate('const input=document.querySelector("input[name=business_type]");return input.getAttribute("aria-describedby").split(" ").map(id=>document.getElementById(id)?.textContent).join(" ");');
+      assert.match(error,/termini non consentiti/);
+      await useTextPicker('business_type','Fiorista',true);
+      registrationError = true;
+      try {
+        await evaluate('document.querySelector(".auth-form form").requestSubmit();');
+        await waitFor('document.querySelector("input[name=business_type]").getAttribute("aria-invalid") === "true"');
+        assert.equal(writes.filter(write=>write.path==='/auth/register').length,before+1);
+        assert.equal(await evaluate('return document.querySelector("input[name=business_type]").value;'),'Fiorista');
+        assert.equal(await evaluate('return document.querySelector("input[name=email]").value;'),'registrazione@example.test');
+      } finally { registrationError = false; authenticated = true; }
     });
     if (process.env.EA_PORTAL_SCREENSHOT_DIR) {
       authenticated = true;

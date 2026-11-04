@@ -1,11 +1,13 @@
 import IconButton from "../components/IconButton";
-import { attachBookingRules } from '../services/booking-rules';
-import { request } from '../api/client';
-import { contentCategories } from "../utils/order-content";
+import { usePickupSchedule } from '../hooks/usePickupSchedule';
+import { contentCategories, contentFormData, contentLabel } from "../utils/order-content";
+import { ApiError } from "../api/client";
+import SuggestedTextField from "../components/SuggestedTextField";
+import { validatePortalText } from "../services/text-policy";
 import Modal from "../components/Modal";
 import CheckoutReview from "../components/CheckoutReview";
 import ShippingQuote from "../components/ShippingQuote";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { createOrder, getOrder, updateOrder, reviewOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
@@ -17,16 +19,8 @@ import { today } from "../utils/format";
 function OrderForm({ order, pickups }) {
   const bookingForm = useRef(null);
   const senderPreference = useRef(null);
-  useEffect(() => {
-    let disposed = false;
-    let cleanup;
-    const load = () => request('/booking-rules');
-    load().then(payload => { if (!disposed) cleanup = attachBookingRules(bookingForm.current, payload, order, load); }).catch(() => {
-      if (!disposed) cleanup = attachBookingRules(bookingForm.current, {server_now:new Date().toISOString()}, order, load);
-    });
-    return () => {disposed = true; cleanup?.();};
-  }, [order]);
-  const [category,setCategory] = useState(order?.category || 'custom');
+  usePickupSchedule(bookingForm, order);
+  const [content,setContent] = useState(order ? contentLabel(order) : '');
   const [shippingType,setShippingType] = useState(order?.shipping_type || 'regional');
   const [cancelOpen,setCancelOpen] = useState(false);
   const [review,setReview] = useState(null);
@@ -63,6 +57,9 @@ function OrderForm({ order, pickups }) {
 
 
     try {
+      const errors = await validatePortalText({content_description: data.content_description});
+      if (Object.keys(errors).length) { setError(new ApiError(422, errors)); return; }
+      Object.assign(data, contentFormData(data.content_description, order));
       const result = await reviewOrder(order ? {...data,version:order.version} : data,order?.slug);
       setReview(result);
       window.scrollTo({top:0,behavior:"smooth"});
@@ -121,7 +118,7 @@ function OrderForm({ order, pickups }) {
     <>
     <nav className="form-progress" aria-label="Avanzamento prenotazione"><span>{review ? '1. Dati del ritiro' : <strong>1. Dati del ritiro</strong>}</span><Icon name="chevron-right"/><span>{review ? <strong>2. Riepilogo e conferma</strong> : '2. Riepilogo e conferma'}</span></nav>
     {review && <CheckoutReview review={review} user={user} busy={busy} error={error} onBack={() => { setReview(null); setError(null); }} onConfirm={confirm} />}
-    <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors} className="order-form booking-form" onSubmit={submit}>
+    <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors && {...error.errors, content_description: error.errors.content_description || error.errors.category}} className="order-form booking-form" onSubmit={submit}>
       <div>
         <section className="panel">
           <h2>
@@ -162,7 +159,7 @@ function OrderForm({ order, pickups }) {
         <section className="panel"><h2><span className="step">03</span> Data e orario</h2>
           <div className="booking-grid booking-schedule">
             {field("pickup_date", "Data del ritiro", { type: "date", min: today(), defaultValue: order?.pickup_date || today() })}
-            {field("pickup_from", "Dalle", { type: "time", defaultValue: order?.pickup_from || "09:00" })}
+            {field("pickup_from", "Dalle", { type: "time", defaultValue: order?.pickup_from || "", help: "L’orario minimo di ritiro è tra 1 minuto. Orari nell’ora italiana." })}
             {field("pickup_to", "Alle", { type: "time", defaultValue: order?.pickup_to || "12:00" })}
           </div>
         </section>
@@ -181,9 +178,9 @@ function OrderForm({ order, pickups }) {
           </div>
           {packageType === 'other' && field("package_description", "Descrizione caratteristiche", { maxLength: 255 })}
           <div className="booking-grid booking-content">
-              <Field label="Contenuto" width="category"><select name="category" value={category} onChange={event => setCategory(event.target.value)}>{Object.entries(contentCategories).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+            <SuggestedTextField label="Contenuto" name="content_description" width="category" value={content} onChange={event => setContent(event.target.value)} required maxLength={255} suggestions={Object.entries(contentCategories).filter(([key]) => key !== 'custom').map(([,label]) => label)} placeholder="Scegli o scrivi liberamente" help="Scegli un suggerimento oppure descrivi il contenuto del pacco." />
+            <input type="hidden" name="category" value={contentFormData(content, order).category} />
             <Field label="Priorità" width="priority"><select name="urgency" defaultValue={order?.urgency || "standard"}><option value="standard">Standard</option><option value="urgent">Urgente</option></select></Field>
-            {category === 'custom' ? field("content_description", "Contenuto del pacco", { maxLength: 255, placeholder: "Es. ricambi per automobile" }) : <input type="hidden" name="content_description" value=""/>}
           </div>
           <Field label="Istruzioni per il rider (facoltative)" width="notes">
             <textarea

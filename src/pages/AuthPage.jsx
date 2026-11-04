@@ -5,6 +5,8 @@ import IconButton from "../components/IconButton";
 import SenderFields from "../components/SenderFields";
 import Brand from "../components/Brand";
 import PrivacyLinks from "../components/PrivacyLinks";
+import { ApiError } from "../api/client";
+import { validatePortalText } from "../services/text-policy";
 import { Field, Feedback, Icon, Form } from "../components/UI";
 export default function AuthPage({ mode = "login" }) {
   const { user, authenticate } = useAuth();
@@ -31,6 +33,11 @@ export default function AuthPage({ mode = "login" }) {
     const data = Object.fromEntries(new FormData(event.currentTarget));
     data.email = data.email.toLowerCase().trim();
     try {
+      const errors = create ? await validatePortalText(data) : {};
+      if (Object.keys(errors).length) {
+        setError(new ApiError(422, errors));
+        return;
+      }
       await authenticate(data, create);
       navigate("/dashboard", { replace: true });
     } catch (error) {

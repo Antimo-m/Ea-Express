@@ -19,3 +19,9 @@ export function contentLabel(order) {
   const label = contentCategories[order.category] || order.category;
   return order.content_description ? `${label}: ${order.content_description}` : label;
 }
+
+export function contentFormData(value, original = null) {
+  if (original && value === contentLabel(original)) return {category: original.category, content_description: original.content_description || ''};
+  const category = Object.entries(contentCategories).find(([key, label]) => key !== 'custom' && label === value)?.[0];
+  return {category: category || 'custom', content_description: category ? '' : value};
+}

@@ -57,3 +57,6 @@ dist/
 !/tests/portal.browser.test.mjs
 !/tests/notifications.test.mjs
 !/tests/pickup-address.test.mjs
+!/tests/booking-rules.test.mjs
+!/tests/pickup-schedule.test.mjs
+!/tests/text-policy.test.mjs
