@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import '../styles/privacy.css';
 
 export default function PrivacyLinks() {
   return <nav className="privacy-links" aria-label="Privacy e memorizzazione dati">

@@ -18,13 +18,21 @@ export function useApi(loader, params = {}, realtime = false, refreshInterval = 
   }, [loader, key, revision]);
   useEffect(() => {
     if (!realtime) return;
+    let scheduled = null;
     const update = (event) => {
       const params = JSON.parse(key);
       if (params.slug && event.detail.order_slug && String(params.slug) !== event.detail.order_slug) return;
-      setRevision(value => value + 1);
+      if (scheduled !== null) return;
+      scheduled = window.setTimeout(() => {
+        scheduled = null;
+        setRevision(value => value + 1);
+      }, 250);
     };
     window.addEventListener('ea:workspace-updated', update);
-    return () => window.removeEventListener('ea:workspace-updated', update);
+    return () => {
+      window.removeEventListener('ea:workspace-updated', update);
+      window.clearTimeout(scheduled);
+    };
   }, [key, realtime]);
   useEffect(() => {
     if (!refreshInterval) return;

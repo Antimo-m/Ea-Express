@@ -7,6 +7,7 @@ import Brand from "../components/Brand";
 import PrivacyLinks from "../components/PrivacyLinks";
 import { ApiError } from "../api/client";
 import { validatePortalText } from "../services/text-policy";
+import { normalizeSenderText } from "../utils/text-policy";
 import { Field, Feedback, Icon, Form } from "../components/UI";
 export default function AuthPage({ mode = "login" }) {
   const { user, authenticate } = useAuth();
@@ -30,7 +31,7 @@ export default function AuthPage({ mode = "login" }) {
     sending.current = true;
     setBusy(true);
     setError(null);
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = normalizeSenderText(Object.fromEntries(new FormData(event.currentTarget)));
     data.email = data.email.toLowerCase().trim();
     try {
       const errors = create ? await validatePortalText(data) : {};

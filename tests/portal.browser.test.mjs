@@ -18,8 +18,8 @@ const order = {
   pickup_date: '2026-10-24', pickup_from: '09:00', pickup_to: '12:00', sender_type: 'business', shipping_type: 'regional',
   status: 'out_for_delivery', status_label: 'In consegna', rider: { name: 'Rider di prova per collaudo interfaccia' }, package_type: 'standard',
   parcel_count: 1, parcel_value_cents: 12500, price_cents: 500, total_cents: 13000, category: 'custom', content_description: 'Ricambi per elettrodomestici',
-  can_edit: true, can_cancel: true, delay: { reported: true, active: true, reported_at: '2026-10-23T12:00:00Z', label: 'In ritardo' },
-  events: [{ slug: 'a43d49ec-2e68-47d2-8a21-5db751cfabff', label: 'Ritardo segnalato dal Rider', created_at: '2026-10-23T12:00:00Z', message: 'Segnalazione operativa registrata.' }],
+  can_edit: true, can_cancel: true,
+  events: [{ slug: 'a43d49ec-2e68-47d2-8a21-5db751cfabff', label: 'Spedizione in consegna', created_at: '2026-10-23T12:00:00Z', message: 'Segnalazione operativa registrata.' }],
 };
 const meta = { current_page: 1, last_page: 2, total: 25 };
 const pending = { slug, subject: 'Pagamento consegne e servizi del mese di ottobre', description: 'Saldo concordato con il negozio per le consegne completate.', amount_cents: 12550, settled_cents: 5000, remaining_cents: 7550, state: 'open', status_label: 'Parzialmente saldato', direction: 'incoming', direction_label: 'Devi pagare EA-Express', occurred_on: '2026-10-01', due_on: '2026-10-31', settlements: [{ slug, amount_cents: 5000, created_at: '2026-10-22T11:00:00Z', updated_at: '2026-10-22T11:00:00Z' }] };
@@ -39,7 +39,9 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
   const writes = [];
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
+  let resourceStatus = 0, inactiveZone = false;
   const rateRequests = [];
+  const orderRequests = [];
   const policyMessage = 'Il testo inserito contiene termini non consentiti. Modifica il contenuto per continuare.';
   const server = createServer((request, response) => {
     const url = new URL(request.url, 'http://localhost');
@@ -74,17 +76,29 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }); return;
       }
       if (errorMode && path === '/orders') { response.statusCode = 500; json({}); return; }
+      if (resourceStatus && /^\/(orders|pending)\//.test(path)) { response.statusCode = resourceStatus; json({}); return; }
       if (path === '/dashboard') { json({ metrics: { active: 13, pickups: 5, delivered: 10, attention: 1, unread: 2 }, live_order: order, recent: [order, { ...order, slug: user.slug }], next_pickups: [order] }); return; }
-      if (path === '/orders') { const body = { data: emptyMode ? [] : [order, { ...order, slug: user.slug }], meta }; loadingMode ? setTimeout(() => json(body), 400) : json(body); return; }
+      if (path === '/orders') {
+        const search=url.searchParams.get('q') || '';
+        orderRequests.push(search);
+        const first = search ? {...order,store_name:`Risultato ${search}`} : order;
+        const body = { data: emptyMode ? [] : [first, { ...first, slug: user.slug }], meta };
+        const delay=search==='Lento'?700:loadingMode?400:0;
+        delay ? setTimeout(() => json(body), delay) : json(body); return;
+      }
       if (path.endsWith('/messages')) { json({ data: emptyMode ? [] : [{ slug, body: 'Il percorso è rallentato. Ti aggiorno appena arrivo alla destinazione concordata.', sender: 'team', created_at: '2026-10-23T12:00:00Z', delivered_at: null, read_at: null }], meta }); return; }
       if (path.startsWith('/orders/')) { json({ data: order }); return; }
       if (path === '/statistics') { json(statistics); return; }
-      if (path === '/pending') { json({ data: emptyMode ? [] : [pending], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
+      if (path === '/pending') { json({ data: emptyMode ? [] : [pending,{...pending,slug:user.slug}], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
       if (path.startsWith('/pending/')) { json({ data: pending }); return; }
       if (path === '/rates') { rateRequests.push(Object.fromEntries(url.searchParams)); const page = Number(url.searchParams.get('page') || 1); const rate = { slug, city: `Caserta e provincia · pagina ${page}`, area: 'Campania', zone: 'Centro storico e periferia', postal_codes: ['81100', '81020'], price_cents: 500, shipping_type: 'regional', delivery_time: 'Entro due giorni lavorativi' }; json({ areas: ['Campania'], rates: { ...meta, current_page:page, data: emptyMode ? [] : ratesPaginationMode ? Array.from({length:18},(_,i)=>({...rate,slug:`${slug}-${i}`})) : [rate] } }); return; }
+      if (path === '/rates/quote') {
+        const recognized = url.searchParams.get('city') === 'Caserta';
+        json(inactiveZone && recognized ? {available:false,availability_status:'inactive',price_cents:null,reason:'Al momento questa zona non è attiva per le consegne, ma sarà presto disponibile.'} : {available:recognized,price_cents:recognized?500:null,reason:recognized?'Tariffa verificata.':'Completa la destinazione.'}); return;
+      }
       if (path === '/notifications') { json({ data: emptyMode ? [] : [{ order_slug: slug, customer_name: user.name, reference: order.reference, total: 3, unread: 1, latest_at: '2026-10-23T12:00:00Z' }], meta }); return; }
       if (path.startsWith('/notifications/orders/')) { json({ data: [
-        { id: '514f7189-32ed-475f-937b-50e06c331bb7', title: 'Ritardo segnalato dal rider per la spedizione in consegna al destinatario', is_message: false, created_at: '2026-10-23T12:00:00Z', read_at: null, order_slug: slug },
+        { id: '514f7189-32ed-475f-937b-50e06c331bb7', title: 'Aggiornamento del rider per la spedizione in consegna al destinatario', is_message: false, created_at: '2026-10-23T12:00:00Z', read_at: null, order_slug: slug },
         { id: '467de175-a71a-453d-989e-aab3da0a1c74', title: 'Nuovo messaggio dal team sulla tua spedizione', is_message: true, created_at: '2026-10-23T11:00:00Z', read_at: '2026-10-23T11:30:00Z', order_slug: slug },
         { id: '17d37f24-5b9a-4cc3-afcc-97df66731bb5', title: 'Spedizione affidata al rider e pronta per la consegna', is_message: false, created_at: '2026-10-23T10:00:00Z', read_at: '2026-10-23T10:30:00Z', order_slug: slug },
       ], meta: { ...meta, current_page: Number(url.searchParams.get('page') || 1) } }); return; }
@@ -116,7 +130,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; const timer = setTimeout(() => reject(new Error(`Timeout ${method}`)), 15000); pending.set(id, { resolve: result => { clearTimeout(timer); resolve(result); }, reject: error => { clearTimeout(timer); reject(error); } }); socket.send(JSON.stringify({ id, method, params })); });
     const evaluate = async expression => { const result = await send('Runtime.evaluate', { expression: `(() => { ${expression} })()`, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
     const waitFor = async expression => { for (let index = 0; index < 100; index++) { if (await evaluate(`return Boolean(${expression});`)) return; await new Promise(resolve => setTimeout(resolve, 30)); } throw new Error(`Not ready: ${expression}`); };
-    const navigate = async path => { await evaluate('window.__previous = true;'); await send('Page.navigate', { url: origin + path }); await waitFor('!window.__previous && document.readyState === "complete" && !document.querySelector(".skeletons") && document.querySelector("h1, .auth-form h2")'); await evaluate('return document.fonts.ready.then(() => true);'); };
+    const navigate = async path => { await evaluate('window.__previous = true;'); await send('Page.navigate', { url: origin + path }); await waitFor('!window.__previous && document.readyState === "complete" && !document.querySelector(".skeletons") && document.querySelector("h1, .auth-form h2, [role=alert]")'); await evaluate('return document.fonts.ready.then(() => true);'); };
     const viewport = width => send('Emulation.setDeviceMetricsOverride', { width, height: ({320:568,360:800,375:812,390:844,430:932,768:1024})[width] || 900, deviceScaleFactor: 1, mobile: width < 768 });
     const fillInputs = values => evaluate(`const values=${JSON.stringify(values)}; for(const [name,value] of Object.entries(values)){const input=document.querySelector('[name="'+name+'"]');if(!input)continue;const prototype=input.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(input,String(value));input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}`);
     const useTextPicker = async (name, value, suggested = false) => {
@@ -152,6 +166,76 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.equal(brand.text, 'EA-Express');
         if (width < 992) await evaluate('document.querySelector(".sidebar-close").click();');
       }
+    });
+    await t.test('spedizioni, messaggi e sospesi separano ogni entità con uno spazio coerente', async () => {
+      for (const width of [320,375,390,430,768,1440]) {
+        await viewport(width);
+        for (const [path, selector] of [['/shipments','.order-row'],['/messages','.order-row'],['/pending','.pending-account-panel']]) {
+          await navigate(path);
+          const gaps = await evaluate(`const nodes=[...document.querySelectorAll('${selector}')];return nodes.slice(1).map((node,index)=>node.getBoundingClientRect().top-nodes[index].getBoundingClientRect().bottom);`);
+          assert.ok(gaps.length && gaps.every(gap=>gap>=16),JSON.stringify({path,width,gaps}));
+          await check(path,width);
+        }
+      }
+    });
+    await t.test('pagina 404: risorse assenti, countdown, redirect e pulizia timer; 403 e 500 restano errori', async () => {
+      await viewport(390); await navigate('/pagina-inesistente');
+      assert.match(await evaluate('return document.querySelector(".not-found-page").textContent;'),/Error Not Found 404.*5 secondi/s);
+      await new Promise(resolve=>setTimeout(resolve,1100));
+      assert.match(await evaluate('return document.querySelector(".not-found-page [role=status]").textContent;'),/4 secondi/);
+      await evaluate('document.querySelector(".not-found-page a").click();');
+      await waitFor('location.pathname === "/dashboard" && !document.querySelector(".skeletons")');
+      await evaluate(`document.querySelector('a[href="/rates"]').click();`);
+      await waitFor('location.pathname === "/rates"');
+      await new Promise(resolve=>setTimeout(resolve,4100));
+      assert.equal(await evaluate('return location.pathname;'),'/rates');
+      try {
+        resourceStatus=404;
+        for (const path of [`/shipments/${slug}`,`/shipments/${slug}/edit`,`/shipments/${slug}/label`,`/pending/${slug}`]) {
+          await navigate(path);
+          assert.ok(await evaluate('return !!document.querySelector(".not-found-page");'),path);
+        }
+        for (const status of [403,500]) {
+          resourceStatus=status; await navigate(`/shipments/${slug}`);
+          assert.equal(await evaluate('return !!document.querySelector(".not-found-page");'),false);
+          assert.ok(await evaluate('return !!document.querySelector("[role=alert]");'));
+        }
+      } finally { resourceStatus=0; }
+      await navigate('/pagina-inesistente');
+      await new Promise(resolve=>setTimeout(resolve,5200));
+      await waitFor('location.pathname === "/dashboard"');
+    });
+    await t.test('zona disattivata: messaggio e blocco riepilogo; digitazione incompleta e zone attive restano distinte', async () => {
+      await viewport(320); await navigate('/pickups/new');
+      try {
+        inactiveZone=true;
+        await fillInputs({delivery_city:'Caserta',delivery_postal_code:'81100'});
+        await waitFor('document.querySelector(".shipping-quote-summary").dataset.state === "inactive"');
+        assert.match(await evaluate('return document.querySelector(".shipping-quote-summary").textContent;'),/Al momento questa zona non è attiva per le consegne, ma sarà presto disponibile\./);
+        assert.equal(await evaluate('return document.querySelector(".booking-review-button").disabled;'),true);
+        await fillInputs({delivery_city:'Casert'});
+        await waitFor('document.querySelector(".shipping-quote-summary").dataset.state === "unavailable"');
+        assert.doesNotMatch(await evaluate('return document.querySelector(".shipping-quote-summary").textContent;'),/questa zona non è attiva/);
+        inactiveZone=false;
+        await fillInputs({delivery_city:'Caserta'});
+        await waitFor('document.querySelector(".shipping-quote-summary").dataset.state === "ready"');
+        assert.equal(await evaluate('return document.querySelector(".booking-review-button").disabled;'),false);
+      } finally { inactiveZone=false; }
+    });
+    await t.test('aggiornamenti realtime raggruppati e risposte lente dei vecchi filtri ignorate', async () => {
+      await viewport(390); await navigate('/shipments');
+      const before=orderRequests.length;
+      await evaluate(`return (async()=>{for(let index=0;index<40;index++){window.dispatchEvent(new CustomEvent('ea:workspace-updated',{detail:{kind:'orders'}}));await new Promise(resolve=>setTimeout(resolve,4));}})();`);
+      await new Promise(resolve=>setTimeout(resolve,450));
+      assert.equal(orderRequests.length,before+1);
+      await fillInputs({q:'Lento'});
+      await evaluate('document.querySelector(".action-search").click();');
+      await waitFor('location.search.includes("Lento")');
+      await fillInputs({q:'Veloce'});
+      await evaluate('document.querySelector(".action-search").click();');
+      await waitFor('document.querySelector(".order-display-name")?.textContent === "Risultato Veloce"');
+      await new Promise(resolve=>setTimeout(resolve,800));
+      assert.equal(await evaluate('return document.querySelector(".order-display-name").textContent;'),'Risultato Veloce');
     });
     await t.test('menu tablet: tastiera, backdrop, navigazione e ridimensionamento', async () => {
       await viewport(768); await navigate('/dashboard');
@@ -199,11 +283,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await evaluate('document.querySelector(".action-reset").click();');
       await waitFor('location.search === "" && document.querySelector("input[name=q]").value === ""');
     });
-    await t.test('ritardo manuale distinto dallo stato e cronologia visibile', async () => {
+    await t.test('stato e cronologia spedizione restano disponibili senza controlli ritardi', async () => {
       await viewport(390); await navigate(`/shipments/${slug}`);
-      assert.match(await evaluate('return document.querySelector(".order-statuses").textContent;'), /In consegna.*In ritardo/);
-      assert.match(await evaluate('return document.querySelector(".timeline").textContent;'), /Ritardo segnalato/);
-      assert.match(await evaluate('return document.querySelector(".delay-notice").textContent;'), /23 ott/);
+      assert.match(await evaluate('return document.querySelector(".order-statuses").textContent;'), /In consegna/);
+      assert.match(await evaluate('return document.querySelector(".timeline").textContent;'), /Spedizione in consegna/);
+      assert.equal(await evaluate('return document.querySelector(".delay-notice,.status-delay");'), null);
     });
     await t.test('modali: contenimento, tooltip hover e focus ed Escape a tutte le larghezze', async () => {
       for (const width of [320,375,768,1024,1440]) {
@@ -379,6 +463,8 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       for (const width of [320, 768, 1440]) {
         await viewport(width); await navigate('/pickups/new'); await fillBooking();
         await check('/checkout', width);
+        const actions = await evaluate('const back=document.querySelector(".checkout-actions .button-back").getBoundingClientRect(),confirm=document.querySelector(".checkout-continue").getBoundingClientRect();return {back:{left:back.left,right:back.right,top:back.top},confirm:{left:confirm.left,right:confirm.right,top:confirm.top}};');
+        assert.ok(actions.back.right<=actions.confirm.left && Math.abs(actions.back.top-actions.confirm.top)<1,JSON.stringify({width,actions}));
         assert.match(await evaluate('return document.querySelector(".checkout-addresses").textContent;'), /Napoli.*Caserta/);
         assert.match(await evaluate('return document.querySelector(".checkout-total").textContent;'), /130,00/);
         assert.equal(await evaluate('return !!document.querySelector(".booking-form input[name=sender_type],.booking-form select[name=sender_type]");'), false);
@@ -493,6 +579,9 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       authenticated = false;
       for (const width of [320, 390, 768, 1440]) { await viewport(width); for (const path of ['/login', '/register']) { await navigate(path); await check(path, width); if (process.env.EA_PORTAL_SCREENSHOT_DIR) { const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR,`${path.slice(1)}-${width}.png`),Buffer.from(shot.data,'base64')); } assert.equal(await evaluate('return !!document.querySelector("a[href*=forgot],input[name=token]");'), false); } }
       assert.equal(writes.some(write => /forgot|reset-password/.test(write.path)), false);
+      const privacyLinks=await evaluate('const nav=document.querySelector(".privacy-links");return {display:getComputedStyle(nav).display,gap:getComputedStyle(nav).columnGap};');
+      assert.equal(privacyLinks.display,'flex');
+      assert.ok(parseFloat(privacyLinks.gap)>=16);
     });
     await t.test('registrazione: opzioni uniformi e validazione accessibile senza perdere i dati', async () => {
       authenticated = false;
@@ -518,11 +607,17 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       const error = await evaluate('const input=document.querySelector("input[name=business_type]");return input.getAttribute("aria-describedby").split(" ").map(id=>document.getElementById(id)?.textContent).join(" ");');
       assert.match(error,/termini non consentiti/);
       await useTextPicker('business_type','Fiorista',true);
+      await fillInputs({name:'C@ZZ0'});
+      await evaluate('document.querySelector(".auth-form form").requestSubmit();');
+      await waitFor('document.querySelector("input[name=name]").getAttribute("aria-invalid") === "true"');
+      assert.equal(writes.filter(write=>write.path==='/auth/register').length,before);
+      await fillInputs({name:'  Cafe\u0301\u00a0 e   Artigianato  '});
       registrationError = true;
       try {
         await evaluate('document.querySelector(".auth-form form").requestSubmit();');
         await waitFor('document.querySelector("input[name=business_type]").getAttribute("aria-invalid") === "true"');
         assert.equal(writes.filter(write=>write.path==='/auth/register').length,before+1);
+        assert.equal(writes.filter(write=>write.path==='/auth/register').at(-1).data.name,'Café e Artigianato');
         assert.equal(await evaluate('return document.querySelector("input[name=business_type]").value;'),'Fiorista');
         assert.equal(await evaluate('return document.querySelector("input[name=email]").value;'),'registrazione@example.test');
       } finally { registrationError = false; authenticated = true; }

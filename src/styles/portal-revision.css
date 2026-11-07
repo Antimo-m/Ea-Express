@@ -72,8 +72,8 @@
 .checkout-assurance > .bi { flex-shrink: 0; margin-top: 1px; color: var(--ea-success); }
 .checkout-assurance p, .checkout-v2 .checkout-rate-note { margin: 0; color: var(--ea-muted); font-size: .8125rem; line-height: 1.5; }
 .checkout-v2 .checkout-rate-note { margin-top: 12px; }
-.checkout-v2 .checkout-actions { display: flex; flex-direction: column-reverse; flex-wrap: nowrap; align-items: stretch; gap: 10px; margin-top: auto; padding-top: 24px; }
-.checkout-v2 .checkout-actions > button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; font-size: .9375rem; }
+.checkout-v2 .checkout-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 10px; margin-top: auto; padding-top: 24px; }
+.checkout-v2 .checkout-actions > button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0; min-height: 46px; padding-inline: 10px; font-size: .9375rem; white-space: normal; overflow-wrap: anywhere; }
 .checkout-v2 .button.checkout-continue, .button.save-pickup-confirm { background: var(--ea-success); border: 1px solid var(--ea-success); color: var(--ea-on-color); }
 .checkout-v2 .button.checkout-continue:hover, .button.save-pickup-confirm:hover { background: color-mix(in srgb, var(--ea-success) 85%, var(--ea-ink)); border-color: var(--ea-success); color: var(--ea-on-color); }
 .checkout-v2 .alert { margin-top: 16px; }
@@ -135,11 +135,36 @@
 .portal-auth.is-registration .sender-type-choice > input { position: static; width: 15px; height: 15px; flex: 0 0 15px; opacity: 1; }
 .portal-auth.is-registration .sender-type-choice > span { min-width: 0; }
 .rates-results { scroll-margin-top: 88px; }
+.order-list, .entity-card-list { display: grid; gap: 16px; min-width: 0; }
+.order-list { padding: 16px; }
+.order-list .order-row, .order-list .order-row:hover, .order-list .order-row:focus-visible {
+  min-width: 0;
+  border: 1px solid var(--ea-line);
+  border-radius: var(--ea-radius-card);
+  background: var(--ea-surface);
+}
+.order-list .order-row:hover, .order-list .order-row:focus-visible { background: var(--ea-hover); }
+.entity-card-list > .data-panel { margin: 0; }
+.ea-modal .modal-actions:has(> .modal-back), .ea-modal .modal-actions:has(> .save-pickup-confirm) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+.ea-modal .modal-actions:has(> .modal-back) > *, .ea-modal .modal-actions:has(> .save-pickup-confirm) > * {
+  min-width: 0;
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.not-found-page { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; min-height: 100dvh; padding: 32px 20px; text-align: center; color: var(--ea-ink); }
+.workspace .not-found-page { min-height: 70dvh; }
+.not-found-code { font: 700 clamp(4rem, 15vw, 8rem) var(--ea-font-display); color: var(--ea-brand); line-height: 1; }
+.not-found-page h1 { margin: 0; font-size: clamp(1.4rem, 4vw, 2rem); }
+.not-found-page p { margin: 0; max-width: 48ch; overflow-wrap: anywhere; }
+.not-found-page > p { color: var(--ea-muted); }
 @media (max-width: 1100px) {
   .checkout-layout { grid-template-columns: minmax(0, 1fr); }
   .checkout-summary { border-left: 0; border-top: 1px solid var(--ea-line); }
-  .checkout-v2 .checkout-actions { flex-direction: row; flex-wrap: wrap; }
-  .checkout-v2 .checkout-actions > button { width: auto; flex: 1 1 180px; }
 }
 @media (min-width: 1440px) { .checkout-layout { grid-template-columns: minmax(0, 1fr) 360px; } }
 @media (max-width: 991px) {
@@ -157,8 +182,6 @@
   .checkout-route-arrow { display: none; }
   .checkout-address + .checkout-route-arrow + .checkout-address { padding-top: 16px; border-top: 1px solid var(--ea-line); }
   .checkout-service { margin-left: 52px; }
-  .checkout-v2 .checkout-actions { flex-direction: column-reverse; }
-  .checkout-v2 .checkout-actions > button { flex: auto; }
   .sender-address-preference { padding: 14px; }
   .saved-pickup-actions > .button { flex: 1 1 130px; }
   .sender-profile-type > span { margin-left: 0; }

@@ -11,7 +11,7 @@ export default function PendingDetailPage() {
   const resource = useApi(loadPending, { slug }, false, 30000);
   return <>
     <Header backTo="/pending" title="Dettaglio sospeso" description="Consulta il saldo e lo storico dei pagamenti registrati da EA-Express." />
-    <State resource={resource}>{({ data: account }) => <>
+    <State resource={resource} notFound>{({ data: account }) => <>
       <DataPanel title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>}>
         <dl className="facts">
           <div><dt>Importo</dt><dd>{money(account.amount_cents)}</dd></div>

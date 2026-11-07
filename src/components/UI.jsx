@@ -2,6 +2,7 @@ import { cloneElement, useContext, useEffect, useId, useRef } from "react";
 import { FormErrorsContext } from "../context/FormErrorsContext";
 import { Link } from "react-router";
 import { date, displayName } from "../utils/format";
+import NotFoundPage from "../pages/NotFoundPage";
 export function Icon({ name, ...props }) {
   return <i className={`bi bi-${name}`} aria-hidden="true" {...props} />;
 }
@@ -30,7 +31,6 @@ export function Status({ order }) {
   return (
     <span className="order-statuses">
       <span className={`status status-${order.status}`}>{order.status_label}</span>
-      {order.delay?.reported && <span className="status status-delay" title={order.delay.reported_at ? `Segnalato il ${date(order.delay.reported_at, true)}` : undefined}><Icon name="exclamation-triangle" /> {order.delay.label || "Ritardo segnalato"}</span>}
     </span>
   );
 }
@@ -88,7 +88,7 @@ export function Feedback({ error, success }) {
     </>
   );
 }
-export function State({ resource, children }) {
+export function State({ resource, children, notFound = false }) {
   if (resource.loading)
     return (
       <div
@@ -102,6 +102,7 @@ export function State({ resource, children }) {
         <span className="sr-only">Caricamento in corso</span>
       </div>
     );
+  if (notFound && resource.error?.status === 404) return <NotFoundPage />;
   if (resource.error)
     return (
       <div className="panel">
@@ -210,7 +211,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
         <span />
       </div>
       {orders.map((order) => (
-        <Link className={`order-row ${order.delay?.active ? "has-delay" : ""}`} key={order.slug} to={`${base}/${order.slug}`}>
+        <Link className="order-row" key={order.slug} to={`${base}/${order.slug}`}>
           <div>
             <strong className="order-display-name">{displayName(order)}</strong>
             <small className="order-code" title={order.reference}>{order.reference}</small>

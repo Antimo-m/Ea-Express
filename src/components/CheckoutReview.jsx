@@ -40,7 +40,7 @@ export default function CheckoutReview({ review, user, busy, error, onBack, onCo
         {quote.reason && <p className="checkout-rate-note">{quote.reason}</p>}
         {!review.checkout_token && !error && <p className="alert error" role="alert">La tariffa non è disponibile. Torna ai dati e controlla la destinazione oppure contatta EA-Express.</p>}
         <Feedback error={error} />
-        <footer className="checkout-actions"><button type="button" className="button button-back" disabled={busy} onClick={onBack}><Icon name="arrow-left" /> Torna indietro</button><button type="button" className="button secondary checkout-continue" aria-busy={busy || undefined} disabled={busy || !review.checkout_token || error?.status === 409} onClick={onConfirm}><Icon name={busy ? "hourglass-split" : "check2"} />{busy ? "Conferma in corso…" : "Conferma ordine"}</button></footer>
+        <footer className="checkout-actions"><button type="button" className="button button-back" disabled={busy} onClick={onBack}><Icon name="arrow-left" /> Torna indietro</button><button type="button" className="button secondary checkout-continue" aria-busy={busy || undefined} disabled={busy || !review.checkout_token || quote.available === false || error?.status === 409} onClick={onConfirm}><Icon name={busy ? "hourglass-split" : "check2"} />{busy ? "Conferma in corso…" : "Conferma ordine"}</button></footer>
       </aside>
     </div>
   </section>;

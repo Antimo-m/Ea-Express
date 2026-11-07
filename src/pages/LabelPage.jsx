@@ -36,5 +36,5 @@ function Label({ order }) {
 export default function LabelPage() {
   const { slug } = useParams();
   const resource = useApi(getOrder, { slug });
-  return <State resource={resource}>{data => <Label order={data.data} />}</State>;
+  return <State resource={resource} notFound>{data => <Label order={data.data} />}</State>;
 }

@@ -33,7 +33,6 @@ function Detail({ order, reload, pickups, messages }) {
         )}
       </Header>
       <Feedback success={success} />
-      {order.delay?.reported && <aside className="delay-notice" aria-label="Segnalazione di ritardo"><Icon name="exclamation-triangle" /><div><strong>{order.delay.active ? "La spedizione è stata segnalata in ritardo" : "La cronologia conserva una segnalazione di ritardo"}</strong><p>Il rider ha registrato la segnalazione{order.delay.reported_at ? ` il ${date(order.delay.reported_at, true)}` : ""}. Puoi contattarlo dalla conversazione della spedizione.</p></div></aside>}
 
       {!messages && <div className="order-summary"><aside className="order-focus-summary"><span className="eyebrow">{order.reference}</span><Status order={order}/><h2>{order.recipient_name}</h2><p>{order.delivery_address} {order.delivery_street_number}, {order.delivery_city}</p><strong>{order.rider?.name || 'Rider da assegnare'}</strong>{order.estimated_at && <p>Arrivo stimato: {date(order.estimated_at, true)}</p>}<IconButton action="message" icon="chat-dots" label="Contatta il rider" to={`/messages/${order.slug}`} /></aside></div>}
       {!messages && (
@@ -178,7 +177,7 @@ export default function OrderDetailPage({ pickups = false, messages = false }) {
   const { slug } = useParams();
   const resource = useApi(getOrder, { slug }, true);
   return (
-    <State resource={resource}>
+    <State resource={resource} notFound>
       {(data) => (
         <Detail
           key={slug}

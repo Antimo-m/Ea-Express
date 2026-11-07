@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { portalTextError } from '../src/utils/text-policy.js';
+import { normalizePortalText, normalizeSenderText, portalTextError } from '../src/utils/text-policy.js';
 import { contentFormData, contentLabel } from '../src/utils/order-content.js';
 
 const fixture = process.env.EA_TEXT_POLICY_FIXTURE ? JSON.parse(readFileSync(process.env.EA_TEXT_POLICY_FIXTURE, 'utf8')) : null;
-const policy = fixture?.policy || {terms: ['cocaina', 'hashish', 'fuck', 'cazzo', 'asshole', 'porco dio'], substitutions: {'0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','@':'a','$':'s','ò':'o','à':'a','í':'i'}, message: 'Testo non consentito.'};
+const policy = fixture?.policy || {terms: ['cocaina', 'hashish', 'fuck', 'cazzo', 'asshole', 'porco dio'], substitutions: {'0':'o','1':'i','3':'e','4':'a','5':'s','7':'t','@':'a','$':'s','ò':'o','ó':'o','à':'a','í':'i'}, message: 'Testo non consentito.'};
 
 test('text policy rejects accents, case, common leetspeak, spacing and punctuation without erasing text', () => {
   for (const text of ['COCAINA', 'CÒCÀÍNÀ', 'co\u0301caina', 'c0c41n4', 'c@zz0', 'c o c a i n a', 'h.a.s.h.i.s.h', 'c-o c_a.i!n?a', 'Vendita (cocaina), online', 'coca\u200Bina', 'porco.dio', 'FUCK']) {
@@ -17,6 +17,13 @@ test('text policy respects word boundaries and legitimate accented business desc
   for (const text of ['Abbigliamento', 'Caffè e artigianato', 'Assistenza e articoli classici', 'Scunthorpe document services', 'Accessori cocktail e cucina', 'Meridiana e ricambi', 'cocaina界', 'Documenti modello MDMA123', '']) {
     assert.equal(portalTextError(text, policy), null, text);
   }
+});
+
+test('sender text normalizes Unicode and whitespace without changing passwords or recipient data', () => {
+  assert.equal(normalizePortalText('  Cafe\u0301\u00a0\u00a0 &   Artigianato\n '), 'Café & Artigianato');
+  assert.deepEqual(normalizeSenderText({name:'  Caffè  e  Artigianato ', business_type:'\tFiorista\n', business_description:'  Fiori\u00a0 freschi ',password:'  Keep  secret ',recipient_name:'  Original  Recipient '}), {
+    name:'Caffè e Artigianato',business_type:'Fiorista',business_description:'Fiori freschi',password:'  Keep  secret ',recipient_name:'  Original  Recipient ',
+  });
 });
 
 test('client and server apply the same policy to shared regression vectors', {skip: !fixture}, () => {
@@ -39,6 +46,9 @@ test('submit validation checks editable fields without revalidating historical r
   try {
     const {validatePortalText} = await import('../src/services/text-policy.js?scope');
     assert.deepEqual(await validatePortalText({sender_type:'business', business_type:'cocaina'}), {business_type:[policy.message]});
+    assert.deepEqual(await validatePortalText({sender_type:'online_shop', name:'c@zz0'}), {name:[policy.message]});
+    assert.deepEqual(await validatePortalText({sender_type:'business', store_name:'FUCK'}), {store_name:[policy.message]});
+    assert.deepEqual(await validatePortalText({sender_type:'private', name:'cazzo', store_name:'cazzo'}), {});
     assert.deepEqual(await validatePortalText({content_description:'Ricambi per automobile'}), {});
     assert.deepEqual(await validatePortalText({content_description:'hashish'}), {content_description:[policy.message]});
   } finally { globalThis.fetch = previousFetch; }

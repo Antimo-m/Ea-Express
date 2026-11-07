@@ -21,7 +21,7 @@ export default function PendingPage() {
         <MetricTile label="Devi pagare EA-Express" value={money(data.totals.incoming)} icon="arrow-up-right" note="Residuo dei sospesi aperti in entrata per EA-Express" tone="attention" />
         <MetricTile label="EA-Express deve pagarti" value={money(data.totals.outgoing)} icon="arrow-down-left" note="Residuo dei sospesi aperti in uscita per EA-Express" />
       </section>
-      {data.data.length ? data.data.map(account => <DataPanel key={account.slug} title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>} footer={<Link className="button secondary" to={`/pending/${account.slug}`}>Dettaglio e storico pagamenti →</Link>}>
+      {data.data.length ? <div className="entity-card-list">{data.data.map(account => <DataPanel key={account.slug} title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>} footer={<Link className="button secondary" to={`/pending/${account.slug}`}>Dettaglio e storico pagamenti →</Link>}>
         <dl className="facts">
           <div><dt>Importo</dt><dd>{money(account.amount_cents)}</dd></div>
           <div><dt>Già saldato</dt><dd>{money(account.settled_cents)}</dd></div>
@@ -30,7 +30,7 @@ export default function PendingPage() {
           <div><dt>Data</dt><dd>{date(account.occurred_on)}</dd></div>
           {account.due_on && <div><dt>Scadenza</dt><dd>{date(account.due_on)}</dd></div>}
         </dl>
-      </DataPanel>) : <Empty title="Nessun sospeso" text="Non risultano sospesi per i filtri selezionati." icon="hourglass" />}
+      </DataPanel>)}</div> : <Empty title="Nessun sospeso" text="Non risultano sospesi per i filtri selezionati." icon="hourglass" />}
       <Pagination meta={data.meta} onPage={page => { const next = new URLSearchParams(params); next.set("page", page); setParams(next); }} />
     </>}</State>
   </>;

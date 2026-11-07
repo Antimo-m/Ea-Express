@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { request, query } from '../api/client';
 import { money } from '../utils/format';
-export default function ShippingQuote({ city, postal, zone, street, shippingType = 'regional', weight, dimension, province, region, onPostalResolved }) {
+export default function ShippingQuote({ city, postal, zone, street, shippingType = 'regional', weight, dimension, province, region, onPostalResolved, onInactiveChange }) {
   const [result, setResult] = useState(null);
   const key = JSON.stringify([city, postal, zone, street, shippingType, weight, dimension, province, region]);
   const valid = Boolean(city.trim()) && (!postal || /^\d{5}$/.test(postal));
@@ -21,8 +21,12 @@ export default function ShippingQuote({ city, postal, zone, street, shippingType
   const current = result?.key === key ? result : null;
   const quote = current?.data;
   const available = quote?.available && Number.isInteger(quote.price_cents);
+  const inactive = quote?.availability_status === 'inactive';
+  useEffect(() => {
+    onInactiveChange?.(inactive);
+  }, [inactive, onInactiveChange]);
   const loading = valid && !current;
-  return <div className="shipping-quote-summary" data-state={loading ? 'loading' : current?.error ? 'error' : available ? 'ready' : quote ? 'unavailable' : 'empty'} role="status" aria-live="polite" aria-busy={loading}>
+  return <div className="shipping-quote-summary" data-state={loading ? 'loading' : current?.error ? 'error' : available ? 'ready' : inactive ? 'inactive' : quote ? 'unavailable' : 'empty'} role="status" aria-live="polite" aria-busy={loading}>
     <strong>{!valid ? 'Completa la destinazione' : loading ? 'Ricalcolo tariffa…' : current.error ? 'Non è stato possibile calcolare la tariffa' : available ? money(quote.price_cents) : 'Tariffa non disponibile'}</strong>
     {!valid && <p>{!city.trim() ? 'Inserisci il comune di consegna. Il CAP viene risolto se univoco; altrimenti indica un CAP di 5 cifre.' : 'Inserisci un CAP valido di 5 cifre.'}</p>}
     {current?.error && <p>Verifica CAP e destinazione e riprova.</p>}

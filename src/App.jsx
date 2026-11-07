@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { attachFormPopovers } from './services/form-popovers';
 import {
   BrowserRouter,
@@ -6,27 +6,27 @@ import {
   Route,
   Navigate,
   Outlet,
-  Link,
 } from "react-router";
 import AuthProvider from "./context/AuthProvider";
 import { useAuth } from "./hooks/useAuth";
-import { State, Empty } from "./components/UI";
+import { State } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PortalLayout from "./layouts/PortalLayout";
 import AuthPage from "./pages/AuthPage";
-import DashboardPage from "./pages/DashboardPage";
-import OrdersPage from "./pages/OrdersPage";
-import OrderFormPage from "./pages/OrderFormPage";
-import OrderDetailPage from "./pages/OrderDetailPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import LabelPage from "./pages/LabelPage";
-import RatesPage from "./pages/RatesPage";
-import StatisticsPage from "./pages/StatisticsPage";
-import PendingPage from "./pages/PendingPage";
-import PendingDetailPage from "./pages/PendingDetailPage";
-import ProfilePage from "./pages/ProfilePage";
-import PrivacyPage from "./pages/PrivacyPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import "bootstrap-icons/font/bootstrap-icons.css";
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const OrderFormPage = lazy(() => import('./pages/OrderFormPage'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const LabelPage = lazy(() => import('./pages/LabelPage'));
+const RatesPage = lazy(() => import('./pages/RatesPage'));
+const StatisticsPage = lazy(() => import('./pages/StatisticsPage'));
+const PendingPage = lazy(() => import('./pages/PendingPage'));
+const PendingDetailPage = lazy(() => import('./pages/PendingDetailPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 function Session() {
   const auth = useAuth();
   return <State resource={auth}>{() => <Outlet />}</State>;
@@ -41,6 +41,7 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<State resource={{ loading: true }} />}>
           <Routes>
             <Route path="/cookies" element={<PrivacyPage />} />
             <Route path="/privacy" element={<PrivacyPage privacy />} />
@@ -78,22 +79,11 @@ export default function App() {
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="settings" element={<ProfilePage settings />} />
-                <Route
-                  path="*"
-                  element={
-                    <Empty
-                      title="Questa pagina non esiste"
-                      text="Riparti dalla panoramica del tuo negozio."
-                    >
-                      <Link className="button" to="/dashboard">
-                        Vai alla panoramica
-                      </Link>
-                    </Empty>
-                  }
-                />
               </Route>
             </Route>
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

@@ -4,6 +4,7 @@ import { contentCategories, contentFormData, contentLabel } from "../utils/order
 import { ApiError } from "../api/client";
 import SuggestedTextField from "../components/SuggestedTextField";
 import { validatePortalText } from "../services/text-policy";
+import { normalizeSenderText } from "../utils/text-policy";
 import Modal from "../components/Modal";
 import CheckoutReview from "../components/CheckoutReview";
 import ShippingQuote from "../components/ShippingQuote";
@@ -45,19 +46,20 @@ function OrderForm({ order, pickups }) {
   }, []);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [inactiveDestination, setInactiveDestination] = useState(false);
   const base = pickups ? "/pickups" : "/shipments";
   async function submit(event) {
     event.preventDefault();
-    if (submitting.current) return;
+    if (submitting.current || inactiveDestination) return;
     submitting.current = true;
     setError(null);
     setBusy(true);
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    const data = normalizeSenderText(Object.fromEntries(new FormData(event.currentTarget)));
     data.parcel_count = Number(data.parcel_count);
 
 
     try {
-      const errors = await validatePortalText({content_description: data.content_description});
+      const errors = await validatePortalText({sender_type: user.sender_type, store_name: data.store_name, content_description: data.content_description});
       if (Object.keys(errors).length) { setError(new ApiError(422, errors)); return; }
       Object.assign(data, contentFormData(data.content_description, order));
       const result = await reviewOrder(order ? {...data,version:order.version} : data,order?.slug);
@@ -71,7 +73,7 @@ function OrderForm({ order, pickups }) {
     }
   }
   async function confirm() {
-    if (submitting.current || !review?.checkout_token) return;
+    if (submitting.current || !review?.checkout_token || review.quote?.available === false) return;
     submitting.current = true; setBusy(true); setError(null);
     try {
       const data = {...review.data,checkout_token:review.checkout_token};
@@ -141,14 +143,14 @@ function OrderForm({ order, pickups }) {
             <Field label="Tipo di spedizione" width="service"><select name="shipping_type" value={shippingType} onChange={event => setShippingType(event.target.value)}><option value="regional">Regionale · Rete EA-Express</option><option value="external">Fuori regione · Rete EA-Express</option></select></Field>
           </div>
           <div className="booking-grid booking-contact">
-            {field("recipient_name", "Nome destinatario", { maxLength: 150 })}
-            {field("recipient_phone", "Telefono destinatario", { type: "tel", maxLength: 30, minLength: 6 })}
+            {field("recipient_name", "Nome destinatario", { maxLength: 150, autoComplete: "section-recipient shipping name" })}
+            {field("recipient_phone", "Telefono destinatario", { type: "tel", maxLength: 30, minLength: 6, autoComplete: "section-recipient shipping tel" })}
           </div>
           <div className="booking-grid booking-address">
-            {field("delivery_address", "Indirizzo di consegna", { onChange: event => setStreet(event.target.value) })}
-            {field("delivery_street_number", "Civico", { maxLength: 20 })}
-            {field("delivery_city", "Comune di consegna", { maxLength: 100, onChange: event => setCity(event.target.value) })}
-            {field("delivery_postal_code", "CAP consegna", { required: false, help: "Automatico se il comune ha un solo CAP.", pattern: "[0-9]{5}", maxLength: 5, inputMode: "numeric", onChange: event => setPostal(event.target.value) })}
+            {field("delivery_address", "Indirizzo di consegna", { autoComplete: "section-recipient shipping address-line1", onChange: event => setStreet(event.target.value) })}
+            {field("delivery_street_number", "Civico", { autoComplete: "off", maxLength: 20 })}
+            {field("delivery_city", "Comune di consegna", { autoComplete: "section-recipient shipping address-level2", maxLength: 100, onChange: event => setCity(event.target.value) })}
+            {field("delivery_postal_code", "CAP consegna", { autoComplete: "section-recipient shipping postal-code", required: false, help: "Automatico se il comune ha un solo CAP.", pattern: "[0-9]{5}", maxLength: 5, inputMode: "numeric", onChange: event => setPostal(event.target.value) })}
           </div>
           <div className="booking-grid booking-location-details">
             {field("delivery_zone", "Zona / quartiere (facoltativo)", { required: false, maxLength: 100, onChange: event => setZone(event.target.value) })}
@@ -195,7 +197,7 @@ function OrderForm({ order, pickups }) {
       </div>
       <section className="panel booking-tariff">
         <h2><span className="step">05</span> Tariffa</h2>
-          <ShippingQuote province={province} region={region} onPostalResolved={resolvePostal} city={city} postal={postal} zone={zone} street={street} shippingType={shippingType}/>
+          <ShippingQuote province={province} region={region} onPostalResolved={resolvePostal} onInactiveChange={setInactiveDestination} city={city} postal={postal} zone={zone} street={street} shippingType={shippingType}/>
         <p className="muted">
           Controlla indirizzi, contatto e orario. Potrai modificare la richiesta
           fino alla presa in carico.
@@ -208,7 +210,7 @@ function OrderForm({ order, pickups }) {
         )}
       </section>
       <div className="booking-final-actions">
-        <button className="button booking-review-button" type="submit" disabled={busy} aria-busy={busy || undefined}>{busy ? "Verifica in corso…" : "Prosegui al riepilogo"}<Icon name="arrow-right" /></button>
+        <button className="button booking-review-button" type="submit" disabled={busy || inactiveDestination} aria-busy={busy || undefined}>{busy ? "Verifica in corso…" : "Prosegui al riepilogo"}<Icon name="arrow-right" /></button>
         <button type="button" className="button danger" disabled={busy} onClick={()=>setCancelOpen(true)}><Icon name="trash"/> Annulla</button>
       </div>
     </Form></div>
@@ -223,7 +225,7 @@ function OrderForm({ order, pickups }) {
 function EditForm({ slug, pickups }) {
   const resource = useApi(getOrder, { slug });
   return (
-    <State resource={resource}>
+    <State resource={resource} notFound>
       {(data) => (
         <OrderForm
           key={data.data.version}

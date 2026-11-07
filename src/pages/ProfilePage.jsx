@@ -1,6 +1,7 @@
 import IconButton from "../components/IconButton";
 import { ApiError } from "../api/client";
 import { validatePortalText } from "../services/text-policy";
+import { normalizeSenderText } from "../utils/text-policy";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -18,7 +19,7 @@ function AccountForm({ kind, user, onUpdate }) {
   async function submit(event) {
     event.preventDefault();
     const form = event.currentTarget;
-    const data = Object.fromEntries(new FormData(form));
+    const data = normalizeSenderText(Object.fromEntries(new FormData(form)));
     if (kind === "preferences") {
       data.notify_orders = data.notify_orders === "on";
       data.notify_messages = data.notify_messages === "on";
