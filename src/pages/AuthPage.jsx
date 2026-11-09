@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import BotChallenge from "../components/BotChallenge";
 import IconButton from "../components/IconButton";
 import SenderFields from "../components/SenderFields";
 import Brand from "../components/Brand";
@@ -12,6 +13,9 @@ import { Field, Feedback, Icon, Form } from "../components/UI";
 export default function AuthPage({ mode = "login" }) {
   const { user, authenticate } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [challenge, setChallenge] = useState(null);
+  const [botToken, setBotToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const sending = useRef(false);
@@ -32,6 +36,7 @@ export default function AuthPage({ mode = "login" }) {
     setBusy(true);
     setError(null);
     const data = normalizeSenderText(Object.fromEntries(new FormData(event.currentTarget)));
+    if (botToken) data["cf-turnstile-response"] = botToken;
     data.email = data.email.toLowerCase().trim();
     try {
       const errors = create ? await validatePortalText(data) : {};
@@ -39,10 +44,13 @@ export default function AuthPage({ mode = "login" }) {
         setError(new ApiError(422, errors));
         return;
       }
-      await authenticate(data, create);
-      navigate("/dashboard", { replace: true });
+      const result = await authenticate(data, create);
+      navigate(create ? "/login" : "/dashboard", { replace: true, state: create ? { message: result.message } : null });
     } catch (error) {
       setError(error);
+      setBotToken("");
+      if (error.botChallenge) setChallenge(error.botChallenge);
+      else if (challenge) setChallenge({ ...challenge });
       if (error.status === 429) { setNow(Date.now()); setRetryAt(Date.now() + (error.retryAfter || 60) * 1000); }
     } finally {
       sending.current = false;
@@ -95,7 +103,7 @@ export default function AuthPage({ mode = "login" }) {
           <p className="muted">
             {create ? "Spedisci come attività o privato, da un unico account." : "Accedi e dai il via alla tua giornata."}
           </p>
-          <Feedback error={error} />
+          <Feedback success={location.state?.message} error={error} />
           <Form errors={error?.errors} onSubmit={submit} aria-busy={busy}>
             {create && <SenderFields />}
             <Field
@@ -124,8 +132,9 @@ export default function AuthPage({ mode = "login" }) {
                 required
               />
             )}
-            {create ? <IconButton action="add" type="submit" label="Crea account cliente" loading={busy} disabled={remaining > 0} /> : <button className="button full" disabled={busy || remaining > 0}>{busy ? "Attendi…" : "Accedi al tuo spazio"}<Icon name="arrow-right" /></button>}
-            {remaining > 0 && <p className="muted" role="status">Puoi riprovare tra {Math.ceil(remaining / 60)} minuti.</p>}
+            {challenge && <BotChallenge challenge={challenge} onToken={setBotToken} />}
+            {create ? <IconButton action="add" type="submit" label="Crea account cliente" loading={busy} disabled={remaining > 0} /> : <button className="button full" disabled={busy || remaining > 0 || Boolean(challenge && !botToken)}>{busy ? "Attendi…" : "Accedi al tuo spazio"}<Icon name="arrow-right" /></button>}
+            {remaining > 0 && <p className="muted" role="status">Puoi riprovare tra {remaining < 60 ? `${remaining} secondi` : `${Math.ceil(remaining / 60)} minuti`}.</p>}
           </Form>
           <p className="auth-switch">
             {mode === "login" ? (

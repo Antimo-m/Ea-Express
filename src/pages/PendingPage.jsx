@@ -13,9 +13,9 @@ export default function PendingPage() {
   const direction = params.get("direction") || "";
   const resource = useApi(loadPending, { page: params.get("page") || 1, view, direction }, false, 30000);
   return <>
-    <Header title="Sospesi" description="Somme da pagare o ricevere, con residui e storico aggiornati." />
+    <Header title={["settled", "history"].includes(view) ? "Archivio Sospesi" : "Sospesi"} description="Somme da pagare o ricevere, con residui e storico aggiornati." />
     <FilterToolbar key={params.toString()} onApply={setParams} onReset={() => setParams({})} count={Number(view !== 'open') + Number(Boolean(direction))}
-      primary={<><Field label="Stato del sospeso"><select name="view" defaultValue={view}><option value="open">Aperti</option><option value="history">Storico · saldati e annullati</option><option value="all">Tutti</option></select></Field><Field label="Direzione"><select name="direction" defaultValue={direction}><option value="">Tutte</option><option value="incoming">In entrata · Devi pagare EA-Express</option><option value="outgoing">In uscita · EA-Express deve pagarti</option></select></Field></>}/>
+      primary={<><Field label="Stato del sospeso"><select name="view" defaultValue={view}><option value="open">Da saldare</option><option value="partial">Parziali</option><option value="settled">Saldati</option><option value="all">Tutti</option><option value="history">Archivio · saldati e annullati</option></select></Field><Field label="Direzione"><select name="direction" defaultValue={direction}><option value="">Tutte</option><option value="incoming">In entrata · Devi pagare EA-Express</option><option value="outgoing">In uscita · EA-Express deve pagarti</option></select></Field></>}/>
     <State resource={resource}>{data => <>
       <section className="pending-metrics" aria-label="Residui aperti">
         <MetricTile label="Devi pagare EA-Express" value={money(data.totals.incoming)} icon="arrow-up-right" note="Residuo dei sospesi aperti in entrata per EA-Express" tone="attention" />

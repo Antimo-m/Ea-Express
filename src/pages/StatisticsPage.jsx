@@ -9,6 +9,7 @@ import { Header, Field, State, Icon } from '../components/UI';
 import { today, money, chartDate } from '../utils/format';
 const load = params => request(`/statistics${query(params)}`);
 const percentage = value => value === null ? 'Nessuna base di confronto' : `${value > 0 ? '+' : ''}${value}% sul periodo precedente`;
+const validatePeriod = ({from, to}) => from && to && from > to ? {to: ['La data finale deve essere uguale o successiva alla data iniziale.']} : {};
 export default function StatisticsPage() {
   const [selectedType,setSelectedType] = useState('regional');
   const [params,setFilters] = useSearchParams();
@@ -17,7 +18,7 @@ export default function StatisticsPage() {
   const resource = useApi(load,filters,true,30000);
   return <>
     <Header eyebrow="LA TUA ATTIVITÀ" title="Statistiche" description="Ricavi dalle consegne, volume di lavoro e crescita del tuo negozio."/>
-    <FilterToolbar key={params.toString()} label="Periodo delle statistiche" onApply={setFilters} onReset={() => setFilters({})} count={Number(filters.from !== defaults.from || filters.to !== defaults.to)}
+    <FilterToolbar key={params.toString()} errors={resource.error?.errors} validate={validatePeriod} label="Periodo delle statistiche" onApply={setFilters} onReset={() => setFilters({})} count={Number(filters.from !== defaults.from || filters.to !== defaults.to)}
       primary={<><Field name="from" label="Data iniziale" type="date" defaultValue={filters.from} required/><Field name="to" label="Data finale" type="date" defaultValue={filters.to} required/></>}/>
     <State resource={resource}>{data => <div className="statistics-workspace">
       <div className="statistics-context"><p>Attività dal <strong>{chartDate(data.from)}</strong> al <strong>{chartDate(data.to)}</strong></p><span>Confronto: {chartDate(data.previous_from)} — {chartDate(data.previous_to)}</span></div>

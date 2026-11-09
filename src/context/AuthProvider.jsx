@@ -46,8 +46,9 @@ export default function AuthProvider({ children }) {
   }
   async function authenticate(data, create = false) {
     const result = await (create ? api.register(data) : api.login(data));
-    setUser(result.user);
+    setUser(result.user || null);
     setError(null);
+    return result;
   }
   async function logout() {
     await api.logout();

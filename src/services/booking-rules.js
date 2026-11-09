@@ -85,7 +85,7 @@ export function attachBookingRules(form, payload, original = null, reload) {
         }
     };
     const visibility = () => {if (!document.hidden) sync();};
-    const submit = event => {update(); if (!form.reportValidity()) {event.preventDefault(); event.stopImmediatePropagation();}};
+    const submit = event => {update(); if (!form.noValidate && !form.reportValidity()) {event.preventDefault(); event.stopImmediatePropagation();}};
     form.addEventListener('input',change); form.addEventListener('change',change); form.addEventListener('submit',submit,true);
     window.addEventListener('focus',sync); document.addEventListener('visibilitychange',visibility);
     const interval = setInterval(update,1000); update(); sync();

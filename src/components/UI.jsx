@@ -1,8 +1,9 @@
-import { cloneElement, useContext, useEffect, useId, useRef } from "react";
+import { cloneElement, useContext, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { FormErrorsContext } from "../context/FormErrorsContext";
 import { Link } from "react-router";
 import { date, displayName } from "../utils/format";
 import NotFoundPage from "../pages/NotFoundPage";
+import ShipmentRoute from "./ShipmentRoute";
 export function Icon({ name, ...props }) {
   return <i className={`bi bi-${name}`} aria-hidden="true" {...props} />;
 }
@@ -114,18 +115,62 @@ export function State({ resource, children, notFound = false }) {
     );
   return children(resource.data);
 }
-export function Form({ errors, ...props }) {
+function focusField(control) {
+  if (!control) return;
+  const target = control.classList.contains("ea-picker-source")
+    ? control.nextElementSibling
+    : control;
+  if (!target?.getClientRects().length) return;
+  target.focus();
+  target.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+function validationMessage(control) {
+  if (control.validity.valid) return "";
+  if (control.validity.customError) return control.validationMessage;
+  if (control.validity.valueMissing) return "Questo campo è obbligatorio.";
+  if (control.type === "email" && control.validity.typeMismatch) return "Inserisci un indirizzo email valido.";
+  if (control.name?.includes("postal_code") && control.validity.patternMismatch) return "Il CAP deve contenere 5 cifre.";
+  if (["parcel_value", "price"].includes(control.name) && control.validity.patternMismatch) return "Inserisci un importo valido con al massimo due decimali.";
+  if (control.validity.tooShort) return `Inserisci almeno ${control.minLength} caratteri.`;
+  if (control.validity.rangeUnderflow) return `Il valore minimo consentito è ${control.min}.`;
+  if (control.validity.rangeOverflow) return `Il valore massimo consentito è ${control.max}.`;
+  if (control.validity.stepMismatch || control.validity.badInput) return "Inserisci un valore numerico valido.";
+  return "Controlla il valore inserito.";
+}
+export function Form({ errors, onSubmit, onInvalidCapture, ref, ...props }) {
+  const form = useRef(null);
+  useImperativeHandle(ref, () => form.current);
+  useEffect(() => {
+    if (!Object.keys(errors || {}).length) return;
+    const frame = requestAnimationFrame(() => focusField(form.current?.querySelector('[aria-invalid="true"]:not(button)')));
+    return () => cancelAnimationFrame(frame);
+  }, [errors]);
   return (
     <FormErrorsContext.Provider value={errors || {}}>
-      <form {...props} />
+      <form {...props} ref={form} noValidate onInvalidCapture={event => {
+        event.preventDefault();
+        onInvalidCapture?.(event);
+      }} onSubmit={event => {
+        if (!event.currentTarget.checkValidity()) {
+          event.preventDefault();
+          focusField(event.currentTarget.querySelector(":invalid"));
+          return;
+        }
+        onSubmit?.(event);
+      }} />
     </FormErrorsContext.Provider>
   );
 }
 export function Field({ label, name, children, help, width, ...props }) {
   const errors = useContext(FormErrorsContext);
+  const [localError, setLocalError] = useState("");
+  const [clearedError, setClearedError] = useState();
   const id = useId();
   const fieldName = name || children?.props?.name;
-  const error = errors[fieldName];
+  const serverError = errors[fieldName];
+  const error = localError || (serverError !== clearedError ? serverError : null);
+  const inputProps = children?.props || props;
+  const required = Boolean(inputProps.required && !inputProps.readOnly);
   const size =
     width ||
     (["parcel_value", "price"].includes(fieldName)
@@ -143,12 +188,26 @@ export function Field({ label, name, children, help, width, ...props }) {
       .join(" ") || undefined;
   const accessibility = {
     id,
+    "aria-required": required || undefined,
     "aria-invalid": error ? true : undefined,
     "aria-describedby": described,
+    onInvalid: event => {
+      inputProps.onInvalid?.(event);
+      setLocalError(validationMessage(event.currentTarget));
+    },
+    onChange: event => {
+      inputProps.onChange?.(event);
+      setClearedError(serverError);
+      if (error) setLocalError(validationMessage(event.currentTarget));
+    },
+    onBlur: event => {
+      inputProps.onBlur?.(event);
+      setLocalError(validationMessage(event.currentTarget));
+    },
   };
   return (
     <div className={`field field-${size}`}>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>{label}{required && <span className="required-mark" aria-hidden="true"> *</span>}</label>
       {children ? (
         cloneElement(children, accessibility)
       ) : (
@@ -161,7 +220,7 @@ export function Field({ label, name, children, help, width, ...props }) {
       )}
       {error && (
         <small className="field-error" id={`${id}-error`} role="alert">
-          {error.join(" ")}
+          {Array.isArray(error) ? error.join(" ") : error}
         </small>
       )}
     </div>
@@ -215,7 +274,6 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
           <div>
             <strong className="order-display-name">{displayName(order)}</strong>
             <small className="order-code" title={order.reference}>{order.reference}</small>
-            <span>Destinatario: {order.recipient_name}</span>
             {messages && (
               <span
                 className={
@@ -231,13 +289,7 @@ export function OrderList({ orders, base = "/shipments", messages = false }) {
               </span>
             )}
           </div>
-          <div>
-            <strong>
-              {order.pickup_city} <Icon name="arrow-right" />{" "}
-              {order.delivery_city}
-            </strong>
-            <span>{order.rider?.name || "In attesa di assegnazione"}</span>
-          </div>
+          <ShipmentRoute order={order} />
           <div>
             <strong>{date(order.pickup_date)}</strong>
             <span>

@@ -4,7 +4,7 @@ dist/
 .env.*
 !.env.example
 *.[mM][dD]
-*.markdown
+*.[mM][aA][rR][kK][dD][oO][wW][nN]
 .agents/
 .ai/
 .codex/
@@ -60,3 +60,12 @@ dist/
 !/tests/booking-rules.test.mjs
 !/tests/pickup-schedule.test.mjs
 !/tests/text-policy.test.mjs
+
+!/tests/auth-security.test.mjs
+
+# Le esportazioni delle conversazioni rimangono locali.
+*.jsonl
+/conversations/
+/conversazioni/
+/transcripts/
+/chat-exports/

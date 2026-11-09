@@ -243,8 +243,6 @@ body.ea-app .text-dark { color: var(--ea-ink) !important; }
 @media (max-width: 991px) { .auth-shell { grid-template-columns: minmax(0, 1fr); } .auth-story { display: none; } .auth-mobile-brand { display: block; margin-bottom: 20px; } }
 @media print { .recipient-identity.is-unreliable > .recipient-name { color: var(--ea-danger); } .recipient-status-danger { print-color-adjust: exact; } }
 
-[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after { background: var(--ea-popup); color: var(--ea-ink); border: 1px solid var(--ea-line); z-index: var(--ea-layer-tooltip); }
-[data-tooltip-placement="below-end"]:is(:hover, :focus-visible)::after { top: calc(100% + var(--ea-space-2)); bottom: auto; left: auto; right: 0; transform: none; max-width: min(220px, calc(100vw - 48px)); white-space: normal; text-align: start; }
 
 :root[data-ea-theme=light] .auth-story .story-heading span { color: var(--ea-brand); }
 
@@ -277,10 +275,10 @@ body.ea-app .text-dark { color: var(--ea-ink) !important; }
 @media (prefers-reduced-motion: reduce) { .icon-button.action-confirm[aria-busy="true"]::before { animation: none; } }
 .picker-time { padding: 10px; min-height: 0; }
 .picker-time .picker-content { grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 8px; }
-.picker-time .time-popover-fields { gap: 8px; }
+.picker-time .time-popover-fields { gap: 8px; margin: 0; }
 .picker-time .picker-feedback { grid-column: 1 / -1; margin: 0; }
 .picker-time .picker-feedback:empty { display: none; }
-.picker-time .action-confirm { grid-column: 2; grid-row: 1; }
+.picker-time .action-confirm { --ea-icon-size: 44px; grid-column: 2; grid-row: 1; align-self: end; }
 .booking-schedule { display: grid; grid-template-columns: minmax(140px,220px) minmax(240px,340px); gap: 16px; align-items: start; }
 .booking-schedule .time-range { margin: 0; gap: 12px; }
 .content-priority { display: grid; grid-template-columns: minmax(0,2fr) minmax(160px,1fr); gap: 16px; margin: 14px 0; }

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { attachFormPopovers } from './services/form-popovers';
+import { attachTooltips } from './services/tooltips';
 import {
   BrowserRouter,
   Routes,
@@ -37,6 +38,7 @@ function Protected() {
 }
 export default function App() {
   useEffect(() => attachFormPopovers(document), []);
+  useEffect(() => attachTooltips(document), []);
   return (
     <ErrorBoundary>
       <BrowserRouter>

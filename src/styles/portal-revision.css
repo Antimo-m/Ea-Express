@@ -144,6 +144,34 @@
   background: var(--ea-surface);
 }
 .order-list .order-row:hover, .order-list .order-row:focus-visible { background: var(--ea-hover); }
+.shipment-route { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; min-width: 0; }
+.shipment-route > div { min-width: 0; }
+.shipment-route strong { display: block; font-size: .8125rem; line-height: 1.4; font-weight: 500; overflow-wrap: anywhere; }
+.shipment-route address { margin: 2px 0 0; font-size: .9375rem; line-height: 1.4; font-style: normal; font-weight: 600; color: var(--ea-ink); overflow-wrap: anywhere; }
+.shipment-route-arrow { color: var(--ea-info); font-size: .875rem; line-height: 1; }
+.shipment-route .shipment-rider { margin-top: 4px; font-size: .8125rem; color: var(--ea-muted); overflow-wrap: anywhere; }
+.pickup-card .shipment-route { margin-block: 10px; }
+.pickup-card > .order-code { display: block; overflow-wrap: anywhere; }
+.order-focus-summary h2 { overflow-wrap: anywhere; font-size: 1.125rem; }
+.required-mark { color: var(--ea-danger); font-weight: 700; }
+.field-error, .field-help, .alert { overflow-wrap: anywhere; }
+.field-error { display: block; }
+.portal-filter-toolbar .field:has([required]) > label { position: static; width: auto; height: auto; margin: 0 0 4px; overflow: visible; clip-path: none; white-space: normal; }
+.portal-filter-toolbar:has(.portal-filter-primary [required]) .portal-filter-actions { align-self: end; }
+.field:has([aria-invalid="true"]) .ea-picker-trigger { border-color: var(--ea-danger); }
+.label-total { align-items: center; text-align: center; }
+.label-address > div { overflow-wrap: anywhere; }
+.label-address .label-person dd { font-weight: 500; font-size: 12px; }
+.label-address .label-route dd { font-weight: 700; font-size: 14px; }
+@media print {
+  .ea-tooltip { display: none !important; }
+  .document-a6 .label-address .label-person dd { font-size: 10px; }
+  .document-a6 .label-address .label-route dd { font-size: 12px; }
+  .parcel-label.document-a4 section { padding-block: 8px; }
+  .document-a4 .receipt-details dl > div { padding-block: 4px; }
+  .document-a4 .label-address dt { font-size: 12px; }
+  .parcel-label.document-a4 .label-reference { padding-block: 8px; }
+}
 .entity-card-list > .data-panel { margin: 0; }
 .ea-modal .modal-actions:has(> .modal-back), .ea-modal .modal-actions:has(> .save-pickup-confirm) {
   display: grid;

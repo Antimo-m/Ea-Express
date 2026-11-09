@@ -3029,20 +3029,22 @@ h2 {
 [data-tooltip] {
   position: relative;
 }
-[data-tooltip]:hover::after, [data-tooltip]:focus-visible::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  background: var(--ea-ink);
-  color: #fff;
+.ea-tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  background: var(--ea-popup);
+  color: var(--ea-ink);
+  border: 1px solid var(--ea-line);
   padding: 6px 10px;
   border-radius: var(--ea-radius-control);
   font: 500 12px/1.4 var(--ea-font);
   width: max-content;
-  max-width: 220px;
+  max-width: min(260px, calc(100vw - 16px));
+  white-space: normal;
+  overflow-wrap: anywhere;
   pointer-events: none;
-  z-index: 20;
+  z-index: var(--ea-layer-tooltip);
 }
 .form-control, .form-select, .field input, .field select, .field textarea {
   border-radius: var(--ea-radius-control);

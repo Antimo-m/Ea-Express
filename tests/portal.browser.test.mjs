@@ -34,14 +34,17 @@ const statistics = {
 };
 
 test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze richieste', { skip: !existsSync(chrome) || !existsSync(built), timeout: 180000 }, async t => {
+  const scenario = (name, callback) => t.test(name, {skip: Boolean(process.env.EA_PORTAL_TEST_FILTER) && !new RegExp(process.env.EA_PORTAL_TEST_FILTER).test(name)}, callback);
   const temporary = mkdtempSync(join(tmpdir(), 'ea-portal-ui-'));
   let browser, socket, authenticated = true, errorMode = false, emptyMode = false, loadingMode = false;
   const writes = [];
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
-  let resourceStatus = 0, inactiveZone = false;
+  let resourceStatus = 0, inactiveZone = false, statisticsError = false;
   const rateRequests = [];
   const orderRequests = [];
+  const statisticsRequests = [];
+  const pendingRequests = [];
   const policyMessage = 'Il testo inserito contiene termini non consentiti. Modifica il contenuto per continuare.';
   const server = createServer((request, response) => {
     const url = new URL(request.url, 'http://localhost');
@@ -88,8 +91,8 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       }
       if (path.endsWith('/messages')) { json({ data: emptyMode ? [] : [{ slug, body: 'Il percorso è rallentato. Ti aggiorno appena arrivo alla destinazione concordata.', sender: 'team', created_at: '2026-10-23T12:00:00Z', delivered_at: null, read_at: null }], meta }); return; }
       if (path.startsWith('/orders/')) { json({ data: order }); return; }
-      if (path === '/statistics') { json(statistics); return; }
-      if (path === '/pending') { json({ data: emptyMode ? [] : [pending,{...pending,slug:user.slug}], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
+      if (path === '/statistics') { statisticsRequests.push(Object.fromEntries(url.searchParams)); if (statisticsError) {response.statusCode=422;json({errors:{to:['Il periodo selezionato non è valido.']}});return;} json(statistics); return; }
+      if (path === '/pending') { pendingRequests.push(Object.fromEntries(url.searchParams)); json({ data: emptyMode ? [] : [pending,{...pending,slug:user.slug}], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
       if (path.startsWith('/pending/')) { json({ data: pending }); return; }
       if (path === '/rates') { rateRequests.push(Object.fromEntries(url.searchParams)); const page = Number(url.searchParams.get('page') || 1); const rate = { slug, city: `Caserta e provincia · pagina ${page}`, area: 'Campania', zone: 'Centro storico e periferia', postal_codes: ['81100', '81020'], price_cents: 500, shipping_type: 'regional', delivery_time: 'Entro due giorni lavorativi' }; json({ areas: ['Campania'], rates: { ...meta, current_page:page, data: emptyMode ? [] : ratesPaginationMode ? Array.from({length:18},(_,i)=>({...rate,slug:`${slug}-${i}`})) : [rate] } }); return; }
       if (path === '/rates/quote') {
@@ -126,12 +129,18 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     socket = new WebSocket(pages.find(page => page.type === 'page').webSocketDebuggerUrl);
     await new Promise(resolve => socket.addEventListener('open', resolve, { once: true }));
     let sequence = 0; const pending = new Map();
-    socket.addEventListener('message', ({ data }) => { const result = JSON.parse(data); if (!pending.has(result.id)) return; const waiter = pending.get(result.id); pending.delete(result.id); result.error ? waiter.reject(new Error(result.error.message)) : waiter.resolve(result.result); });
+    const browserErrors = [];
+    socket.addEventListener('message', ({ data }) => { const result = JSON.parse(data); if (result.method === 'Runtime.exceptionThrown') browserErrors.push(result.params.exceptionDetails.exception?.description || result.params.exceptionDetails.text); if (!pending.has(result.id)) return; const waiter = pending.get(result.id); pending.delete(result.id); result.error ? waiter.reject(new Error(result.error.message)) : waiter.resolve(result.result); });
     const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; const timer = setTimeout(() => reject(new Error(`Timeout ${method}`)), 15000); pending.set(id, { resolve: result => { clearTimeout(timer); resolve(result); }, reject: error => { clearTimeout(timer); reject(error); } }); socket.send(JSON.stringify({ id, method, params })); });
+    await send('Runtime.enable');
+    await send('Emulation.setFocusEmulationEnabled', { enabled: true });
     const evaluate = async expression => { const result = await send('Runtime.evaluate', { expression: `(() => { ${expression} })()`, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
     const waitFor = async expression => { for (let index = 0; index < 100; index++) { if (await evaluate(`return Boolean(${expression});`)) return; await new Promise(resolve => setTimeout(resolve, 30)); } throw new Error(`Not ready: ${expression}`); };
     const navigate = async path => { await evaluate('window.__previous = true;'); await send('Page.navigate', { url: origin + path }); await waitFor('!window.__previous && document.readyState === "complete" && !document.querySelector(".skeletons") && document.querySelector("h1, .auth-form h2, [role=alert]")'); await evaluate('return document.fonts.ready.then(() => true);'); };
-    const viewport = width => send('Emulation.setDeviceMetricsOverride', { width, height: ({320:568,360:800,375:812,390:844,430:932,768:1024})[width] || 900, deviceScaleFactor: 1, mobile: width < 768 });
+    const viewport = async width => {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: ({320:568,360:800,375:812,390:844,430:932,768:1024})[width] || 900, deviceScaleFactor: 1, mobile: width < 768 });
+      await send('Emulation.setTouchEmulationEnabled', { enabled: width < 768 });
+    };
     const fillInputs = values => evaluate(`const values=${JSON.stringify(values)}; for(const [name,value] of Object.entries(values)){const input=document.querySelector('[name="'+name+'"]');if(!input)continue;const prototype=input.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(input,String(value));input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}`);
     const useTextPicker = async (name, value, suggested = false) => {
       await evaluate(`document.querySelector('input[name="${name}"]').parentElement.querySelector('.ea-picker-trigger').click();`);
@@ -149,12 +158,12 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     };
     const routes = ['/dashboard', '/shipments', '/pickups', '/messages', `/shipments/${slug}`, `/messages/${slug}`, '/pickups/new', `/shipments/${slug}/edit`, '/rates', '/statistics', '/pending', `/pending/${slug}`, '/notifications', '/profile', '/settings', `/shipments/${slug}/label`];
     for (const width of [320, 360, 375, 390, 430, 768, 1024, 1440]) {
-      await t.test(`${width}px: tutte le pagine senza overflow e con creazione accessibile`, async () => {
+      await scenario(`${width}px: tutte le pagine senza overflow e con creazione accessibile`, async () => {
         await viewport(width);
         for (const path of routes) { await navigate(path); await check(path, width); }
       });
     }
-    await t.test('shell senza margini residui, marchio allineato e creazione centrata', async () => {
+    await scenario('shell senza margini residui, marchio allineato e creazione centrata', async () => {
       for (const width of [375, 760, 767, 768, 991, 992, 1024, 1250, 1440]) {
         await viewport(width); await navigate('/statistics');
         const geometry = await evaluate(`const workspace=document.querySelector('.workspace').getBoundingClientRect(); return {left:workspace.left,right:workspace.right,available:document.documentElement.clientWidth,menu:getComputedStyle(document.querySelector('.menu-toggle')).display};`);
@@ -167,7 +176,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         if (width < 992) await evaluate('document.querySelector(".sidebar-close").click();');
       }
     });
-    await t.test('spedizioni, messaggi e sospesi separano ogni entità con uno spazio coerente', async () => {
+    await scenario('spedizioni, messaggi e sospesi separano ogni entità con uno spazio coerente', async () => {
       for (const width of [320,375,390,430,768,1440]) {
         await viewport(width);
         for (const [path, selector] of [['/shipments','.order-row'],['/messages','.order-row'],['/pending','.pending-account-panel']]) {
@@ -178,7 +187,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       }
     });
-    await t.test('pagina 404: risorse assenti, countdown, redirect e pulizia timer; 403 e 500 restano errori', async () => {
+    await scenario('pagina 404: risorse assenti, countdown, redirect e pulizia timer; 403 e 500 restano errori', async () => {
       await viewport(390); await navigate('/pagina-inesistente');
       assert.match(await evaluate('return document.querySelector(".not-found-page").textContent;'),/Error Not Found 404.*5 secondi/s);
       await new Promise(resolve=>setTimeout(resolve,1100));
@@ -205,7 +214,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await new Promise(resolve=>setTimeout(resolve,5200));
       await waitFor('location.pathname === "/dashboard"');
     });
-    await t.test('zona disattivata: messaggio e blocco riepilogo; digitazione incompleta e zone attive restano distinte', async () => {
+    await scenario('zona disattivata: messaggio e blocco riepilogo; digitazione incompleta e zone attive restano distinte', async () => {
       await viewport(320); await navigate('/pickups/new');
       try {
         inactiveZone=true;
@@ -222,7 +231,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.equal(await evaluate('return document.querySelector(".booking-review-button").disabled;'),false);
       } finally { inactiveZone=false; }
     });
-    await t.test('aggiornamenti realtime raggruppati e risposte lente dei vecchi filtri ignorate', async () => {
+    await scenario('aggiornamenti realtime raggruppati e risposte lente dei vecchi filtri ignorate', async () => {
       await viewport(390); await navigate('/shipments');
       const before=orderRequests.length;
       await evaluate(`return (async()=>{for(let index=0;index<40;index++){window.dispatchEvent(new CustomEvent('ea:workspace-updated',{detail:{kind:'orders'}}));await new Promise(resolve=>setTimeout(resolve,4));}})();`);
@@ -237,7 +246,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await new Promise(resolve=>setTimeout(resolve,800));
       assert.equal(await evaluate('return document.querySelector(".order-display-name").textContent;'),'Risultato Veloce');
     });
-    await t.test('menu tablet: tastiera, backdrop, navigazione e ridimensionamento', async () => {
+    await scenario('menu tablet: tastiera, backdrop, navigazione e ridimensionamento', async () => {
       await viewport(768); await navigate('/dashboard');
       await evaluate('document.querySelector(".menu-toggle").click();');
       await waitFor('document.querySelector(".sidebar").classList.contains("is-open")');
@@ -263,7 +272,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await viewport(768);
       await waitFor('!document.querySelector(".sidebar").classList.contains("is-open")');
     });
-    await t.test('statistiche distanziate e grafici interattivi contenuti', async () => {
+    await scenario('statistiche distanziate e grafici interattivi contenuti', async () => {
       for (const width of [375,768,1024,1440]) {
         await viewport(width); await navigate('/statistics');
         const spacing = await evaluate(`const nodes=[...document.querySelector('.statistics-workspace').children];return nodes.slice(1).map((node,index)=>({gap:node.getBoundingClientRect().top-nodes[index].getBoundingClientRect().bottom,width:node.getBoundingClientRect().width,parent:node.parentElement.getBoundingClientRect().width}));`);
@@ -274,7 +283,56 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await waitFor('document.querySelector(".chart-legend button").getAttribute("aria-pressed") === "false"');
       }
     });
-    await t.test('filtri: colori semantici, applicazione e reset della ricerca', async () => {
+    await scenario('periodo statistiche: estremi, ordine date, errore 422 nel filtro mobile e reset', async () => {
+      for (const width of [320,768,1440]) {
+        await viewport(width); await navigate('/statistics');
+        if (width<768) await evaluate('document.querySelector(".filter-more").click();');
+        await fillInputs({from:'2026-11-10',to:'2026-11-01'});
+        const before=statisticsRequests.length;
+        await evaluate('document.querySelector(".portal-filter-toolbar").requestSubmit();');
+        await waitFor('document.querySelector("input[name=to]").getAttribute("aria-invalid") === "true"');
+        assert.match(await evaluate('return document.querySelector("input[name=to]").closest(".field").textContent;'),/successiva/);
+        assert.equal(statisticsRequests.length,before);
+        await fillInputs({to:'2026-11-30'});
+        await evaluate('document.querySelector(".portal-filter-toolbar").requestSubmit();');
+        await waitFor('location.search.includes("to=2026-11-30") && !document.querySelector(".skeletons")');
+        assert.equal(statisticsRequests.at(-1).from,'2026-11-10');
+        assert.equal(statisticsRequests.at(-1).to,'2026-11-30');
+        assert.equal(statisticsRequests.at(-1).period,'custom');
+        try {
+          statisticsError=true;
+          if (width<768) await evaluate('document.querySelector(".filter-more").click();');
+          await fillInputs({to:'2026-12-01'});
+          await evaluate('document.querySelector(".portal-filter-toolbar").requestSubmit();');
+          await waitFor('document.querySelector("input[name=to]").getAttribute("aria-invalid") === "true"');
+          assert.match(await evaluate('return document.querySelector("input[name=to]").closest(".field").textContent;'),/periodo selezionato/);
+          if(width<768) assert.ok(await evaluate('return !!document.querySelector(".ea-modal[open]");'));
+          await waitFor('document.activeElement === document.querySelector("input[name=to]").nextElementSibling');
+        } finally { statisticsError=false; }
+        await evaluate('document.querySelector(".portal-filter-toolbar .action-reset").click();');
+        await waitFor('location.search === "" && !document.querySelector(".skeletons")');
+        await check('/statistics valid and reset',width);
+      }
+    });
+    await scenario('sospesi: vista iniziale da saldare, filtri parziali e saldati, archivio e paginazione server', async () => {
+      for(const width of [320,768,1440]) {
+        await viewport(width);await navigate('/pending');
+        assert.equal(pendingRequests.at(-1).view,'open');
+        for(const view of ['partial','settled','all']) {
+          if(width<768) await evaluate('document.querySelector(".filter-more").click();');
+          await evaluate(`const input=document.querySelector('select[name=view]');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(input,'${view}');input.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('.portal-filter-toolbar').requestSubmit();`);
+          await waitFor(`location.search.includes('view=${view}') && !document.querySelector('.skeletons')`);
+          assert.equal(pendingRequests.at(-1).view,view);
+          assert.equal(await evaluate('return document.querySelector("h1").textContent;'),view==='settled'?'Archivio Sospesi':'Sospesi');
+          await evaluate(`document.querySelector('.pagination button[aria-label="Pagina successiva"]').click();`);
+          await waitFor('location.search.includes("page=2") && !document.querySelector(".skeletons")');
+          assert.equal(pendingRequests.at(-1).view,view);
+          assert.equal(pendingRequests.at(-1).page,'2');
+          await check('/pending filtered',width);
+        }
+      }
+    });
+    await scenario('filtri: colori semantici, applicazione e reset della ricerca', async () => {
       await viewport(1024); await navigate('/rates');
       const colors = await evaluate(`const search=document.querySelector('.action-search'),reset=document.querySelector('.action-reset');const token=name=>getComputedStyle(document.documentElement).getPropertyValue(name).trim();return {search:getComputedStyle(search).getPropertyValue('--action-color').trim(),reset:getComputedStyle(reset).getPropertyValue('--action-color').trim(),filter:getComputedStyle(document.querySelector('.filter-more')).backgroundColor,searchBackground:getComputedStyle(search).backgroundColor,brand:token('--ea-brand'),info:token('--ea-info')};`);
       assert.equal(colors.search,colors.brand); assert.equal(colors.reset,colors.info); assert.equal(colors.filter,colors.searchBackground);
@@ -283,13 +341,13 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await evaluate('document.querySelector(".action-reset").click();');
       await waitFor('location.search === "" && document.querySelector("input[name=q]").value === ""');
     });
-    await t.test('stato e cronologia spedizione restano disponibili senza controlli ritardi', async () => {
+    await scenario('stato e cronologia spedizione restano disponibili senza controlli ritardi', async () => {
       await viewport(390); await navigate(`/shipments/${slug}`);
       assert.match(await evaluate('return document.querySelector(".order-statuses").textContent;'), /In consegna/);
       assert.match(await evaluate('return document.querySelector(".timeline").textContent;'), /Spedizione in consegna/);
       assert.equal(await evaluate('return document.querySelector(".delay-notice,.status-delay");'), null);
     });
-    await t.test('modali: contenimento, tooltip hover e focus ed Escape a tutte le larghezze', async () => {
+    await scenario('modali: contenimento, tooltip hover e focus ed Escape a tutte le larghezze', async () => {
       for (const width of [320,375,768,1024,1440]) {
       await viewport(width); await navigate('/shipments');
       await evaluate('const trigger=document.querySelector(".portal-filter-actions .button");trigger.focus();trigger.click();');
@@ -302,16 +360,121 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       for (const mode of ['hover','focus']) {
         if (mode === 'hover') await send('Input.dispatchMouseEvent',{type:'mouseMoved',...close});
         else { await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:0,y:0}); await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9}); await evaluate(`document.querySelector('${closeSelector}').focus();`); }
-        const bounds = await evaluate(`const b=document.querySelector('${closeSelector}'),s=getComputedStyle(b,'::after'),r=b.getBoundingClientRect(),d=b.closest('dialog').getBoundingClientRect();const w=parseFloat(s.width),h=parseFloat(s.height);return {content:s.content,left:r.right-w,right:r.right,top:r.top+parseFloat(s.top),bottom:r.top+parseFloat(s.top)+h,dialog:{left:d.left,right:d.right,top:d.top,bottom:d.bottom}};`);
-        assert.equal(bounds.content,'"Chiudi"');
-        assert.ok(bounds.left>=bounds.dialog.left && bounds.right<=bounds.dialog.right && bounds.top>=bounds.dialog.top && bounds.bottom<=bounds.dialog.bottom,JSON.stringify({mode,bounds}));
+        await waitFor('document.querySelector(".ea-tooltip")');
+        const bounds = await evaluate(`const b=document.querySelector('${closeSelector}'),tooltip=document.querySelector('.ea-tooltip'),r=tooltip.getBoundingClientRect();return {content:tooltip.textContent,left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:innerWidth,height:innerHeight,described:b.getAttribute('aria-describedby').split(' ').includes(tooltip.id)};`);
+        assert.equal(bounds.content,'Chiudi');
+        assert.ok(bounds.described && bounds.left>=0 && bounds.right<=bounds.width && bounds.top>=0 && bounds.bottom<=bounds.height,JSON.stringify({mode,bounds}));
       }
       await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
       await waitFor('!document.querySelector("dialog[open]")');
       assert.equal(await evaluate('return document.activeElement === document.querySelector(".portal-filter-actions .button");'), true);
       }
     });
-    await t.test('menu raggiungibile e focus contenuto anche a 767px', async () => {
+    await scenario('tooltip ai bordi: cambio lato, testo lungo, tastiera e pressione prolungata touch', async () => {
+      for (const width of [320,360,375,390,430,768,1440]) {
+        await viewport(width); await navigate('/dashboard');
+        for (const side of ['left','right']) {
+          await evaluate(`const button=document.querySelector('.dashboard-actions .action-add');button.style.cssText='position:fixed;${side}:0;top:0;z-index:4000;';button.dataset.tooltip='Prenota una nuova spedizione per un destinatario con un nome molto lungo e un indirizzo completo';button.focus();`);
+          await waitFor('document.querySelector(".ea-tooltip")');
+          const tooltip=await evaluate('const r=document.querySelector(".ea-tooltip").getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,w:innerWidth,h:innerHeight};');
+          assert.ok(tooltip.left>=8 && tooltip.right<=tooltip.w-7 && tooltip.top>=8 && tooltip.bottom<=tooltip.h-7,JSON.stringify({width,side,tooltip}));
+          await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+          assert.equal(await evaluate('return !!document.querySelector(".ea-tooltip");'),false);
+          await evaluate('document.querySelector(".dashboard-actions .action-add").blur();');
+        }
+        if (width<768) {
+          await evaluate('document.querySelector(".dashboard-actions .action-add").style.cssText="";document.querySelector(".menu-toggle").focus();');
+          const point=await evaluate('const r=document.querySelector(".portal-mobile-nav .mobile-create").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};');
+          await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+          await new Promise(resolve=>setTimeout(resolve,500));
+          await waitFor('document.querySelector(".ea-tooltip")');
+          await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          assert.equal(await evaluate('return location.pathname;'),'/dashboard');
+          assert.match(await evaluate('return document.querySelector(".ea-tooltip").textContent;'),/Prenota/);
+          await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:8,y:110}]});
+          await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+          await waitFor('!document.querySelector(".ea-tooltip")');
+        }
+      }
+    });
+    await scenario('card spedizioni: percorsi completi e rider presenti su elenchi e dashboard; navbar mobile senza titolo', async () => {
+      for (const width of [320,360,375,390,430,768,1440]) {
+        await viewport(width);
+        for (const path of ['/dashboard','/shipments','/pickups','/messages']) {
+          await navigate(path);
+          const routes=await evaluate('return [...document.querySelectorAll(".shipment-route")].map(node=>node.textContent);');
+          assert.ok(routes.length>0,path);
+          for (const route of routes) {
+            for (const value of [order.store_name,order.recipient_name,order.pickup_address,order.pickup_street_number,order.pickup_postal_code,order.pickup_city,order.delivery_address,order.delivery_street_number,order.delivery_postal_code,order.delivery_city,order.rider.name]) assert.ok(route.includes(value),`${path}: ${value}`);
+            assert.match(route,/Rider:/);
+          }
+          if (width<992) assert.equal(await evaluate('const title=document.querySelector(".topbar-label strong");return !!title?.getClientRects().length;'),false);
+          await check(path,width);
+        }
+      }
+    });
+    await scenario('form: obbligatorietà, messaggi inline, CAP e importi, primo focus e correzione senza perdita di dati', async () => {
+      for (const width of [320,360,375,390,430,768,1440]) {
+        await viewport(width); await navigate('/pickups/new');
+        await evaluate('document.querySelector(".booking-form").requestSubmit();');
+        await waitFor('document.querySelector("input[name=pickup_address]").getAttribute("aria-invalid") === "true"');
+        assert.equal(await evaluate('return document.activeElement.name;'),'pickup_address');
+        assert.match(await evaluate('return document.querySelector("input[name=pickup_address]").closest(".field").textContent;'),/Questo campo è obbligatorio/);
+        const labels=await evaluate('return [...document.querySelectorAll(".booking-form .field")].map(field=>{const input=field.querySelector("input,select,textarea"),label=field.querySelector("label");return {name:input.name,required:input.required&&!input.readOnly,mark:!!label.querySelector(".required-mark"),linked:label.htmlFor===input.id};});');
+        assert.ok(labels.every(label=>label.required===label.mark && label.linked),JSON.stringify(labels));
+        await fillInputs({pickup_address:'Via del test con indirizzo molto lungo per la verifica',pickup_postal_code:'123',parcel_value:'2,345'});
+        await evaluate('document.querySelector(".booking-form").requestSubmit();');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_address]").getAttribute("aria-invalid");'),null);
+        assert.match(await evaluate('return document.querySelector("input[name=pickup_postal_code]").closest(".field").textContent;'),/Il CAP deve contenere 5 cifre/);
+        assert.match(await evaluate('return document.querySelector("input[name=parcel_value]").closest(".field").textContent;'),/al massimo due decimali/);
+        await fillInputs({pickup_postal_code:'80100',parcel_value:'0,29'});
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_postal_code]").getAttribute("aria-invalid");'),null);
+        assert.equal(await evaluate('return document.querySelector("input[name=parcel_value]").getAttribute("aria-invalid");'),null);
+        await check('/pickups/new invalid fields',width);
+      }
+    });
+    await scenario('time picker: conferma allineata, limiti orario, tastiera e touch a tutte le larghezze richieste', async () => {
+      for (const width of [320,360,375,390,430,768,1440]) {
+        await viewport(width); await navigate('/pickups/new');
+        await fillInputs({pickup_date:'2027-12-15',pickup_from:'09:00',pickup_to:'12:00'});
+        await evaluate('document.querySelector("input[name=pickup_from]").nextElementSibling.click();');
+        await waitFor('document.querySelector(".picker-time")');
+        const bounds=await evaluate('const p=document.querySelector(".picker-time").getBoundingClientRect(),b=document.querySelector(".picker-time .action-confirm").getBoundingClientRect(),inputs=[...document.querySelectorAll(".time-popover-fields input")].map(input=>input.getBoundingClientRect());return {p:{left:p.left,right:p.right},button:{top:b.top,bottom:b.bottom,left:b.left,right:b.right,width:b.width,height:b.height},inputs:inputs.map(r=>({top:r.top,bottom:r.bottom,right:r.right}))};');
+        assert.ok(bounds.p.left>=0 && bounds.p.right<=width && bounds.button.width>=44 && bounds.button.height>=44,JSON.stringify({width,bounds}));
+        assert.ok(bounds.inputs.every(input=>Math.abs(input.top-bounds.button.top)<=1 && Math.abs(input.bottom-bounds.button.bottom)<=1 && input.right<=bounds.button.left),JSON.stringify({width,bounds}));
+        await evaluate('const inputs=document.querySelectorAll(".time-popover-fields input");inputs[0].value="25";inputs[0].dispatchEvent(new Event("input",{bubbles:true}));');
+        assert.equal(await evaluate('return document.querySelector(".picker-time .action-confirm").disabled;'),true);
+        await evaluate('const input=document.querySelector(".time-popover-fields input");input.value="11";input.dispatchEvent(new Event("input",{bubbles:true}));');
+        if (width<768) {
+          const point=await evaluate('const r=document.querySelector(".picker-time .action-confirm").getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};');
+          await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});
+          await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+        } else await evaluate('document.querySelector(".picker-time .action-confirm").click();');
+        await waitFor('!document.querySelector(".picker-time")');
+        assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").value;'),'11:00');
+      }
+    });
+    await scenario('etichetta: prezzo centrato, percorso in evidenza e PDF A6/A4 senza pagine aggiuntive', async () => {
+      for (const width of [320,768,1440]) {
+        await viewport(width); await navigate(`/shipments/${slug}/label`);
+        const style=await evaluate('const total=document.querySelector(".label-total"),price=total.querySelector("strong");const r=total.getBoundingClientRect(),p=price.getBoundingClientRect();return {center:Math.abs((r.left+r.right-p.left-p.right)/2),route:parseFloat(getComputedStyle(document.querySelector(".label-route dd")).fontSize),name:parseFloat(getComputedStyle(document.querySelector(".label-person dd")).fontSize)};');
+        assert.ok(style.center<=1 && style.route>style.name,JSON.stringify({width,style}));
+        await check('/label',width);
+      }
+      for (const format of ['a6','a4']) {
+        await evaluate(`const select=document.querySelector('.print-toolbar select');Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'${format}');select.dispatchEvent(new Event('change',{bubbles:true}));`);
+        await waitFor(`document.querySelector('.parcel-label.document-${format}')`);
+        await send('Emulation.setEmulatedMedia',{media:'print'});
+        try {
+          const pdf=await send('Page.printToPDF',{preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
+          const contents=Buffer.from(pdf.data,'base64');
+          const pages=(contents.toString('latin1').match(/\/Type\s*\/Page\b/g)||[]).length;
+          if(process.env.EA_PORTAL_SCREENSHOT_DIR) writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR,`label-${format}.pdf`),contents);
+          assert.equal(pages,1,`${format}: one complete printed document`);
+        } finally { await send('Emulation.setEmulatedMedia',{media:''}); }
+      }
+    });
+    await scenario('menu raggiungibile e focus contenuto anche a 767px', async () => {
       await viewport(767); await navigate('/profile');
       await evaluate('document.querySelector(".menu-toggle").click();');
       assert.equal(await evaluate('return document.querySelector(".sidebar").getAttribute("aria-modal");'), 'true');
@@ -319,7 +482,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await evaluate('document.querySelector(".sidebar-close").click();');
       assert.equal(await evaluate('return document.querySelector(".workspace").inert;'), false);
     });
-    await t.test('titolo scorre, navigazione resta raggiungibile e caricamento è annunciato', async () => {
+    await scenario('titolo scorre, navigazione resta raggiungibile e caricamento è annunciato', async () => {
       await viewport(320); await navigate('/pickups/new');
       await evaluate('window.scrollTo(0,600);');
       assert.ok(await evaluate('return document.querySelector(".page-heading").getBoundingClientRect().bottom;') < 0);
@@ -331,7 +494,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await waitFor('document.querySelectorAll(".order-row").length === 2');
       loadingMode = false;
     });
-    await t.test('stati vuoti ed errore conservano navigazione e possibilità di riprovare', async () => {
+    await scenario('stati vuoti ed errore conservano navigazione e possibilità di riprovare', async () => {
       emptyMode = true;
       for (const path of ['/shipments', '/rates', '/pending', '/notifications']) { await navigate(path); assert.ok(await evaluate('return !!document.querySelector(".empty");')); await check(path, 767); }
       emptyMode = false; errorMode = true; await navigate('/shipments');
@@ -339,7 +502,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       errorMode = false; await evaluate('[...document.querySelectorAll("button")].find(n=>n.textContent==="Riprova").click();');
       await waitFor('document.querySelectorAll(".order-row").length === 2');
     });
-    await t.test('aggiornamenti della stessa spedizione: card separate, bordi completi e contenuto leggibile', async () => {
+    await scenario('aggiornamenti della stessa spedizione: card separate, bordi completi e contenuto leggibile', async () => {
       for (const width of [320, 390, 768, 1440]) {
         await viewport(width); await navigate('/notifications');
         await evaluate('document.querySelector(".notification-group > summary").click();');
@@ -362,12 +525,12 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await waitFor('!document.querySelector(".notification-history")');
       }
     });
-    await t.test('cronologia pagamenti leggibile', async () => {
+    await scenario('cronologia pagamenti leggibile', async () => {
       await viewport(320);
       await navigate(`/pending/${slug}`);
       assert.match(await evaluate('return document.querySelector(".settlement-row").textContent;'), /50,00/);
     });
-    await t.test('listini: cambio pagina scorre ai risultati e conserva filtri senza ricaricare', async () => {
+    await scenario('listini: cambio pagina scorre ai risultati e conserva filtri senza ricaricare', async () => {
       ratesPaginationMode = true;
       try {
         for (const width of [375,1440]) {
@@ -387,7 +550,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       } finally { ratesPaginationMode = false; }
     });
-    await t.test('ritiro: orario automatico, scelta manuale, data futura e mezzanotte', async () => {
+    await scenario('ritiro: orario automatico, scelta manuale, data futura e mezzanotte', async () => {
       authenticated = true;
       bookingNow = '2026-11-04T10:35:20+01:00';
       try {
@@ -420,7 +583,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await check('/pickup midnight',390);
       } finally { bookingNow = null; }
     });
-    await t.test('checkout: riepilogo, ritorno con dati preservati e conferma singola con scelta indirizzo', async () => {
+    await scenario('checkout: riepilogo, ritorno con dati preservati e conferma singola con scelta indirizzo', async () => {
       const fillBooking = async () => {
         await evaluate(`const values=${JSON.stringify({...order, parcel_value: '125.00', pickup_date: new Intl.DateTimeFormat('en-CA', {timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+86400000))})}; const form=document.querySelector('.booking-form'); for(const [name,value] of Object.entries(values)){ const input=form.elements.namedItem(name);if(!input || !['INPUT','TEXTAREA'].includes(input.tagName))continue; const prototype=input.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(prototype,'value').set.call(input,String(value));input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true})); }`);
         await evaluate('document.querySelector(".booking-review-button").click();');
@@ -506,8 +669,9 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       savedAddress = null;
       await navigate('/pickups/new'); await fillBooking(); confirmationStatus = 422;
       await evaluate('document.querySelector(".checkout-continue").click();');
-      await waitFor('document.querySelector(".checkout-v2 [role=alert]")');
-      assert.match(await evaluate('return document.querySelector(".checkout-v2 [role=alert]").textContent;'), /data non è più disponibile/);
+      await waitFor('!document.querySelector(".checkout-v2") && document.querySelector("input[name=pickup_date]").getAttribute("aria-invalid") === "true"');
+      assert.match(await evaluate('return document.querySelector("input[name=pickup_date]").closest(".field").textContent;'), /data non è più disponibile/);
+      await waitFor('document.activeElement === document.querySelector("input[name=pickup_date]").nextElementSibling');
       assert.equal(await evaluate('return !!document.querySelector(".ea-modal[open]");'), false);
       assert.equal(savedAddress, null); confirmationStatus = 0;
       await navigate('/pickups/new'); await fillBooking(); confirmationStatus = 409;
@@ -532,7 +696,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       assert.equal(writes.filter(write => write.path === '/orders').length, confirmedBefore + 1);
       assert.equal(savedAddress, null); failAddressSave = false;
     });
-    await t.test('privacy pubblica, preferenze sul server e ripristino senza perdere la sessione', async () => {
+    await scenario('privacy pubblica, preferenze sul server e ripristino senza perdere la sessione', async () => {
       await viewport(390); await navigate('/dashboard');
       await evaluate('document.querySelector(".theme-toggle").click();');
       await waitFor('document.documentElement.dataset.eaTheme === "dark"');
@@ -575,7 +739,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       }
       authenticated = true;
     });
-    await t.test('accesso e registrazione non espongono recupero password', async () => {
+    await scenario('accesso e registrazione non espongono recupero password', async () => {
       authenticated = false;
       for (const width of [320, 390, 768, 1440]) { await viewport(width); for (const path of ['/login', '/register']) { await navigate(path); await check(path, width); if (process.env.EA_PORTAL_SCREENSHOT_DIR) { const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR,`${path.slice(1)}-${width}.png`),Buffer.from(shot.data,'base64')); } assert.equal(await evaluate('return !!document.querySelector("a[href*=forgot],input[name=token]");'), false); } }
       assert.equal(writes.some(write => /forgot|reset-password/.test(write.path)), false);
@@ -583,7 +747,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       assert.equal(privacyLinks.display,'flex');
       assert.ok(parseFloat(privacyLinks.gap)>=16);
     });
-    await t.test('registrazione: opzioni uniformi e validazione accessibile senza perdere i dati', async () => {
+    await scenario('registrazione: opzioni uniformi e validazione accessibile senza perdere i dati', async () => {
       authenticated = false;
       for (const width of [320,390,768,1440]) {
         await viewport(width); await navigate('/register');
@@ -635,6 +799,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR, `sidebar-${width}.png`), Buffer.from(shot.data,'base64'));
       }
     }
+    assert.deepEqual(browserErrors, [], 'Nessuna eccezione JavaScript durante navigazione e interazioni');
   } finally {
     socket?.close(); browser?.kill(); await new Promise(resolve => server.close(resolve));
     rmSync(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });

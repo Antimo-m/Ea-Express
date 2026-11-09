@@ -1,6 +1,7 @@
 import MetricTile from '../components/MetricTile';
 import DataPanel from '../components/DataPanel';
 import IconButton from "../components/IconButton";
+import ShipmentRoute from "../components/ShipmentRoute";
 import { Link } from "react-router";
 import { dashboard } from "../api/workspace";
 import { useApi } from "../hooks/useApi";
@@ -65,7 +66,7 @@ export default function DashboardPage() {
                 <Icon name="arrow-right" />
               </Link>
             )}
-            {data.live_order && <aside className="order-focus-summary" aria-label="Spedizione in primo piano"><div><span className="eyebrow">IN PRIMO PIANO</span><h2>{data.live_order.recipient_name}</h2><p>{data.live_order.delivery_address}, {data.live_order.delivery_city}</p></div><div><Status order={data.live_order}/><p>{data.live_order.rider?.name || 'Rider da assegnare'}</p></div><Link className="button secondary" to={`/shipments/${data.live_order.slug}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside>}
+            {data.live_order && <aside className="order-focus-summary" aria-label="Spedizione in primo piano"><div><span className="eyebrow">IN PRIMO PIANO</span><h2>{data.live_order.reference}</h2><p>{date(data.live_order.pickup_date)} · {data.live_order.pickup_from}–{data.live_order.pickup_to}</p><ShipmentRoute order={data.live_order}/></div><Status order={data.live_order}/><Link className="button secondary" to={`/shipments/${data.live_order.slug}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside>}
             <div className="dashboard-grid">
               <DataPanel title="Spedizioni recenti" description="Le ultime richieste e il loro stato." className="data-panel--flush" actions={<Link to="/shipments">Vedi tutte <Icon name="arrow-right" /></Link>}>
                 <OrderList orders={data.recent} />
@@ -89,7 +90,8 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <h3>{displayName(order)}</h3>
-                      <p>{order.pickup_address}</p>
+                      <small className="order-code">{order.reference}</small>
+                      <ShipmentRoute order={order}/>
                       <Status order={order} />
                     </Link>
                   ))

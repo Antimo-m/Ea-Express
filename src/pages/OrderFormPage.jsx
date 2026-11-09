@@ -8,7 +8,7 @@ import { normalizeSenderText } from "../utils/text-policy";
 import Modal from "../components/Modal";
 import CheckoutReview from "../components/CheckoutReview";
 import ShippingQuote from "../components/ShippingQuote";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { createOrder, getOrder, updateOrder, reviewOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
@@ -45,6 +45,7 @@ function OrderForm({ order, pickups }) {
     }
   }, []);
   const [error, setError] = useState(null);
+  const fieldErrors = useMemo(() => error?.errors && ({...error.errors, content_description: error.errors.content_description || error.errors.category}), [error]);
   const [busy, setBusy] = useState(false);
   const [inactiveDestination, setInactiveDestination] = useState(false);
   const base = pickups ? "/pickups" : "/shipments";
@@ -80,7 +81,12 @@ function OrderForm({ order, pickups }) {
       const result = order ? await updateOrder(order.slug,data) : await createOrder(data);
       await senderPreference.current?.offerSave(review.data, review.checkout_token);
       navigate(`${base}/${result.data.slug}`, {replace:true,state:{success:order ? "Richiesta aggiornata." : "Richiesta confermata e inviata ai rider."}});
-    } catch (failure) { setError(failure); if (failure.errors?.pickup_from || failure.errors?.pickup_date) setReview(previous => ({...previous,checkout_token:null})); }
+    } catch (failure) {
+      setError(failure);
+      if (failure.status === 422 && Object.keys(failure.errors || {}).some(name => name === "category" || bookingForm.current?.elements.namedItem(name))) {
+        setReview(null);
+      }
+    }
     finally { submitting.current=false; setBusy(false); }
   }
   const fieldWidths = {
@@ -120,7 +126,7 @@ function OrderForm({ order, pickups }) {
     <>
     <nav className="form-progress" aria-label="Avanzamento prenotazione"><span>{review ? '1. Dati del ritiro' : <strong>1. Dati del ritiro</strong>}</span><Icon name="chevron-right"/><span>{review ? <strong>2. Riepilogo e conferma</strong> : '2. Riepilogo e conferma'}</span></nav>
     {review && <CheckoutReview review={review} user={user} busy={busy} error={error} onBack={() => { setReview(null); setError(null); }} onConfirm={confirm} />}
-    <div hidden={Boolean(review)}><Form ref={bookingForm} errors={error?.errors && {...error.errors, content_description: error.errors.content_description || error.errors.category}} className="order-form booking-form" onSubmit={submit}>
+    <div hidden={Boolean(review)}><Form ref={bookingForm} errors={fieldErrors} className="order-form booking-form" onSubmit={submit}>
       <div>
         <section className="panel">
           <h2>
@@ -140,7 +146,7 @@ function OrderForm({ order, pickups }) {
             <span className="step">02</span> Punto di consegna
           </h2>
           <div className="booking-service">
-            <Field label="Tipo di spedizione" width="service"><select name="shipping_type" value={shippingType} onChange={event => setShippingType(event.target.value)}><option value="regional">Regionale · Rete EA-Express</option><option value="external">Fuori regione · Rete EA-Express</option></select></Field>
+            <Field label="Tipo di spedizione" width="service"><select name="shipping_type" required value={shippingType} onChange={event => setShippingType(event.target.value)}><option value="regional">Regionale · Rete EA-Express</option><option value="external">Fuori regione · Rete EA-Express</option></select></Field>
           </div>
           <div className="booking-grid booking-contact">
             {field("recipient_name", "Nome destinatario", { maxLength: 150, autoComplete: "section-recipient shipping name" })}
@@ -176,13 +182,13 @@ function OrderForm({ order, pickups }) {
               defaultValue: order?.parcel_value_cents != null ? (order.parcel_value_cents / 100).toFixed(2) : "",
               help: "Valore dichiarato, non costo di spedizione o importo da riscuotere.",
             })}
-            <Field label="Caratteristiche del pacco" width="package"><select name="package_type" value={packageType} onChange={event => setPackageType(event.target.value)}><option value="standard">Standard</option><option value="fragile">Fragile</option><option value="other">Altro</option></select></Field>
+            <Field label="Caratteristiche del pacco" width="package"><select name="package_type" required value={packageType} onChange={event => setPackageType(event.target.value)}><option value="standard">Standard</option><option value="fragile">Fragile</option><option value="other">Altro</option></select></Field>
           </div>
           {packageType === 'other' && field("package_description", "Descrizione caratteristiche", { maxLength: 255 })}
           <div className="booking-grid booking-content">
             <SuggestedTextField label="Contenuto" name="content_description" width="category" value={content} onChange={event => setContent(event.target.value)} required maxLength={255} suggestions={Object.entries(contentCategories).filter(([key]) => key !== 'custom').map(([,label]) => label)} placeholder="Scegli o scrivi liberamente" help="Scegli un suggerimento oppure descrivi il contenuto del pacco." />
             <input type="hidden" name="category" value={contentFormData(content, order).category} />
-            <Field label="Priorità" width="priority"><select name="urgency" defaultValue={order?.urgency || "standard"}><option value="standard">Standard</option><option value="urgent">Urgente</option></select></Field>
+            <Field label="Priorità" width="priority"><select name="urgency" required defaultValue={order?.urgency || "standard"}><option value="standard">Standard</option><option value="urgent">Urgente</option></select></Field>
           </div>
           <Field label="Istruzioni per il rider (facoltative)" width="notes">
             <textarea

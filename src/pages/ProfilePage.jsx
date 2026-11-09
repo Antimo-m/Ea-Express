@@ -13,6 +13,7 @@ import {
 import SenderFields from "../components/SenderFields";
 import { Header, Field, Feedback, Form } from "../components/UI";
 function AccountForm({ kind, user, onUpdate }) {
+  const [emailChanged, setEmailChanged] = useState(false);
   const [error, setError] = useState(null),
     [success, setSuccess] = useState(""),
     [busy, setBusy] = useState(false);
@@ -73,6 +74,7 @@ function AccountForm({ kind, user, onUpdate }) {
             name="email"
             type="email"
             defaultValue={user.email}
+            onChange={event => setEmailChanged(event.target.value.toLowerCase().trim() !== user.email.toLowerCase().trim())}
             required
             autoComplete="email"
           />
@@ -82,6 +84,7 @@ function AccountForm({ kind, user, onUpdate }) {
             type="password"
             autoComplete="current-password"
             maxLength={72}
+            required={emailChanged}
           />
         </>
       ) : kind === "password" ? (

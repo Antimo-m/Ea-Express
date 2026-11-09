@@ -8,7 +8,7 @@ export default function IconButton({ action = 'neutral', icon, label, to, loadin
   if (action === 'message') text = false;
   if (action === 'edit' && (!icon || ['pencil', 'pencil-square'].includes(icon))) text = false;
   const content = <><span className="action-icon" aria-hidden="true"><Icon name={icon || icons[action] || 'three-dots'} />{action === 'print-multiple' && <span className="print-plus">+</span>}</span>{text && <span>{label}</span>}</>;
-  const attributes = { ...props, className: `icon-button action-${action} ${text ? 'action-with-text' : ''} ${className}`, 'aria-label': label, title: label, 'data-tooltip': label, 'aria-busy': loading || undefined };
+  const attributes = { ...props, className: `icon-button action-${action} ${text ? 'action-with-text' : ''} ${className}`, 'aria-label': label, 'data-tooltip': label, 'aria-busy': loading || undefined };
   if (to && !disabled && !loading) return <Link {...attributes} to={to}>{content}</Link>;
   return <button {...attributes} type={type} disabled={disabled || loading}>{content}</button>;
 }

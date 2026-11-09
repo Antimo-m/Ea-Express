@@ -5,7 +5,7 @@ import { Field, Icon } from "./UI";
 function SenderTypeChoice({ value, icon, label, selected, onChange }) {
   return (
     <label className={`sender-type-choice${selected ? " selected" : ""}`}>
-      <input type="radio" name="sender_type" value={value} checked={selected} onChange={onChange} />
+      <input type="radio" name="sender_type" value={value} checked={selected} onChange={onChange} required />
       <Icon name={icon} />
       <span>{label}</span>
     </label>
@@ -25,7 +25,7 @@ export default function SenderFields({ identity = {}, nameField = "name", select
   return (
     <div className="sender-fields">
       {selectableType ? <fieldset className="sender-selector">
-        <legend>Tipo mittente</legend>
+        <legend>Tipo mittente<span className="required-mark" aria-hidden="true"> *</span></legend>
         <div className="sender-type-options">
         {[
           ["private", "person", "Privato"],
