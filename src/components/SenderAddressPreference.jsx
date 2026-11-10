@@ -103,7 +103,7 @@ export default function SenderAddressPreference({ ref, formRef, onUse, initial }
       </div></>}
       {!saved && ready && <p>Inserisci il punto di ritiro. Dopo la conferma potrai salvarlo per la prossima volta.</p>}
       {ready && complete && !matches && <div className="save-pickup-current"><button type="button" className="button secondary" disabled={busy || error?.status === 409} onClick={() => save(pickupAddress(Object.fromEntries(new FormData(formRef.current))), saved?.version || 0)}><Icon name="bookmark-plus" />{saved ? "Salva modifiche al preferito" : "Salva questo indirizzo"}</button></div>}
-      {confirmDelete && <div role="group" aria-label="Conferma eliminazione preferito"><p>Eliminare il preferito? Gli ordini precedenti rimangono invariati.</p><div className="actions"><IconButton action="confirm" label="Conferma eliminazione" loading={busy} onClick={remove} /><button type="button" className="button button-back" disabled={busy} onClick={() => setConfirmDelete(false)}>Torna indietro</button></div></div>}
+      {confirmDelete && <div role="group" aria-label="Conferma eliminazione preferito"><p>Eliminare il preferito? Gli ordini precedenti rimangono invariati.</p><div className="actions"><IconButton action="delete" text label="Elimina indirizzo di ritiro" loading={busy} onClick={remove} /><button type="button" className="button button-back" disabled={busy} onClick={() => setConfirmDelete(false)}>Torna indietro</button></div></div>}
       {!prompt && <Feedback error={error} />}
       {!prompt && error && <button type="button" className="button secondary" disabled={busy} onClick={reload}>Ricarica preferito</button>}
       {message && <p className="saved-pickup-message" role="status">{message}</p>}

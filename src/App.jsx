@@ -21,6 +21,7 @@ const OrdersPage = lazy(() => import('./pages/OrdersPage'));
 const OrderFormPage = lazy(() => import('./pages/OrderFormPage'));
 const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const LabelsPage = lazy(() => import('./pages/LabelsPage'));
 const LabelPage = lazy(() => import('./pages/LabelPage'));
 const RatesPage = lazy(() => import('./pages/RatesPage'));
 const StatisticsPage = lazy(() => import('./pages/StatisticsPage'));
@@ -56,6 +57,7 @@ export default function App() {
               <Route element={<Protected />}>
                 <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="rates" element={<RatesPage/>}/><Route path="statistics" element={<StatisticsPage/>}/><Route path="dashboard" element={<DashboardPage />} />
+                <Route path="shipments/labels" element={<LabelsPage />} />
                 <Route path="shipments/:slug/label" element={<LabelPage />} />
                 <Route path="shipments" element={<OrdersPage />} />
                 <Route path="shipments/new" element={<OrderFormPage />} />

@@ -218,3 +218,48 @@
   .portal-auth.is-registration .sender-type-options { grid-template-columns: minmax(0, 1fr); }
   .portal-auth.is-registration .sender-selector .sender-type-choice { min-height: 48px; }
 }
+.action-print[aria-disabled="true"], .action-print-multiple[aria-disabled="true"] { opacity: .48; cursor: default; }
+@media print { .label-batch .parcel-label { break-after: page; } .label-batch .parcel-label:last-of-type { break-after: auto; } }
+.icon-button.action-print[aria-disabled="true"], .icon-button.action-print-multiple[aria-disabled="true"] { pointer-events: auto; cursor: default; }
+@media print {
+  .parcel-label.document-a6 section { padding: 2px 0; }
+  .parcel-label.document-a6 .label-reference { padding: 4px 0; }
+  .document-a6 .logistic-header img { width: 72px; height: 38px; }
+}
+@media print {
+  .parcel-label.document-a4 section { padding-block: 5px; }
+  .parcel-label.document-a4 .label-reference { padding-block: 6px; }
+  .document-a4 .receipt-details dl > div { padding-block: 2px; }
+  .document-a4 .logistic-header img { width: 94px; height: 50px; }
+}
+
+.price-state--green { color: var(--ea-success); background: var(--ea-surface); border: 1px solid currentColor; }
+.price-state--danger { color: var(--ea-danger); background: var(--ea-surface); border: 1px solid currentColor; }
+.price-state--blue { color: var(--ea-info); background: var(--ea-surface); border: 1px solid currentColor; }
+.actions.action-pair, .booking-final-actions, .ea-modal .modal-actions { display: flex; flex-flow: row wrap; justify-content: flex-end; align-items: center; gap: 12px; width: 100%; }
+.actions.action-pair > .danger, .actions.action-pair > .action-delete, .booking-final-actions > .danger { order: -1; margin-inline-end: auto; }
+.actions.action-pair > .secondary, .actions.action-pair > .button-back { margin-inline-end: auto; }
+.booking-final-actions > .booking-review-button { width: auto; margin-inline-start: auto; max-width: 100%; }
+.ea-modal .modal-actions:has(> .action-delete), .ea-modal .modal-actions.destructive-actions { display: flex; justify-content: space-between; }
+.ea-modal .modal-actions > .action-delete, .ea-modal .modal-actions > .danger { order: -1; margin-inline-end: auto; }
+.ea-modal .modal-actions .action-delete { color: var(--ea-on-color); background: var(--ea-danger); border-color: var(--ea-danger); }
+.ea-modal .modal-actions.destructive-actions > * { flex: 0 1 auto; width: auto; max-width: 100%; }
+.ea-picker-popup .picker-content > .action-confirm { display: flex; width: max-content; margin-inline-start: auto; margin-top: 12px; }
+.dashboard-actions > .actions { margin-inline-start: auto; justify-content: flex-end; }
+.dashboard-actions > .actions > .action-add { order: 1; }
+.empty > .action-add { margin-inline-start: auto; }
+.page-heading > .actions { justify-content: flex-end; }
+.label-selection-fields { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.label-selection-fields > .field { min-width: 0; flex: 1 1 180px; }
+.label-selection-fields input, .label-selection-fields select { min-width: 0; max-width: 100%; }
+@media (max-width: 767px) {
+  .dashboard-actions > .actions, .page-heading > .actions { width: 100%; justify-content: flex-end; }
+  .booking-final-actions > button { flex: 0 1 auto; min-width: 0; width: auto; white-space: normal; overflow-wrap: anywhere; }
+}
+
+.account-form > .action-confirm { display: flex; margin-inline-start: auto; justify-self: end; }
+.actions { justify-content: flex-end; }
+.actions > .action-add { margin-inline-start: auto; order: 1; }
+.actions > .action-delete, .actions > .danger { order: -1; margin-inline-end: auto; }
+.sidebar .portal-create { align-self: flex-end; margin-inline: auto 12px; }
+.portal-mobile-nav .mobile-create { order: 1; }

@@ -2,14 +2,14 @@ import IconButton from "../components/IconButton";
 import { contentLabel } from "../utils/order-content";
 import { useState } from 'react';
 import { useParams } from 'react-router';
-import { getOrder } from '../api/shipments';
+import { getLabels } from '../api/shipments';
 import { useApi } from '../hooks/useApi';
-import { Header, State, Field } from '../components/UI';
+import { Header, State, Field, Empty } from '../components/UI';
 import { date, money } from '../utils/format';
-function Label({ order }) {
+export function Label({ order, showTools = true }) {
   const [format, setFormat] = useState('a6');
   return <>
-    <div className="print-toolbar">
+    {showTools && <div className="print-toolbar">
       <Header title="Documento di spedizione" description="Etichetta da applicare al pacco o ricevuta completa da conservare. La stampa include soltanto il documento.">
         <IconButton action="back" to={`/shipments/${order.slug}`} label="Torna alla spedizione" text />
         <IconButton action="print" label={format === 'a6' ? 'Stampa etichetta' : 'Stampa ricevuta'} onClick={() => window.print()} />
@@ -19,7 +19,7 @@ function Label({ order }) {
 
       </div>
       <p className="muted small">Per un foglio pulito disattiva le intestazioni e i piè di pagina aggiunti dal browser.</p>
-    </div>
+    </div>}
     <article className={`parcel-label document-${format}`}>
       <header className="logistic-header"><div><img src="/brand.svg" alt="EA-Express" width="110" height="59"/><small>{format === 'a6' ? 'ETICHETTA DI SPEDIZIONE' : 'RICEVUTA DI SPEDIZIONE'}</small></div><b>COLLI<br/>{order.parcel_count}</b></header>
       <div className="label-reference"><small>CODICE SPEDIZIONE</small><strong>{order.reference}</strong></div>
@@ -35,6 +35,6 @@ function Label({ order }) {
 }
 export default function LabelPage() {
   const { slug } = useParams();
-  const resource = useApi(getOrder, { slug });
-  return <State resource={resource} notFound>{data => <Label order={data.data} />}</State>;
+  const resource = useApi(getLabels, { ids: [slug] });
+  return <State resource={resource} notFound>{data => data.data?.length ? <Label order={data.data[0]} /> : <Empty>Al momento non ci sono ordini da stampare</Empty>}</State>;
 }

@@ -156,12 +156,12 @@ function OrderForm({ order, pickups }) {
             {field("delivery_address", "Indirizzo di consegna", { autoComplete: "section-recipient shipping address-line1", onChange: event => setStreet(event.target.value) })}
             {field("delivery_street_number", "Civico", { autoComplete: "off", maxLength: 20 })}
             {field("delivery_city", "Comune di consegna", { autoComplete: "section-recipient shipping address-level2", maxLength: 100, onChange: event => setCity(event.target.value) })}
-            {field("delivery_postal_code", "CAP consegna", { autoComplete: "section-recipient shipping postal-code", required: false, help: "Automatico se il comune ha un solo CAP.", pattern: "[0-9]{5}", maxLength: 5, inputMode: "numeric", onChange: event => setPostal(event.target.value) })}
+            {field("delivery_postal_code", "CAP consegna", { autoComplete: "section-recipient shipping postal-code", help: "Automatico se il comune ha un solo CAP.", pattern: "[0-9]{5}", maxLength: 5, inputMode: "numeric", onChange: event => setPostal(event.target.value) })}
           </div>
           <div className="booking-grid booking-location-details">
             {field("delivery_zone", "Zona / quartiere (facoltativo)", { required: false, maxLength: 100, onChange: event => setZone(event.target.value) })}
-            {field("delivery_province", "Provincia", { onChange: event => setProvince(event.target.value), required: shippingType === 'external', maxLength: 100 })}
-            {field("delivery_region", "Regione", { onChange: event => setRegion(event.target.value), required: shippingType === 'external', maxLength: 100 })}
+            {field("delivery_province", "Provincia", { onChange: event => setProvince(event.target.value), maxLength: 100 })}
+            {field("delivery_region", "Regione", { onChange: event => setRegion(event.target.value), maxLength: 100 })}
           </div>
         </section>
         <section className="panel"><h2><span className="step">03</span> Data e orario</h2>
@@ -223,7 +223,7 @@ function OrderForm({ order, pickups }) {
     <Modal open={cancelOpen} title="Annullare la richiesta?" description="I dati inseriti in questa prenotazione andranno persi." danger onClose={()=>setCancelOpen(false)}>
       <footer className="modal-actions">
         <button type="button" className="button modal-back" onClick={()=>setCancelOpen(false)}><Icon name="arrow-left"/> Continua compilazione</button>
-        <IconButton action="confirm" label="Conferma annullamento" onClick={()=>{bookingForm.current?.reset();setReview(null);setError(null);setCancelOpen(false);navigate('/dashboard',{replace:true});}} />
+        <IconButton action="delete" text label="Annulla compilazione" onClick={()=>{bookingForm.current?.reset();setReview(null);setError(null);setCancelOpen(false);navigate('/dashboard',{replace:true});}} />
       </footer>
     </Modal></>
   );

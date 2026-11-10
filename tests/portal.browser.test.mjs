@@ -14,11 +14,11 @@ const order = {
   slug, reference: 'EA-EXPRESS-2026-TEST-0123456789', version: 1, store_name: user.name,
   recipient_name: 'Destinatario dimostrativo per collaudo interfaccia', recipient_phone: '0000000000',
   pickup_address: 'Via di Prova del Collaudo Interfaccia', pickup_street_number: '123', pickup_postal_code: '80100', pickup_city: 'Napoli',
-  delivery_address: 'Via Dimostrativa della Distribuzione di Prova', delivery_street_number: '123', delivery_postal_code: '81100', delivery_city: 'Caserta',
+  delivery_address: 'Via Dimostrativa della Distribuzione di Prova', delivery_street_number: '123', delivery_postal_code: '81100', delivery_city: 'Caserta', delivery_province: 'Caserta', delivery_region: 'Campania',
   pickup_date: '2026-10-24', pickup_from: '09:00', pickup_to: '12:00', sender_type: 'business', shipping_type: 'regional',
   status: 'out_for_delivery', status_label: 'In consegna', rider: { name: 'Rider di prova per collaudo interfaccia' }, package_type: 'standard',
   parcel_count: 1, parcel_value_cents: 12500, price_cents: 500, total_cents: 13000, category: 'custom', content_description: 'Ricambi per elettrodomestici',
-  can_edit: true, can_cancel: true,
+  can_edit: true, can_cancel: true, pricing_version: 1, price_state: 'agreed', price_tone: 'green', price_label: 'Prezzo accettato', quoted_price_cents: 500,
   events: [{ slug: 'a43d49ec-2e68-47d2-8a21-5db751cfabff', label: 'Spedizione in consegna', created_at: '2026-10-23T12:00:00Z', message: 'Segnalazione operativa registrata.' }],
 };
 const meta = { current_page: 1, last_page: 2, total: 25 };
@@ -40,7 +40,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
   const writes = [];
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
-  let resourceStatus = 0, inactiveZone = false, statisticsError = false;
+  let resourceStatus = 0, inactiveZone = false, statisticsError = false, priceState = 'agreed';
   const rateRequests = [];
   const orderRequests = [];
   const statisticsRequests = [];
@@ -90,7 +90,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         delay ? setTimeout(() => json(body), delay) : json(body); return;
       }
       if (path.endsWith('/messages')) { json({ data: emptyMode ? [] : [{ slug, body: 'Il percorso è rallentato. Ti aggiorno appena arrivo alla destinazione concordata.', sender: 'team', created_at: '2026-10-23T12:00:00Z', delivered_at: null, read_at: null }], meta }); return; }
-      if (path.startsWith('/orders/')) { json({ data: order }); return; }
+      if (path === '/orders/labels') {
+        if (url.searchParams.get('preview') === '1') { json({count: emptyMode ? 0 : 2, day: url.searchParams.get('day')}); return; }
+        json({ data: emptyMode ? [] : url.searchParams.get('scope') === 'filtered' ? [order, {...order, slug: user.slug}] : url.searchParams.getAll('ids[]').map(id => ({...order, slug:id})) }); return;
+      }
+      if (path.startsWith('/orders/')) { json({ data: {...order, price_state: priceState, price_tone: {agreed:'green',rejected:'danger',awaiting_customer:'blue'}[priceState], price_label: {agreed:'Prezzo accettato',rejected:'Proposta rifiutata',awaiting_customer:'Prezzo da confermare'}[priceState]} }); return; }
       if (path === '/statistics') { statisticsRequests.push(Object.fromEntries(url.searchParams)); if (statisticsError) {response.statusCode=422;json({errors:{to:['Il periodo selezionato non è valido.']}});return;} json(statistics); return; }
       if (path === '/pending') { pendingRequests.push(Object.fromEntries(url.searchParams)); json({ data: emptyMode ? [] : [pending,{...pending,slug:user.slug}], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
       if (path.startsWith('/pending/')) { json({ data: pending }); return; }
@@ -141,6 +145,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await send('Emulation.setDeviceMetricsOverride', { width, height: ({320:568,360:800,375:812,390:844,430:932,768:1024})[width] || 900, deviceScaleFactor: 1, mobile: width < 768 });
       await send('Emulation.setTouchEmulationEnabled', { enabled: width < 768 });
     };
+    const click = async selector => {
+      const point = await evaluate(`const node=[...document.querySelectorAll(${JSON.stringify(selector)})].find(n=>n.getClientRects().length); if(!node)throw new Error('Controllo non disponibile'); node.scrollIntoView({block:'center',behavior:'instant'}); const r=node.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2,width:innerWidth};`);
+      if (point.width < 768) { await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:point.x,y:point.y}]}); await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}); }
+      else { await send('Input.dispatchMouseEvent',{type:'mousePressed',x:point.x,y:point.y,button:'left',clickCount:1}); await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:point.x,y:point.y,button:'left',clickCount:1}); }
+    };
     const fillInputs = values => evaluate(`const values=${JSON.stringify(values)}; for(const [name,value] of Object.entries(values)){const input=document.querySelector('[name="'+name+'"]');if(!input)continue;const prototype=input.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(prototype,'value').set.call(input,String(value));input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));}`);
     const useTextPicker = async (name, value, suggested = false) => {
       await evaluate(`document.querySelector('input[name="${name}"]').parentElement.querySelector('.ea-picker-trigger').click();`);
@@ -163,15 +172,15 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         for (const path of routes) { await navigate(path); await check(path, width); }
       });
     }
-    await scenario('shell senza margini residui, marchio allineato e creazione centrata', async () => {
+    await scenario('shell senza margini residui, marchio allineato e aggiunta a destra', async () => {
       for (const width of [375, 760, 767, 768, 991, 992, 1024, 1250, 1440]) {
         await viewport(width); await navigate('/statistics');
         const geometry = await evaluate(`const workspace=document.querySelector('.workspace').getBoundingClientRect(); return {left:workspace.left,right:workspace.right,available:document.documentElement.clientWidth,menu:getComputedStyle(document.querySelector('.menu-toggle')).display};`);
         assert.ok(Math.abs(geometry.right - geometry.available) <= 1, JSON.stringify({width, ...geometry}));
         assert.equal(geometry.left, width < 992 ? 0 : 262);
         if (width < 992) await evaluate('document.querySelector(".menu-toggle").click();');
-        const brand = await evaluate(`const logo=document.querySelector('.sidebar .brand-wordmark'); const ranges=[...logo.children].map(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getBoundingClientRect().bottom;}); const sidebarNode=document.querySelector('.sidebar-content'),sidebar=sidebarNode.getBoundingClientRect(), button=document.querySelector('.portal-create').getBoundingClientRect();return {baseline:Math.abs(ranges[0]-ranges[1]),center:Math.abs((button.left+button.right-2*sidebar.left-sidebarNode.clientWidth)/2),text:logo.textContent};`);
-        assert.ok(brand.baseline <= 1 && brand.center <= 1, JSON.stringify({width,...brand}));
+        const brand = await evaluate(`const logo=document.querySelector('.sidebar .brand-wordmark'); const ranges=[...logo.children].map(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getBoundingClientRect().bottom;}); const sidebarNode=document.querySelector('.sidebar-content'),sidebar=sidebarNode.getBoundingClientRect(), button=document.querySelector('.portal-create').getBoundingClientRect();return {baseline:Math.abs(ranges[0]-ranges[1]),right:Math.abs(sidebar.left+sidebarNode.clientWidth-24-button.right),text:logo.textContent};`);
+        assert.ok(brand.baseline <= 1 && brand.right <= 1, JSON.stringify({width,...brand}));
         assert.equal(brand.text, 'EA-Express');
         if (width < 992) await evaluate('document.querySelector(".sidebar-close").click();');
       }
@@ -433,6 +442,20 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await check('/pickups/new invalid fields',width);
       }
     });
+    await scenario('consegna: CAP, provincia e regione obbligatori in creazione e modifica per ogni servizio', async () => {
+      for (const path of ['/pickups/new', `/pickups/${slug}/edit`]) {
+        await navigate(path);
+        for (const service of ['external', 'regional']) {
+          await evaluate(`const select=document.querySelector('[name="shipping_type"]');select.value=${JSON.stringify(service)};select.dispatchEvent(new Event('change',{bubbles:true}));`);
+          await fillInputs({delivery_postal_code:'', delivery_province:'', delivery_region:''});
+          const before = writes.length;
+          await evaluate('document.querySelector(".booking-form").requestSubmit();');
+          const fields = await evaluate('return ["delivery_postal_code","delivery_province","delivery_region"].map(name=>{const input=document.querySelector(`[name="${name}"]`);return {name,required:input.required,invalid:input.getAttribute("aria-invalid"),text:input.closest(".field").textContent};});');
+          assert.ok(fields.every(field=>field.required && field.invalid==='true' && /Questo campo è obbligatorio/.test(field.text)),JSON.stringify({path,service,fields}));
+          assert.equal(writes.length,before);
+        }
+      }
+    });
     await scenario('time picker: conferma allineata, limiti orario, tastiera e touch a tutte le larghezze richieste', async () => {
       for (const width of [320,360,375,390,430,768,1440]) {
         await viewport(width); await navigate('/pickups/new');
@@ -453,6 +476,56 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await waitFor('!document.querySelector(".picker-time")');
         assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").value;'),'11:00');
       }
+    });
+    await scenario('prezzi: badge accettato verde, rifiutato rosso e da confermare blu', async () => {
+      await viewport(375);
+      for (const [state, tone, variable] of [['agreed','green','--ea-success'],['rejected','danger','--ea-danger'],['awaiting_customer','blue','--ea-info']]) {
+        priceState=state;
+        await navigate(`/shipments/${slug}`);
+        await waitFor(`document.querySelector('.price-state--${tone}')`);
+        const matches=await evaluate(`const badge=document.querySelector('.price-state--${tone}'),sample=document.createElement('span');sample.style.color='var(${variable})';document.body.append(sample);const matches=getComputedStyle(badge).color===getComputedStyle(sample).color;sample.remove();return matches;`);
+        assert.equal(matches,true, `${state}: colore effettivo del badge`);
+        await check('badge '+state,375);
+      }
+      priceState='agreed';
+    });
+    await scenario('etichette: controllo inattivo senza ordini, accesso diretto vuoto e stampa multipla filtrata', async () => {
+      for (const width of [320,360,375,390,430,768]) {
+        await viewport(width); emptyMode = true;
+        await navigate('/shipments?q=nessuna-spedizione');
+        await waitFor('document.querySelector(".action-print-multiple[aria-disabled=true]")');
+        await click('.action-print-multiple');
+        await waitFor('[...document.querySelectorAll("[role=status]")].some(node=>node.textContent.includes("Al momento non ci sono ordini da stampare"))');
+        assert.ok(await evaluate('return location.pathname === "/shipments";'));
+        await check('etichette vuote',width);
+      }
+      await navigate('/shipments/labels');
+      assert.equal(await evaluate('return document.querySelectorAll(".parcel-label").length;'),0);
+      emptyMode = false; await viewport(1440); await navigate('/shipments?q=Caserta');
+      await click('.action-print-multiple');
+      await waitFor('document.querySelector(".label-selection")');
+      assert.equal(await evaluate('return location.pathname;'), '/shipments');
+      await evaluate(`const select=document.querySelector('.label-selection select');select.value=${JSON.stringify(slug)};select.dispatchEvent(new Event('change',{bubbles:true}));`);
+      await click('.label-selection .actions > button:last-child');
+      await waitFor('document.querySelectorAll(".label-batch .parcel-label").length===1');
+      assert.deepEqual(await evaluate('return new URLSearchParams(location.search).getAll("ids[]");'),[slug]);
+      await navigate('/shipments?q=Caserta');
+      await click('.action-print-multiple');
+      await waitFor('document.querySelector(".label-selection")');
+      await evaluate('const date=document.querySelector("input[name=print_day]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(date,"2026-10-24");date.dispatchEvent(new Event("input",{bubbles:true}));date.dispatchEvent(new Event("change",{bubbles:true}));');
+      await waitFor('!document.querySelector(".label-selection-fields > button").disabled');
+      await click('.label-selection-fields > button');
+      await waitFor('document.querySelector(".label-selection [role=status]").textContent.includes("2 etichette")');
+      await click('.label-selection .actions > button:last-child');
+      await waitFor('document.querySelectorAll(".label-batch .parcel-label").length===2');
+      assert.equal(await evaluate('return new URLSearchParams(location.search).get("day");'), '2026-10-24');
+      assert.equal(await evaluate('return new URLSearchParams(location.search).get("q");'), 'Caserta');
+      await send('Emulation.setEmulatedMedia',{media:'print'});
+      try {
+        const pdf=await send('Page.printToPDF',{preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
+        const pages=(Buffer.from(pdf.data,'base64').toString('latin1').match(/\/Type\s*\/Page\b/g)||[]).length;
+        assert.equal(pages,2,'Due documenti, una pagina per spedizione');
+      } finally { await send('Emulation.setEmulatedMedia',{media:''}); }
     });
     await scenario('etichetta: prezzo centrato, percorso in evidenza e PDF A6/A4 senza pagine aggiuntive', async () => {
       for (const width of [320,768,1440]) {

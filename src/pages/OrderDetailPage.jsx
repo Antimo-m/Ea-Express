@@ -26,7 +26,7 @@ function Detail({ order, reload, pickups, messages }) {
         title={messages ? `Conversazione · ${displayName(order)}` : displayName(order)}
         description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city} · Destinatario: ${order.recipient_name}`}
       >
-        <IconButton action="print" label="Stampa etichetta" to={`/shipments/${order.slug}/label`} />
+        <IconButton action="print" label="Stampa etichetta" to={order.can_print === false ? undefined : `/shipments/${order.slug}/label`} aria-disabled={order.can_print === false} onClick={event => { if (order.can_print === false) { event.preventDefault(); setSuccess("Al momento non ci sono ordini da stampare"); } }} />
         <Status order={order} /><span className="service-badge">{order.shipping_type === "external" ? "Fuori regione" : "Regionale"}</span>
         {order.can_edit && (
           <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.slug}/edit`} />
@@ -69,7 +69,7 @@ function Detail({ order, reload, pickups, messages }) {
               </div>
             </section>
             <section className="panel">
-              {order.shipping_type === 'external' && <div className="carrier-summary"><h2>Consegna con Rete EA-Express</h2><dl className="facts"><div><dt>Servizio</dt><dd>Rete EA-Express</dd></div><div><dt>Tracking spedizione</dt><dd>{order.carrier_tracking || 'Non ancora disponibile'}</dd></div><div><dt>Stato spedizione</dt><dd>{{booked:'Prenotata',handed_over:'Affidata alla rete',in_transit:'In transito',delivery_issue:'Problema di consegna',delivered:'Consegnata'}[order.carrier_status] || 'In attesa di affidamento'}</dd></div>{order.estimated_delivery_from && <div><dt>Consegna stimata</dt><dd>{date(order.estimated_delivery_from)} – {date(order.estimated_delivery_to)}</dd></div>}</dl><p className="muted small">Stima dal ritiro, da confermare con EA-Express. Gli aggiornamenti sono registrati da EA-Express.</p></div>}
+              {order.shipping_type === 'external' && <div className="carrier-summary"><h2>Consegna con Rete EA-Express</h2><dl className="facts"><div><dt>Servizio</dt><dd>Rete EA-Express</dd></div><div><dt>Stato spedizione</dt><dd>{{booked:'Prenotata',handed_over:'Affidata alla rete',in_transit:'In transito',delivery_issue:'Problema di consegna',delivered:'Consegnata'}[order.carrier_status] || 'In attesa di affidamento'}</dd></div>{order.estimated_delivery_from && <div><dt>Consegna stimata</dt><dd>{date(order.estimated_delivery_from)} – {date(order.estimated_delivery_to)}</dd></div>}</dl><p className="muted small">Stima dal ritiro, da confermare con EA-Express. Gli aggiornamenti sono registrati da EA-Express.</p></div>}
               <h2>Ogni passo, in ordine</h2>
               {order.events?.length ? (
                 <ol className="timeline">

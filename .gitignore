@@ -69,3 +69,6 @@ dist/
 /conversazioni/
 /transcripts/
 /chat-exports/
+
+/auth.json
+/.npmrc
