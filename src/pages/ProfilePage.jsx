@@ -40,8 +40,10 @@ function AccountForm({ kind, user, onUpdate }) {
         preferences: updatePreferences,
       }[kind](data);
       setSuccess(result.message);
-      if (kind === "password") form.reset();
-      else {
+      if (kind === "password") {
+        form.reset();
+        onUpdate(null);
+      } else {
         const result = await me();
         onUpdate(result.user);
       }

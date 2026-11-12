@@ -261,5 +261,5 @@
 .actions { justify-content: flex-end; }
 .actions > .action-add { margin-inline-start: auto; order: 1; }
 .actions > .action-delete, .actions > .danger { order: -1; margin-inline-end: auto; }
-.sidebar .portal-create { align-self: flex-end; margin-inline: auto 12px; }
+.sidebar .portal-create { align-self: center; margin-inline: auto; }
 .portal-mobile-nav .mobile-create { order: 1; }

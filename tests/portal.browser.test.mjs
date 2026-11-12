@@ -61,6 +61,16 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         request.on('end', () => {
           const data = body ? JSON.parse(body) : {};
           writes.push({ path, data });
+          if (path === '/password') {
+            if (data.current_password !== 'password') {
+              response.statusCode = 422;
+              json({errors: {current_password: ['La password attuale non è corretta.']}});
+            } else {
+              authenticated = false;
+              json({message: 'Password aggiornata. Accedi nuovamente.', csrf_token: 'rotated-token'});
+            }
+            return;
+          }
           if (path === '/auth/register') {
             if (registrationError) { response.statusCode = 422; json({errors:{business_type:[policyMessage]}}); }
             else { authenticated = true; json({user}); }
@@ -172,15 +182,15 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         for (const path of routes) { await navigate(path); await check(path, width); }
       });
     }
-    await scenario('shell senza margini residui, marchio allineato e aggiunta a destra', async () => {
+    await scenario('shell senza margini residui, marchio allineato e aggiunta centrata', async () => {
       for (const width of [375, 760, 767, 768, 991, 992, 1024, 1250, 1440]) {
         await viewport(width); await navigate('/statistics');
         const geometry = await evaluate(`const workspace=document.querySelector('.workspace').getBoundingClientRect(); return {left:workspace.left,right:workspace.right,available:document.documentElement.clientWidth,menu:getComputedStyle(document.querySelector('.menu-toggle')).display};`);
         assert.ok(Math.abs(geometry.right - geometry.available) <= 1, JSON.stringify({width, ...geometry}));
         assert.equal(geometry.left, width < 992 ? 0 : 262);
         if (width < 992) await evaluate('document.querySelector(".menu-toggle").click();');
-        const brand = await evaluate(`const logo=document.querySelector('.sidebar .brand-wordmark'); const ranges=[...logo.children].map(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getBoundingClientRect().bottom;}); const sidebarNode=document.querySelector('.sidebar-content'),sidebar=sidebarNode.getBoundingClientRect(), button=document.querySelector('.portal-create').getBoundingClientRect();return {baseline:Math.abs(ranges[0]-ranges[1]),right:Math.abs(sidebar.left+sidebarNode.clientWidth-24-button.right),text:logo.textContent};`);
-        assert.ok(brand.baseline <= 1 && brand.right <= 1, JSON.stringify({width,...brand}));
+        const brand = await evaluate(`const logo=document.querySelector('.sidebar .brand-wordmark'); const ranges=[...logo.children].map(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getBoundingClientRect().bottom;}); const sidebar=document.querySelector('.sidebar-content').getBoundingClientRect(), button=document.querySelector('.portal-create').getBoundingClientRect();return {baseline:Math.abs(ranges[0]-ranges[1]),center:Math.abs((sidebar.left+sidebar.right-button.left-button.right)/2),text:logo.textContent};`);
+        assert.ok(brand.baseline <= 1 && brand.center <= 1, JSON.stringify({width,...brand}));
         assert.equal(brand.text, 'EA-Express');
         if (width < 992) await evaluate('document.querySelector(".sidebar-close").click();');
       }
@@ -858,6 +868,25 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.equal(await evaluate('return document.querySelector("input[name=business_type]").value;'),'Fiorista');
         assert.equal(await evaluate('return document.querySelector("input[name=email]").value;'),'registrazione@example.test');
       } finally { registrationError = false; authenticated = true; }
+    });
+    await scenario('cambio password: errore conserva il profilo, successo richiede un nuovo accesso', async () => {
+      try {
+        for (const width of [390, 1440]) {
+          authenticated = true;
+          await viewport(width); await navigate('/profile');
+          await evaluate(`const values={current_password:'wrong-password',password:'NuovaPasswordDiProva123!',password_confirmation:'NuovaPasswordDiProva123!'};for(const [name,value] of Object.entries(values)){const input=document.querySelector('#profile-security [name="'+name+'"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));}`);
+          await evaluate('document.querySelector("#profile-security").requestSubmit();');
+          await waitFor('document.querySelector("#profile-security [aria-invalid=true]")');
+          assert.equal(await evaluate('return location.pathname;'), '/profile');
+          assert.equal(authenticated, true);
+          await evaluate(`const input=document.querySelector('#profile-security [name="current_password"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'password');input.dispatchEvent(new Event('input',{bubbles:true}));`);
+          await evaluate('document.querySelector("#profile-security").requestSubmit();');
+          await waitFor('location.pathname === "/login" && document.querySelector(".auth-form")');
+          assert.equal(authenticated, false);
+          await navigate('/profile');
+          assert.equal(await evaluate('return location.pathname;'), '/login');
+        }
+      } finally { authenticated = true; }
     });
     if (process.env.EA_PORTAL_SCREENSHOT_DIR) {
       authenticated = true;
