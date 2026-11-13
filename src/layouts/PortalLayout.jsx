@@ -11,6 +11,7 @@ import NotificationSound from "../components/NotificationSound";
 import { connectWorkspace } from "../services/workspace-realtime";
 import { request } from "../api/client";
 import { initials } from "../utils/format";
+import { BetaStrip } from "../components/BetaNotice";
 const groups = [
   ['Operatività', [
     ['/dashboard', 'grid-1x2', 'Panoramica'], ['/pickups', 'calendar2-week', 'Ritiri'],
@@ -176,6 +177,7 @@ export default function PortalLayout() {
           </div>
         </header>
         <main id="main" tabIndex="-1">
+          <BetaStrip />
           <Feedback error={error} />
           <Outlet />
         </main>

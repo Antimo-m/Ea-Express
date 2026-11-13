@@ -29,6 +29,7 @@ const PendingPage = lazy(() => import('./pages/PendingPage'));
 const PendingDetailPage = lazy(() => import('./pages/PendingDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const BetaTermsPage = lazy(() => import('./pages/BetaTermsPage'));
 function Session() {
   const auth = useAuth();
   return <State resource={auth}>{() => <Outlet />}</State>;
@@ -48,8 +49,12 @@ export default function App() {
           <Routes>
             <Route path="/cookies" element={<PrivacyPage />} />
             <Route path="/privacy" element={<PrivacyPage privacy />} />
+            <Route path="/condizioni-beta" element={<BetaTermsPage />} />
             <Route element={<Session />}>
               <Route path="/login" element={<AuthPage key="login" />} />
+              <Route path="/verify-access" element={<AuthPage key="verify" mode="verify" />} />
+              <Route path="/forgot-password" element={<AuthPage key="forgot" mode="forgot" />} />
+              <Route path="/reset-password" element={<AuthPage key="reset" mode="reset" />} />
               <Route
                 path="/register"
                 element={<AuthPage key="register" mode="register" />}

@@ -9,6 +9,7 @@ import { Header, State, Status, Feedback, Icon, Empty } from "../components/UI";
 import ShippingPrice from "../components/ShippingPrice";
 import MessageThread from "../components/MessageThread";
 import { date, money, displayName } from "../utils/format";
+import { IndicativePriceNote } from "../components/BetaNotice";
 function Detail({ order, reload, pickups, messages }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [success, setSuccess] = useState(useLocation().state?.success || "");
@@ -134,7 +135,7 @@ function Detail({ order, reload, pickups, messages }) {
                 </div>
                 <div>
                   <dt>Costo spedizione</dt>
-                  <dd>{money(order.price_cents)}</dd>
+                  <dd>{money(order.price_cents)}<IndicativePriceNote /></dd>
                 </div>
                 {order.estimated_at && (
                   <div>

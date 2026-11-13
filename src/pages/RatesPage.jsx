@@ -5,6 +5,7 @@ import { request, query } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { Header, Field, State, Empty, Pagination, Icon } from "../components/UI";
 import { money } from "../utils/format";
+import { IndicativePriceNote } from "../components/BetaNotice";
 const load = params => request(`/rates${query(params)}`);
 export default function RatesPage() {
   const [params, setFilters] = useSearchParams();
@@ -29,5 +30,5 @@ export default function RatesPage() {
       <header><span className="eyebrow">{rate.area || 'Località'}</span><Icon name="geo-alt"/></header><h2>{rate.city}</h2><span className="service-badge">{rate.shipping_type === "external" ? 'Fuori regione · Rete EA-Express' : "Regionale"}</span>{(rate.max_weight_kg || rate.max_dimension_cm) && <p className="small">{rate.max_weight_kg && `Fino a ${rate.max_weight_kg} kg totali. `}{rate.max_dimension_cm && `Lato massimo: ${rate.max_dimension_cm} cm.`}</p>}<p className="rate-location">{[rate.zone,rate.postal_codes?.length ? `CAP ${rate.postal_codes.join(', ')}` : rate.postal_code ? `CAP ${rate.postal_code}` : '',rate.street].filter(Boolean).join(' · ') || (rate.is_default ? 'Tutte le destinazioni fuori regione senza tariffa specifica' : 'Intera località')}</p>
       <div className="rate-price"><span>Costo spedizione</span><strong>{money(rate.price_cents)}</strong></div><p className="rate-time"><Icon name="clock"/>{rate.delivery_time || (rate.delivery_days_min ? `${rate.delivery_days_min}–${rate.delivery_days_max} giorni lavorativi` : 'Tempi da confermare')}</p>
     </article>)}</div> : <Empty title="Nessuna tariffa disponibile" text="Verifica località e CAP. Per confermare una prenotazione serve una tariffa disponibile nel listino."/>}<Pagination meta={rates} onPage={page => setFilters({...filters,page})}/></>}</State></section>
-    <p className="data-caption">Il riepilogo della prenotazione verifica la tariffa per l’indirizzo inserito. Le spedizioni precedenti conservano il prezzo concordato.</p></>;
+    <IndicativePriceNote /><p className="data-caption">Il riepilogo della prenotazione verifica la tariffa per l’indirizzo inserito. Le spedizioni precedenti conservano il prezzo concordato.</p></>;
 }

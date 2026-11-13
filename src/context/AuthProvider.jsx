@@ -50,13 +50,19 @@ export default function AuthProvider({ children }) {
     setError(null);
     return result;
   }
+  async function confirmDevice(data) {
+    const result = await api.verifyOtp(data);
+    setUser(result.user);
+    setError(null);
+    return result;
+  }
   async function logout() {
     await api.logout();
     setUser(null);
   }
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, reload, authenticate, logout, setUser, updateDisplayPreferences }}
+      value={{ user, loading, error, reload, authenticate, confirmDevice, logout, setUser, updateDisplayPreferences }}
     >
       {children}
     </AuthContext.Provider>

@@ -36,7 +36,7 @@ const statistics = {
 test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze richieste', { skip: !existsSync(chrome) || !existsSync(built), timeout: 180000 }, async t => {
   const scenario = (name, callback) => t.test(name, {skip: Boolean(process.env.EA_PORTAL_TEST_FILTER) && !new RegExp(process.env.EA_PORTAL_TEST_FILTER).test(name)}, callback);
   const temporary = mkdtempSync(join(tmpdir(), 'ea-portal-ui-'));
-  let browser, socket, authenticated = true, errorMode = false, emptyMode = false, loadingMode = false;
+  let browser, socket, authenticated = true, otpPending = false, errorMode = false, emptyMode = false, loadingMode = false;
   const writes = [];
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
@@ -54,8 +54,10 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       const json = body => response.end(JSON.stringify(body));
       if (path === '/text-policy') { json({version:1,terms:['cocaina','hashish','fuck','cazzo'],substitutions:{0:'o',1:'i',3:'e',4:'a',5:'s',7:'t','@':'a','$':'s'},message:policyMessage}); return; }
       if (path === '/auth/me') { response.statusCode = authenticated ? 200 : 401; json(authenticated ? { user } : {}); return; }
+      if (path === '/auth/otp' && request.method === 'GET') { json({ pending: otpPending, email: otpPending ? 'c•••@example.test' : null }); return; }
       if (path === '/privacy') { json({version:'2026-10-28',reviewed:false,controller:{name:null,address:null,email:null},same_site:'lax',secure:false,cookies:[{name:'ea_express_customer_session',purpose:'Accesso autenticato al portale clienti',minutes:120,http_only:true,session_only:false},{name:'XSRF-TOKEN',purpose:'Protezione delle richieste da CSRF',minutes:120,http_only:false,session_only:false}]}); return; }
       if (path === '/csrf') { json({ csrf_token: 'test-token' }); return; }
+      if (path === '/platform') { json({ beta: true, terms_version: '2026-11-12', privacy_version: '2026-10-28', terms: [{ title: 'Servizio sperimentale', body: 'Prova gratuita.' }, { title: 'Nessun pagamento tramite l’app', body: 'Tariffe indicative.' }] }); return; }
       if (request.method !== 'GET') {
         let body = ''; request.on('data', chunk => body += chunk);
         request.on('end', () => {
@@ -69,6 +71,19 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
               authenticated = false;
               json({message: 'Password aggiornata. Accedi nuovamente.', csrf_token: 'rotated-token'});
             }
+            return;
+          }
+          if (path === '/auth/login') { otpPending = true; response.statusCode = 202; json({ otp_required: true, email: 'c•••@example.test', message: 'Ti abbiamo inviato via email un codice di verifica.', retry_after: null, csrf_token: 'test-token' }); return; }
+          if (path === '/auth/password/forgot') { response.statusCode = 202; json({ message: 'Se l’indirizzo è associato a un account, riceverai un’email con il link per reimpostare la password. Il link vale 15 minuti.' }); return; }
+          if (path === '/auth/password/reset') {
+            if (data.token !== 'valid-token') { response.statusCode = 422; json({ errors: { email: ['Il link non è valido o è scaduto. Richiedi un nuovo link di ripristino.'] } }); }
+            else { json({ message: 'Password reimpostata. Accedi con la nuova password.' }); }
+            return;
+          }
+          if (path === '/auth/otp/send') { json({ message: 'Nuovo codice inviato via email.' }); return; }
+          if (path === '/auth/otp/verify') {
+            if (!otpPending || data.code !== '123456') { response.statusCode = 422; json({ errors: { code: ['Codice non corretto. Dopo cinque errori devi richiederne uno nuovo.'] } }); }
+            else { otpPending = false; authenticated = true; json({ user, csrf_token: 'rotated-token' }); }
             return;
           }
           if (path === '/auth/register') {
@@ -822,13 +837,92 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       }
       authenticated = true;
     });
-    await scenario('accesso e registrazione non espongono recupero password', async () => {
+    await scenario('accesso e registrazione offrono il recupero password senza esporre token', async () => {
       authenticated = false;
-      for (const width of [320, 390, 768, 1440]) { await viewport(width); for (const path of ['/login', '/register']) { await navigate(path); await check(path, width); if (process.env.EA_PORTAL_SCREENSHOT_DIR) { const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR,`${path.slice(1)}-${width}.png`),Buffer.from(shot.data,'base64')); } assert.equal(await evaluate('return !!document.querySelector("a[href*=forgot],input[name=token]");'), false); } }
-      assert.equal(writes.some(write => /forgot|reset-password/.test(write.path)), false);
+      for (const width of [320, 390, 768, 1440]) { await viewport(width); for (const path of ['/login', '/register']) { await navigate(path); await check(path, width); if (process.env.EA_PORTAL_SCREENSHOT_DIR) { const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});writeFileSync(join(process.env.EA_PORTAL_SCREENSHOT_DIR,`${path.slice(1)}-${width}.png`),Buffer.from(shot.data,'base64')); } assert.equal(await evaluate('return !!document.querySelector("input[name=token]");'), false); if (path === '/login') assert.equal(await evaluate('return document.querySelector("a[href=\\"/forgot-password\\"]")?.textContent;'), 'Password dimenticata?'); } }
+      assert.equal(writes.some(write => /password\/(forgot|reset)/.test(write.path)), false);
       const privacyLinks=await evaluate('const nav=document.querySelector(".privacy-links");return {display:getComputedStyle(nav).display,gap:getComputedStyle(nav).columnGap};');
       assert.equal(privacyLinks.display,'flex');
       assert.ok(parseFloat(privacyLinks.gap)>=16);
+    });
+    await scenario('accesso da un nuovo dispositivo: codice OTP richiesto prima della dashboard', async () => {
+      authenticated = false;
+      try {
+        for (const width of [320, 390, 768, 1440]) {
+          authenticated = false; otpPending = false;
+          await viewport(width); await navigate('/login');
+          await fillInputs({ email: 'cliente@example.test', password: 'password-valida' });
+          await evaluate('document.querySelector(".auth-form form").requestSubmit();');
+          await waitFor('location.pathname === "/verify-access" && document.querySelector("[data-otp-verification] input[name=code]")');
+          assert.equal(authenticated, false);
+          await check('/verify-access', width);
+          assert.match(await evaluate('return document.querySelector(".auth-form").textContent;'), /c•••@example\.test/);
+          assert.equal(await evaluate('return document.querySelector("[data-otp-verification] input[name=code]").autocomplete;'), 'one-time-code');
+          assert.equal(await evaluate('return document.querySelector("[data-otp-verification] button[type=button]").disabled;'), true, 'il reinvio attende il primo intervallo');
+          const verifications = () => writes.filter(write => write.path === '/auth/otp/verify').length;
+          const before = verifications();
+          await fillInputs({ code: '12' });
+          await evaluate('document.querySelector("[data-otp-verification]").requestSubmit();');
+          await waitFor('document.querySelector("input[name=code]").getAttribute("aria-invalid") === "true"');
+          assert.equal(verifications(), before, 'un codice incompleto non arriva al server');
+          await fillInputs({ code: '000000' });
+          await evaluate('document.querySelector("[data-otp-verification]").requestSubmit();');
+          await waitFor('document.querySelector(".auth-form [role=alert]")?.textContent.includes("Codice non corretto")');
+          assert.equal(await evaluate('return location.pathname;'), '/verify-access');
+          await fillInputs({ code: '123456' });
+          await evaluate('document.querySelector("[data-otp-verification]").requestSubmit();');
+          await waitFor('location.pathname === "/dashboard"');
+          assert.equal(authenticated, true);
+        }
+        authenticated = false; otpPending = false;
+        await navigate('/verify-access');
+        await waitFor('location.pathname === "/login" && document.querySelector(".auth-form").textContent.includes("Accedi di nuovo")');
+      } finally { authenticated = true; otpPending = false; }
+    });
+    await scenario('beta: condizioni pubbliche, fascia nel portale e tariffe indicative', async () => {
+      authenticated = false;
+      await viewport(390); await navigate('/login');
+      assert.ok(await evaluate('return !!document.querySelector("[data-beta-banner]");'), 'banner beta nel login');
+      await navigate('/condizioni-beta');
+      await waitFor('document.querySelectorAll(".beta-terms li").length === 2');
+      await check('/condizioni-beta', 390);
+      authenticated = true;
+      for (const width of [375, 1440]) {
+        await viewport(width); await navigate('/rates');
+        await waitFor('document.querySelector("[data-beta-strip]") && document.querySelector("[data-indicative-price]")');
+        assert.match(await evaluate('return document.querySelector("[data-indicative-price]").textContent;'), /Tariffa indicativa/);
+        assert.ok(await evaluate('return document.documentElement.scrollWidth <= innerWidth + 1;'), `beta strip overflow ${width}`);
+      }
+    });
+    await scenario('password dimenticata: richiesta generica, link letto dal frammento e rimosso dalla barra', async () => {
+      authenticated = false;
+      try {
+        for (const width of [320, 390, 768, 1440]) {
+          await viewport(width); await navigate('/forgot-password');
+          await check('/forgot-password', width);
+          await fillInputs({ email: 'Cliente@Example.test ' });
+          await evaluate('document.querySelector("[data-password-recovery]").requestSubmit();');
+          await waitFor('document.querySelector(".auth-form [role=status], .auth-form .alert")?.textContent.includes("15 minuti")');
+          assert.equal(writes.filter(write => write.path === '/auth/password/forgot').at(-1).data.email, 'cliente@example.test');
+          await navigate('/reset-password#token=valid-token&email=cliente%40example.test');
+          await waitFor('document.querySelector("[data-password-reset]")');
+          assert.equal(await evaluate('return location.hash;'), '', 'il token non resta nella barra degli indirizzi');
+          assert.match(await evaluate('return document.querySelector(".auth-form").textContent;'), /cliente@example\.test/);
+          await check('/reset-password', width);
+          await fillInputs({ password: 'NuovaPasswordSicura1', password_confirmation: 'NuovaPasswordSicura1' });
+          await evaluate('document.querySelector("[data-password-reset]").requestSubmit();');
+          await waitFor('location.pathname === "/login" && document.querySelector(".auth-form").textContent.includes("Password reimpostata")');
+          const reset = writes.filter(write => write.path === '/auth/password/reset').at(-1).data;
+          assert.equal(reset.token, 'valid-token'); assert.equal(reset.email, 'cliente@example.test');
+        }
+        await navigate('/reset-password#token=expired&email=cliente%40example.test');
+        await fillInputs({ password: 'NuovaPasswordSicura1', password_confirmation: 'NuovaPasswordSicura1' });
+        await evaluate('document.querySelector("[data-password-reset]").requestSubmit();');
+        await waitFor('document.querySelector(".auth-form [role=alert]")?.textContent.includes("non è valido o è scaduto")');
+        assert.ok(await evaluate('return !!document.querySelector(".auth-form a[href=\\"/forgot-password\\"]");'));
+        await navigate('/reset-password');
+        await waitFor('document.querySelector(".auth-form h2")?.textContent === "Link non valido"');
+      } finally { authenticated = true; }
     });
     await scenario('registrazione: opzioni uniformi e validazione accessibile senza perdere i dati', async () => {
       authenticated = false;
@@ -843,7 +937,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.ok(Math.abs(picker.width-picker.field)<1 && picker.height>=44,JSON.stringify(picker));
         await check('/register',width);
       }
+      assert.ok(await evaluate('return !!document.querySelector("[data-beta-banner]") && document.querySelector("[data-beta-banner] a[href=\\"/condizioni-beta\\"]") !== null;'), 'banner beta in registrazione');
+      assert.deepEqual(await evaluate('return [...document.querySelectorAll(".consent input[type=checkbox]")].map(input=>[input.name,input.required]);'), [['privacy_acknowledged',true],['beta_terms_accepted',true]]);
+      assert.ok(await evaluate('return !!document.querySelector(".consent a[href=\\"/privacy\\"]") && !!document.querySelector(".consent a[href=\\"/condizioni-beta\\"]");'));
       await fillInputs({name:'Negozio dimostrativo',email:'registrazione@example.test',password:'UnaPasswordDiProva123!',password_confirmation:'UnaPasswordDiProva123!'});
+      await evaluate('document.querySelectorAll(".consent input[type=checkbox]").forEach(input=>{if(!input.checked)input.click();});');
       await useTextPicker('business_type','C0.C4.1.N4');
       await waitFor('document.querySelector("input[name=business_type]").getAttribute("aria-invalid") === "true"');
       const before = writes.filter(write=>write.path==='/auth/register').length;

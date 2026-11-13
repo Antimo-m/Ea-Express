@@ -131,6 +131,7 @@ function validationMessage(control) {
   if (control.type === "email" && control.validity.typeMismatch) return "Inserisci un indirizzo email valido.";
   if (control.name?.includes("postal_code") && control.validity.patternMismatch) return "Il CAP deve contenere 5 cifre.";
   if (["parcel_value", "price"].includes(control.name) && control.validity.patternMismatch) return "Inserisci un importo valido con al massimo due decimali.";
+  if (control.name === "code" && (control.validity.patternMismatch || control.validity.tooShort)) return "Il codice deve contenere 6 cifre.";
   if (control.validity.tooShort) return `Inserisci almeno ${control.minLength} caratteri.`;
   if (control.validity.rangeUnderflow) return `Il valore minimo consentito è ${control.min}.`;
   if (control.validity.rangeOverflow) return `Il valore massimo consentito è ${control.max}.`;

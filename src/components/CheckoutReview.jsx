@@ -1,6 +1,7 @@
 import { Icon, Feedback } from "./UI";
 import { contentLabel } from "../utils/order-content";
 import { date, money } from "../utils/format";
+import { IndicativePriceNote } from "./BetaNotice";
 
 export default function CheckoutReview({ review, user, busy, error, onBack, onConfirm }) {
   const data = review.data;
@@ -35,6 +36,7 @@ export default function CheckoutReview({ review, user, busy, error, onBack, onCo
       <aside className="checkout-summary" aria-labelledby="checkout-summary-heading">
         <p className="eyebrow">IL TUO ORDINE</p><h3 id="checkout-summary-heading">Riepilogo economico</h3>
         <dl className="checkout-amounts"><div><dt>Valore dichiarato del pacco</dt><dd>{money(review.parcel_value_cents)}</dd></div><div><dt>Tariffa di spedizione</dt><dd>{money(review.shipping_price_cents)}</dd></div><div className="checkout-total"><dt>Totale finale</dt><dd>{money(review.total_cents)}</dd></div></dl>
+        <IndicativePriceNote />
         <p className="checkout-total-note">Il totale comprende valore dichiarato e spedizione. La conferma non esegue un pagamento online e non attiva un contrassegno.</p>
         <div className="checkout-assurance"><Icon name="shield-check" /><p>La tariffa viene verificata nuovamente alla conferma. Nessun importo può essere modificato da questa pagina.</p></div>
         {quote.reason && <p className="checkout-rate-note">{quote.reason}</p>}
