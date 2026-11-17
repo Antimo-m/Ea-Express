@@ -13,6 +13,12 @@ test('text policy rejects accents, case, common leetspeak, spacing and punctuati
   }
 });
 
+test('text policy blocks stems, repeated letters and compatibility characters but keeps real names', () => {
+  const stems = {...policy, terms: [...policy.terms, 'stronz*', 'porco dio']};
+  for (const text of ['stronzo', 'Stronzetto', 'strooonzo', 'Ｓｔｒｏｎｚｏ', 'porcodio']) assert.equal(portalTextError(text, stems), stems.message, text);
+  for (const text of ['Cazzola Ricambi', 'Ferramenta Cazzaniga', 'Spaghetti alla puttanesca', 'Zoë Dvořák']) assert.equal(portalTextError(text, stems), null, text);
+});
+
 test('text policy respects word boundaries and legitimate accented business descriptions', () => {
   for (const text of ['Abbigliamento', 'Caffè e artigianato', 'Assistenza e articoli classici', 'Scunthorpe document services', 'Accessori cocktail e cucina', 'Meridiana e ricambi', 'cocaina界', 'Documenti modello MDMA123', '']) {
     assert.equal(portalTextError(text, policy), null, text);
@@ -40,7 +46,7 @@ test('one content field maps suggestions and free text to the existing API stora
   assert.deepEqual(contentFormData('Documenti', legacy), {category:'documents', content_description:''});
 });
 
-test('submit validation checks editable fields without revalidating historical read-only identity on bookings', async () => {
+test('submit validation checks every identity and descriptive field, including private names', async () => {
   const previousFetch = globalThis.fetch;
   globalThis.fetch = async () => ({ok:true, status:200, json:async () => policy});
   try {
@@ -48,7 +54,8 @@ test('submit validation checks editable fields without revalidating historical r
     assert.deepEqual(await validatePortalText({sender_type:'business', business_type:'cocaina'}), {business_type:[policy.message]});
     assert.deepEqual(await validatePortalText({sender_type:'online_shop', name:'c@zz0'}), {name:[policy.message]});
     assert.deepEqual(await validatePortalText({sender_type:'business', store_name:'FUCK'}), {store_name:[policy.message]});
-    assert.deepEqual(await validatePortalText({sender_type:'private', name:'cazzo', store_name:'cazzo'}), {});
+    assert.deepEqual(await validatePortalText({sender_type:'private', name:'cazzo', store_name:'Mario Rossi'}), {name:[policy.message]});
+    assert.deepEqual(await validatePortalText({recipient_name:'Porco Dio', customer_notes:'Citofonare al secondo piano'}), {recipient_name:[policy.message]});
     assert.deepEqual(await validatePortalText({content_description:'Ricambi per automobile'}), {});
     assert.deepEqual(await validatePortalText({content_description:'hashish'}), {content_description:[policy.message]});
   } finally { globalThis.fetch = previousFetch; }

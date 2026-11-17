@@ -150,18 +150,19 @@ export default function AuthPage({ mode = "login" }) {
               {create ? <IconButton action="add" type="submit" label="Crea account cliente" loading={busy} disabled={remaining > 0} /> : <button className="button full" disabled={busy || remaining > 0 || Boolean(challenge && !botToken)}>{busy ? "Attendi…" : "Accedi al tuo spazio"}<Icon name="arrow-right" /></button>}
               {remaining > 0 && <p className="muted" role="status">Puoi riprovare tra {remaining < 60 ? `${remaining} secondi` : `${Math.ceil(remaining / 60)} minuti`}.</p>}
             </Form>
-            <p className="auth-switch">
+            <div className="auth-switch">
               {mode === "login" ? (
                 <>
-                  <Link to="/forgot-password">Password dimenticata?</Link>
-                  <br />
-                  Non hai un account?{" "}
-                  <Link to="/register">Crea il tuo account</Link>
+                  <Link className="auth-recovery-link" to="/forgot-password">Password dimenticata?</Link>
+                  <p className="auth-register-prompt">
+                    Non hai un account?{" "}
+                    <Link to="/register">Crea il tuo account</Link>
+                  </p>
                 </>
               ) : (
                 <Link className="back-link" to="/login">Torna all’accesso</Link>
               )}
-            </p>
+            </div>
           </>}
           <PrivacyLinks />
         </div>

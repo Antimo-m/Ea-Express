@@ -2,11 +2,11 @@ import ThemeToggle from "../components/ThemeToggle";
 import Brand from "../components/Brand";
 import PrivacyLinks from "../components/PrivacyLinks";
 import IconButton from "../components/IconButton";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router";
 import { useMobile } from "../hooks/useMobile";
 import { useAuth } from "../hooks/useAuth";
-import { Icon, Feedback } from "../components/UI";
+import { Icon, Feedback, Loading } from "../components/UI";
 import NotificationSound from "../components/NotificationSound";
 import { connectWorkspace } from "../services/workspace-realtime";
 import { request } from "../api/client";
@@ -179,7 +179,9 @@ export default function PortalLayout() {
         <main id="main" tabIndex="-1">
           <BetaStrip />
           <Feedback error={error} />
-          <Outlet />
+          <Suspense fallback={<Loading />}>
+            <Outlet />
+          </Suspense>
         </main>
         <footer className="footer">
           <span>EA-Express</span>

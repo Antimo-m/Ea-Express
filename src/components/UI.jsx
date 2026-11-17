@@ -89,20 +89,34 @@ export function Feedback({ error, success }) {
     </>
   );
 }
+/** Full-screen branded placeholder used while the session or the first bundle is loading. */
+export function AppLoading({ label = "Caricamento del portale…" }) {
+  return (
+    <div className="app-loading" role="status" aria-live="polite">
+      <span className="app-loading-mark" aria-hidden="true"><b>EA</b>-Express</span>
+      <span className="app-loading-bar" aria-hidden="true"><span /></span>
+      <span className="app-loading-label">{label}</span>
+    </div>
+  );
+}
+
+/** Skeleton with a delayed «slow network» hint, so long waits never look frozen. */
+export function Loading({ rows = 3 }) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div className="skeletons" role="status" aria-label="Caricamento in corso" aria-busy="true">
+      {Array.from({ length: rows }, (_, index) => <div key={index} />)}
+      <span className={slow ? "skeleton-slow" : "sr-only"}>{slow ? "Il caricamento sta richiedendo più del solito. Attendi ancora qualche secondo…" : "Caricamento in corso"}</span>
+    </div>
+  );
+}
+
 export function State({ resource, children, notFound = false }) {
-  if (resource.loading)
-    return (
-      <div
-        className="skeletons"
-        role="status"
-        aria-label="Caricamento in corso"
-      >
-        <div />
-        <div />
-        <div />
-        <span className="sr-only">Caricamento in corso</span>
-      </div>
-    );
+  if (resource.loading) return <Loading />;
   if (notFound && resource.error?.status === 404) return <NotFoundPage />;
   if (resource.error)
     return (

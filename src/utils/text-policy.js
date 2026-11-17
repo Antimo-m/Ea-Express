@@ -9,13 +9,23 @@ export function normalizeSenderText(data) {
   ]));
 }
 
+/** Mirrors App\\Support\\PortalTextPolicy::comparable(): the submitted value is never changed. */
+export function comparablePortalText(value, substitutions = {}, lettersOnly = false) {
+  let text = normalizePortalText(String(value).normalize('NFKC')).toLowerCase();
+  text = [...text].map(character => substitutions[character] ?? character).join('');
+  text = text.normalize('NFD').replace(/[\p{Mn}\p{Cf}]/gu, '');
+  if (lettersOnly) text = text.replace(/[^\p{L}\p{N}]/gu, '');
+  return text.replace(/(\p{L})\1+/gu, '$1');
+}
+
 export function portalTextError(value, policy) {
   if (!value || !policy) return null;
-  const normalized = normalizePortalText(value).toLowerCase().replace(/[\p{Mn}\p{Cf}]/gu, '').replace(/./gu, character => policy.substitutions[character] ?? character);
+  const text = comparablePortalText(value, policy.substitutions);
   for (const term of policy.terms) {
-    const letters = [...term.replace(/[^\p{L}\p{N}]/gu, '')];
-    const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${letters.join('[^\\p{L}\\p{N}]*')}(?![\\p{L}\\p{N}])`, 'u');
-    if (pattern.test(normalized)) return policy.message;
+    const stem = term.endsWith('*');
+    const letters = [...comparablePortalText(term.replace(/\*$/, ''), policy.substitutions, true)].map(letter => letter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${letters.join('[^\\p{L}\\p{N}]*')}${stem ? '' : '(?![\\p{L}\\p{N}])'}`, 'u');
+    if (pattern.test(text)) return policy.message;
   }
   return null;
 }

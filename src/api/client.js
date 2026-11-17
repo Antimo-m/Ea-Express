@@ -4,6 +4,12 @@ const base = (import.meta.env?.VITE_API_URL || "/api/v1/customer").replace(
 );
 let csrfToken;
 let csrfPending;
+let pendingRequests = 0;
+/** Broadcasts the number of API requests in flight, used by the global activity bar. */
+function activity(delta) {
+  pendingRequests = Math.max(0, pendingRequests + delta);
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("ea:activity", { detail: pendingRequests }));
+}
 const messages = {
   400: "La richiesta non è valida.",
   401: "La sessione è scaduta. Accedi nuovamente.",
@@ -44,6 +50,7 @@ export async function request(
 ) {
   if (method !== "GET" && !csrfToken) await csrf();
   let response;
+  activity(1);
   try {
     response = await fetch(`${base}${path}`, {
       method,
@@ -58,8 +65,13 @@ export async function request(
       },
       ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
     });
-  } catch {
-    throw new ApiError(0);
+  } catch (failure) {
+    const error = new ApiError(0);
+    if (typeof navigator !== "undefined" && navigator.onLine === false) error.message = "Sei offline: controlla la connessione e riprova.";
+    else if (failure?.name === "TimeoutError") error.message = "Il servizio sta rispondendo lentamente. Riprova tra qualche istante.";
+    throw error;
+  } finally {
+    activity(-1);
   }
   if (response.status === 419 && retry && method !== "GET") {
     csrfToken = null;

@@ -808,7 +808,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await waitFor('document.querySelector(".sound-toggle").getAttribute("aria-pressed") === "true"');
       assert.equal(await evaluate('return localStorage.getItem("ea:theme");'), null);
       await navigate('/cookies');
-      await waitFor('document.querySelector(".privacy-table-wrap tbody tr")');
+      await waitFor('document.querySelector("#preferenze button")');
       await evaluate('localStorage.setItem("ea:notification-seen:customer:test", "opaque-identifiers");');
       const logoutBefore = writes.filter(write => write.path === '/auth/logout').length;
       await evaluate('document.querySelector("#preferenze button").click();');
@@ -823,17 +823,17 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       authenticated = false;
       for (const width of [320,768,1440]) {
         await viewport(width); await navigate('/cookies');
-        await waitFor('document.querySelector(".privacy-table-wrap tbody tr")');
+        await waitFor('document.querySelector("#preferenze button")');
         await check('/cookies', width);
         assert.equal(await evaluate('return location.pathname;'), '/cookies');
-        assert.match(await evaluate('return document.querySelector(".privacy-table-wrap").textContent;'), /ea_express_customer_session.*HttpOnly/s);
-        assert.match(await evaluate('return document.querySelector(".privacy-draft").textContent;'), /verifica legale/);
+        assert.equal(await evaluate(`return !!document.querySelector('#tecnici, a[href="#tecnici"], .privacy-table-wrap');`), false);
+        assert.match(await evaluate('return document.querySelector(".privacy-updated").textContent;'), /fase di test/); assert.doesNotMatch(await evaluate('return document.querySelector(".privacy-content").textContent;'), /da fornire|produzione|verifica legale/);
         assert.equal(await evaluate('return !!document.querySelector("dialog[open],[role=dialog],input[type=checkbox]");'), false);
         assert.ok(await evaluate(`return !!document.querySelector('a[href="/privacy"]');`));
         const scripts = await evaluate('return [...document.scripts].filter(node=>node.src).map(node=>new URL(node.src).origin);');
         assert.ok(scripts.every(scriptOrigin => scriptOrigin === origin));
-        await navigate('/privacy'); await waitFor('document.querySelector(".privacy-draft")'); await check('/privacy',width);
-        assert.match(await evaluate('return document.querySelector(".privacy-content").textContent;'), /non costituisce una firma/);
+        await navigate('/privacy'); await waitFor('document.querySelector(".privacy-toc")'); await check('/privacy',width);
+        assert.match(await evaluate('return document.querySelector(".privacy-content").textContent;'), /non equivale alla firma/);
       }
       authenticated = true;
     });

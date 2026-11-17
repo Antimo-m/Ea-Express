@@ -117,6 +117,10 @@
 .portal-auth .auth-form form > .button.full { width: 100%; justify-content: center; }
 .portal-auth .auth-form form > .action-add { margin: 3px auto 0; }
 .portal-auth .auth-switch { margin: 24px 0 0; padding-top: 20px; border-top: 1px solid var(--ea-line); text-align: center; font-size: .875rem; }
+.portal-auth .auth-switch { display: grid; justify-items: center; gap: 14px; }
+.portal-auth .auth-switch .auth-recovery-link { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border-radius: 999px; }
+.portal-auth .auth-register-prompt { margin: 0; color: var(--ea-muted); line-height: 1.6; }
+.portal-auth .auth-register-prompt a { padding: 0; background: none; }
 .portal-auth .auth-form .alert { padding: 12px 14px; margin-block: 12px 18px; font-size: .875rem; }
 .portal-auth .auth-form .sender-fields { gap: 18px; }
 .portal-auth .auth-form .sender-selector { margin: 0; gap: 8px; }
@@ -263,3 +267,31 @@
 .actions > .action-delete, .actions > .danger { order: -1; margin-inline-end: auto; }
 .sidebar .portal-create { align-self: center; margin-inline: auto; }
 .portal-mobile-nav .mobile-create { order: 1; }
+
+/* Revisione pre-testing: azioni finali del modulo e del checkout equilibrate su mobile. */
+.checkout-v2 .checkout-actions { grid-template-columns: auto minmax(0, 1fr); gap: 12px; }
+.checkout-v2 .checkout-actions > button { padding-inline: 16px; white-space: nowrap; overflow-wrap: normal; }
+@media (max-width: 575px) {
+  .booking-final-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; max-width: 420px; margin-inline: auto; padding: 8px 0 calc(16px + env(safe-area-inset-bottom)); }
+  .booking-final-actions > button, .booking-final-actions > .booking-review-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-width: 0; min-height: 48px; margin: 0; padding-inline: 12px; text-align: center; }
+  .booking-final-actions > .danger { order: -1; margin: 0; }
+  .checkout-v2 .checkout-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-bottom: env(safe-area-inset-bottom); }
+  .checkout-v2 .checkout-actions > button { min-height: 48px; padding-inline: 10px; white-space: normal; text-align: center; }
+}
+
+/* Caricamenti: schermata di avvio brandizzata, skeleton stabili e avviso per attese lunghe. */
+.app-loading { min-height: 100vh; min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; background: var(--ea-bg); color: var(--ea-ink); }
+.app-loading-mark { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+.app-loading-mark b { padding: 0 4px; border-radius: 4px; background: var(--ea-signal); color: var(--ea-graphite); }
+.app-loading-bar { position: relative; width: 160px; height: 4px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--ea-ink) 12%, transparent); }
+.app-loading-bar span { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: var(--ea-signal); animation: app-loading-slide 1.1s ease-in-out infinite; }
+.app-loading-label { color: var(--ea-muted); font-size: .875rem; }
+@keyframes app-loading-slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.skeletons { min-height: 240px; }
+.skeletons > div { background: linear-gradient(100deg, var(--ea-surface-muted) 30%, var(--ea-surface) 50%, var(--ea-surface-muted) 70%); background-size: 200% 100%; }
+.skeleton-slow { color: var(--ea-muted); font-size: .875rem; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .app-loading-bar span { animation: none; width: 100%; opacity: .6; } .skeletons > div { animation: none; } }
+.activity-bar { position: fixed; inset: 0 0 auto 0; z-index: 3000; height: 3px; overflow: hidden; pointer-events: none; opacity: 0; animation: activity-appear 0s linear .25s forwards; }
+@keyframes activity-appear { to { opacity: 1; } }
+.activity-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: 0 999px 999px 0; background: var(--ea-signal); animation: app-loading-slide 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .activity-bar::before { animation: none; width: 100%; opacity: .7; } }

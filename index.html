@@ -11,9 +11,21 @@
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>EA-Express · Portale clienti</title>
+    <style>
+      .boot-loading { min-height: 100vh; min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; background: #f6f8f7; color: #141a20; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+      .boot-mark { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; }
+      .boot-mark b { padding: 0 4px; border-radius: 4px; background: #e6a23d; color: #141a20; }
+      .boot-bar { position: relative; width: 160px; height: 4px; overflow: hidden; border-radius: 999px; background: rgba(20, 26, 32, .12); }
+      .boot-bar span { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: #e6a23d; animation: boot-slide 1.1s ease-in-out infinite; }
+      .boot-label { font-size: .875rem; color: #4b5a62; }
+      @keyframes boot-slide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+      @media (prefers-color-scheme: dark) { .boot-loading { background: #111b24; color: #eef2f5; } .boot-label { color: #b7c3c9; } .boot-bar { background: rgba(255, 255, 255, .14); } }
+      @media (prefers-reduced-motion: reduce) { .boot-bar span { animation: none; width: 100%; opacity: .6; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-loading" role="status" aria-live="polite"><span class="boot-mark"><b>EA</b>-Express</span><span class="boot-bar" aria-hidden="true"><span></span></span><span class="boot-label">Caricamento del portale…</span></div></div>
+    <noscript><p style="font-family:system-ui,sans-serif;padding:24px">Per usare il portale EA-Express abilita JavaScript nel browser.</p></noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

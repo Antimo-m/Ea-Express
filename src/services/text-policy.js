@@ -19,8 +19,7 @@ export function loadTextPolicy() {
 export async function validatePortalText(data) {
   const policy = await loadTextPolicy();
   const errors = {};
-  for (const name of ['name', 'store_name', 'business_type', 'business_description', 'content_description']) {
-    if (name !== 'content_description' && data.sender_type === 'private') continue;
+  for (const name of ['name', 'store_name', 'recipient_name', 'business_type', 'business_description', 'content_description', 'package_description', 'customer_notes']) {
     const error = portalTextError(data[name], policy);
     if (error) errors[name] = [error];
   }

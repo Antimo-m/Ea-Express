@@ -12,7 +12,7 @@ export function BetaBanner() {
     <aside className="beta-banner" role="note" data-beta-banner>
       <Icon name="flask" />
       <p>
-        <strong>Versione beta.</strong> EA-Express è in prova: servizio sperimentale e gratuito. Nessun pagamento o accordo passa tramite il portale.{" "}
+        <strong>Versione beta.</strong> EA-Express è in prova: servizio sperimentale e gratuito. Nessun pagamento viene gestito tramite il portale; eventuali accordi commerciali restano definiti tra le parti.{" "}
         <Link to="/condizioni-beta">Condizioni della beta</Link>
       </p>
     </aside>

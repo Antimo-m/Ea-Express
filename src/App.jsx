@@ -10,7 +10,8 @@ import {
 } from "react-router";
 import AuthProvider from "./context/AuthProvider";
 import { useAuth } from "./hooks/useAuth";
-import { State } from "./components/UI";
+import { AppLoading, State } from "./components/UI";
+import ActivityBar from "./components/ActivityBar";
 import ErrorBoundary from "./components/ErrorBoundary";
 import PortalLayout from "./layouts/PortalLayout";
 import AuthPage from "./pages/AuthPage";
@@ -32,6 +33,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const BetaTermsPage = lazy(() => import('./pages/BetaTermsPage'));
 function Session() {
   const auth = useAuth();
+  if (auth.loading) return <AppLoading label="Verifica dell’accesso…" />;
   return <State resource={auth}>{() => <Outlet />}</State>;
 }
 function Protected() {
@@ -45,7 +47,8 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-          <Suspense fallback={<State resource={{ loading: true }} />}>
+          <ActivityBar />
+          <Suspense fallback={<AppLoading />}>
           <Routes>
             <Route path="/cookies" element={<PrivacyPage />} />
             <Route path="/privacy" element={<PrivacyPage privacy />} />

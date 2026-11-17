@@ -13,7 +13,6 @@ import {
 import SenderFields from "../components/SenderFields";
 import { Header, Field, Feedback, Form } from "../components/UI";
 function AccountForm({ kind, user, onUpdate }) {
-  const [emailChanged, setEmailChanged] = useState(false);
   const [error, setError] = useState(null),
     [success, setSuccess] = useState(""),
     [busy, setBusy] = useState(false);
@@ -25,7 +24,6 @@ function AccountForm({ kind, user, onUpdate }) {
       data.notify_orders = data.notify_orders === "on";
       data.notify_messages = data.notify_messages === "on";
     }
-    if (data.email) data.email = data.email.toLowerCase().trim();
     setError(null);
     setSuccess("");
     setBusy(true);
@@ -50,7 +48,6 @@ function AccountForm({ kind, user, onUpdate }) {
     } catch (error) {
       setError(error);
     } finally {
-      if (kind === "profile") form.elements.namedItem("current_password").value = "";
       setBusy(false);
     }
   }
@@ -72,21 +69,13 @@ function AccountForm({ kind, user, onUpdate }) {
         <>
           <SenderFields identity={user} />
           <Field
-            label="Email"
-            name="email"
+            label="Email di accesso"
+            name="account_email"
             type="email"
-            defaultValue={user.email}
-            onChange={event => setEmailChanged(event.target.value.toLowerCase().trim() !== user.email.toLowerCase().trim())}
-            required
-            autoComplete="email"
-          />
-          <Field
-            label="Password attuale (richiesta per cambiare email)"
-            name="current_password"
-            type="password"
-            autoComplete="current-password"
-            maxLength={72}
-            required={emailChanged}
+            value={user.email}
+            readOnly
+            disabled
+            help="L’indirizzo email associato all’account non può essere modificato."
           />
         </>
       ) : kind === "password" ? (

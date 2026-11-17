@@ -60,7 +60,7 @@ function OrderForm({ order, pickups }) {
 
 
     try {
-      const errors = await validatePortalText({sender_type: user.sender_type, store_name: data.store_name, content_description: data.content_description});
+      const errors = await validatePortalText({store_name: data.store_name, recipient_name: data.recipient_name, content_description: data.content_description, package_description: data.package_description, customer_notes: data.customer_notes});
       if (Object.keys(errors).length) { setError(new ApiError(422, errors)); return; }
       Object.assign(data, contentFormData(data.content_description, order));
       const result = await reviewOrder(order ? {...data,version:order.version} : data,order?.slug);

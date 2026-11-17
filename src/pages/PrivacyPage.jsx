@@ -7,9 +7,151 @@ import { request } from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import '../styles/privacy.css';
 
-function lifetime(cookie) {
-  if (cookie.session_only) return 'Fino alla chiusura del browser';
-  return cookie.minutes >= 1440 ? `${Math.round(cookie.minutes / 1440)} giorni` : `${cookie.minutes} minuti`;
+const browserGuides = [
+  ['Google Chrome', 'https://support.google.com/chrome/answer/95647?hl=it'],
+  ['Mozilla Firefox', 'https://support.mozilla.org/it/kb/clear-cookies-and-site-data-firefox'],
+  ['Apple Safari', 'https://support.apple.com/it-it/guide/safari/sfri11471/mac'],
+  ['Microsoft Edge', 'https://support.microsoft.com/it-it/microsoft-edge/eliminare-i-cookie-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09'],
+];
+
+function formatDate(value) {
+  const date = value ? new Date(`${value}T00:00:00`) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : value;
+}
+
+function Section({ id, title, children }) {
+  return <section id={id} aria-labelledby={`${id}-title`}><h2 id={`${id}-title`}>{title}</h2>{children}</section>;
+}
+
+function Contents({ sections }) {
+  return <nav className="privacy-toc" aria-label="Indice della pagina">
+    <p>Indice</p>
+    <ol>{sections.map(([id, title]) => <li key={id}><a href={`#${id}`}>{title}</a></li>)}</ol>
+  </nav>;
+}
+
+function ControllerFacts({ controller }) {
+  const facts = [['Titolare', controller?.name], ['Sede legale', controller?.address], ['Partita IVA', controller?.vat], ['Contatto privacy', controller?.email]].filter(([, value]) => value);
+  if (!facts.length) return <p>Il titolare del trattamento è il gestore del servizio EA-Express. Per qualsiasi richiesta sui tuoi dati puoi scriverci dalla sezione <strong>Messaggi</strong> del portale.</p>;
+  return <dl className="privacy-facts">{facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{label === 'Contatto privacy' ? <a href={`mailto:${value}`}>{value}</a> : value}</dd></div>)}</dl>;
+}
+
+function CookiePolicy({ policy, busy, notice, onReset }) {
+  const sections = [
+    ['introduzione', 'Introduzione'], ['cosa-sono', 'Cosa sono i cookie'], ['prima-terze-parti', 'Cookie di prima e di terze parti'],
+    ['sessione-persistenti', 'Cookie di sessione e persistenti'],
+    ['funzionali', 'Preferenze e memorizzazione locale'], ['analitici', 'Cookie analitici'], ['marketing', 'Cookie di marketing e profilazione'],
+    ['servizi-esterni', 'Servizi esterni'], ['preferenze', 'Gestione delle preferenze'], ['browser', 'Eliminare o bloccare i cookie'],
+    ['aggiornamenti', 'Aggiornamenti e Privacy Policy'],
+  ];
+  return <>
+    <Contents sections={sections}/>
+    <Section id="introduzione" title="Introduzione">
+      <p>Questa Cookie Policy descrive come il portale clienti EA-Express utilizza i cookie e le tecnologie analoghe quando accedi, prenoti un ritiro o consulti le tue spedizioni. Integra la <Link to="/privacy">Privacy Policy</Link>, alla quale rimandiamo per tutte le informazioni sul trattamento dei dati personali.</p>
+      <p>EA-Express utilizza esclusivamente strumenti tecnici, necessari al funzionamento del servizio. Non utilizziamo cookie pubblicitari, di profilazione o di analisi statistica.</p>
+    </Section>
+    <Section id="cosa-sono" title="Cosa sono i cookie">
+      <p>Un cookie è un piccolo file di testo che un sito salva sul tuo computer o smartphone durante la navigazione e che il browser rinvia al sito nelle visite successive. Permette, ad esempio, di riconoscere una sessione di accesso già avviata.</p>
+      <p>Esistono anche tecnologie analoghe, come il <em>localStorage</em> del browser, che consentono di conservare piccole informazioni sul dispositivo. In questa pagina le descriviamo insieme ai cookie.</p>
+    </Section>
+    <Section id="prima-terze-parti" title="Cookie di prima e di terze parti">
+      <p>I <strong>cookie di prima parte</strong> sono impostati direttamente dal sito che stai visitando e solo quel sito può leggerli. I <strong>cookie di terze parti</strong> sono impostati da servizi esterni integrati nella pagina.</p>
+      <p>I cookie utilizzati dal portale sono di prima parte e vengono impostati dal server EA-Express.</p>
+    </Section>
+    <Section id="sessione-persistenti" title="Cookie di sessione e persistenti">
+      <p>I <strong>cookie di sessione</strong> servono a mantenere l’accesso mentre usi il portale e scadono dopo un periodo di inattività o alla chiusura del browser. I <strong>cookie persistenti</strong> restano sul dispositivo per un periodo determinato: nel portale ne utilizziamo uno solo, quando scegli «Ricordami» durante l’accesso.</p>
+    </Section>
+    <Section id="funzionali" title="Preferenze e memorizzazione locale">
+      <ul>
+        <li><strong>Preferenze dell’account:</strong> tema chiaro o scuro, suoni delle notifiche, preferenze di comunicazione e indirizzo di ritiro preferito vengono salvati nel tuo account sul server, non nel browser. Puoi modificarli in qualsiasi momento dal portale.</li>
+        <li><strong>localStorage:</strong> il portale salva gli identificatori delle notifiche già segnalate e l’impostazione dei suoni, per evitare avvisi ripetuti tra più schede aperte. Questi dati non contengono indirizzi né testi dei messaggi.</li>
+        <li><strong>Memoria della pagina:</strong> i dati di un modulo di prenotazione restano disponibili solo finché la pagina è aperta e vengono eliminati quando la ricarichi o la chiudi.</li>
+      </ul>
+    </Section>
+    <Section id="analitici" title="Cookie analitici">
+      <p>EA-Express non utilizza cookie analitici né strumenti di statistica sulla navigazione, propri o di terze parti.</p>
+    </Section>
+    <Section id="marketing" title="Cookie di marketing e profilazione">
+      <p>EA-Express non utilizza cookie pubblicitari, pixel di tracciamento o strumenti di profilazione. Le informazioni raccolte durante la navigazione non vengono usate per mostrarti pubblicità.</p>
+    </Section>
+    <Section id="servizi-esterni" title="Servizi esterni">
+      <ul>
+        <li><strong>Notifiche in tempo reale:</strong> gli aggiornamenti delle spedizioni arrivano tramite una connessione autenticata al server EA-Express. Non utilizziamo geolocalizzazione né mappe di terze parti.</li>
+        <li><strong>Caratteri e icone:</strong> sono serviti direttamente da EA-Express, senza richieste a servizi esterni.</li>
+        {policy.security_check && <li><strong>Verifica di sicurezza:</strong> quando il sistema rileva tentativi di accesso sospetti può chiederti di completare una verifica anti-bot fornita da Cloudflare Turnstile. Il servizio viene caricato soltanto in quel momento e tratta dati tecnici del dispositivo al solo scopo di distinguere persone e programmi automatici.</li>}
+      </ul>
+    </Section>
+    <Section id="preferenze" title="Gestione delle preferenze">
+      <p>Poiché utilizziamo soltanto strumenti tecnici, non ti chiediamo di accettare categorie facoltative di cookie e non mostriamo un banner di consenso. Se in futuro introdurremo strumenti facoltativi, resteranno disattivati finché non avrai espresso una scelta libera, che potrai modificare in qualsiasi momento.</p>
+      <p>Puoi cancellare le informazioni salvate nel browser e ripristinare il tema chiaro e i suoni disattivati senza uscire dal tuo account.</p>
+      <button className="button secondary" disabled={busy} onClick={onReset}>{busy ? 'Ripristino…' : 'Ripristina preferenze tecniche'}</button>
+      {notice && <p role="status">{notice}</p>}
+    </Section>
+    <Section id="browser" title="Eliminare o bloccare i cookie">
+      <p>Puoi eliminare i cookie già presenti sul dispositivo cancellando i dati di navigazione del browser e puoi impostare il browser per bloccarli. Bloccare i cookie tecnici del portale impedisce però l’accesso al tuo account e la prenotazione dei ritiri.</p>
+      <ul className="privacy-browser-list">{browserGuides.map(([name, url]) => <li key={name}><a href={url} target="_blank" rel="noopener noreferrer">{name}</a></li>)}</ul>
+      <p>Per approfondire puoi consultare le <a href="https://www.garanteprivacy.it/faq/Cookie" target="_blank" rel="noopener noreferrer">domande frequenti sui cookie del Garante per la protezione dei dati personali</a>.</p>
+    </Section>
+    <Section id="aggiornamenti" title="Aggiornamenti e Privacy Policy">
+      <p>Aggiorneremo questa pagina ogni volta che cambieranno gli strumenti utilizzati dal portale. La data dell’ultima revisione è indicata in alto.</p>
+      <p>Per conoscere quali dati personali trattiamo e come esercitare i tuoi diritti consulta la <Link to="/privacy">Privacy Policy</Link>.</p>
+    </Section>
+  </>;
+}
+
+function PrivacyPolicy({ policy }) {
+  const sections = [
+    ['introduzione', 'Introduzione'], ['titolare', 'Titolare del trattamento'], ['dati', 'Dati che trattiamo'], ['finalita', 'Perché utilizziamo i dati'],
+    ['destinatari', 'Chi può accedere ai dati'], ['conservazione', 'Conservazione e sicurezza'], ['diritti', 'I tuoi diritti'], ['cookie', 'Cookie'], ['modifiche', 'Modifiche'],
+  ];
+  return <>
+    <Contents sections={sections}/>
+    <Section id="introduzione" title="Introduzione">
+      <p>Questa Privacy Policy spiega quali dati personali vengono trattati quando utilizzi il portale clienti EA-Express per prenotare ritiri, seguire le spedizioni e comunicare con il servizio.</p>
+      {policy.privacy_url && /^https:\/\//i.test(policy.privacy_url) && <p><a href={policy.privacy_url} rel="noopener noreferrer">Leggi l’informativa completa del titolare</a></p>}
+    </Section>
+    <Section id="titolare" title="Titolare del trattamento"><ControllerFacts controller={policy.controller}/></Section>
+    <Section id="dati" title="Dati che trattiamo">
+      <ul>
+        <li><strong>Dati dell’account:</strong> nome e cognome o denominazione dell’attività, indirizzo email, tipologia di mittente e descrizione dell’attività. La password è conservata esclusivamente in forma cifrata non reversibile.</li>
+        <li><strong>Informazioni di contatto:</strong> email e recapiti telefonici indicati per organizzare ritiri e consegne.</li>
+        <li><strong>Indirizzi di mittenti e destinatari:</strong> indirizzi di ritiro e di consegna, nominativi e recapiti dei destinatari che inserisci nelle prenotazioni.</li>
+        <li><strong>Informazioni sugli ordini:</strong> numero e tipologia dei colli, contenuto dichiarato, valore indicato, fasce orarie, note e tariffa applicata.</li>
+        <li><strong>Informazioni operative:</strong> stati della spedizione, rider assegnato, storico degli eventi, etichette ed eventuali segnalazioni relative alla consegna.</li>
+        <li><strong>Comunicazioni:</strong> messaggi scambiati con EA-Express dal portale e notifiche relative alle tue spedizioni.</li>
+        <li><strong>Dati tecnici e di sicurezza:</strong> cookie di sessione, codici di verifica temporanei e registri degli eventi di accesso, nei quali l’indirizzo IP è conservato in forma pseudonimizzata.</li>
+      </ul>
+    </Section>
+    <Section id="finalita" title="Perché utilizziamo i dati">
+      <ul>
+        <li>Creare e gestire il tuo account e verificare la tua identità all’accesso.</li>
+        <li>Organizzare ritiri e consegne, assegnare le spedizioni ai rider e generare le etichette.</li>
+        <li>Inviarti email e notifiche sullo stato delle spedizioni, in base alle preferenze che hai scelto.</li>
+        <li>Rispondere ai messaggi e gestire le segnalazioni relative alle consegne.</li>
+        <li>Gestire la contabilità del servizio, incluse le tariffe e le posizioni economiche delle spedizioni.</li>
+        <li>Proteggere il portale da accessi non autorizzati e utilizzi abusivi.</li>
+      </ul>
+      <p>I dati non vengono utilizzati per finalità pubblicitarie né per profilazione.</p>
+    </Section>
+    <Section id="destinatari" title="Chi può accedere ai dati">
+      <p>I dati sono accessibili al personale amministrativo di EA-Express e, per le sole spedizioni loro assegnate, ai rider incaricati del ritiro e della consegna. Possono inoltre essere trattati dai fornitori tecnici che ospitano il servizio e recapitano le email, esclusivamente per queste attività. I dati non vengono venduti né ceduti a terzi per finalità commerciali.</p>
+    </Section>
+    <Section id="conservazione" title="Conservazione e sicurezza">
+      <p>I dati dell’account e delle spedizioni restano associati al tuo account per il tempo necessario a fornire il servizio. I registri degli eventi di sicurezza vengono eliminati automaticamente dopo {policy.security_log_days || 14} giorni.</p>
+      <p>Le comunicazioni con il portale avvengono tramite connessione cifrata. L’accesso è protetto da password e da un codice di verifica inviato via email; le sessioni vengono revocate al cambio della password.</p>
+    </Section>
+    <Section id="diritti" title="I tuoi diritti">
+      <p>In base al Regolamento (UE) 2016/679 (GDPR) puoi chiedere l’accesso ai tuoi dati, la loro rettifica o cancellazione, la limitazione del trattamento, la portabilità e puoi opporti al trattamento nei casi previsti. Hai inoltre il diritto di proporre reclamo al <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer">Garante per la protezione dei dati personali</a>.</p>
+      <p>{policy.controller?.email ? <>Per esercitare i tuoi diritti scrivi a <a href={`mailto:${policy.controller.email}`}>{policy.controller.email}</a>.</> : <>Per esercitare i tuoi diritti scrivici dalla sezione <strong>Messaggi</strong> del portale.</>}</p>
+    </Section>
+    <Section id="cookie" title="Cookie">
+      <p>Il portale utilizza solo cookie tecnici necessari all’accesso e alla sicurezza. I dettagli sono descritti nella <Link to="/cookies">Cookie Policy</Link>.</p>
+      <p>L’accettazione delle condizioni del servizio e la consultazione di questa informativa sono operazioni distinte: leggere questa pagina non equivale alla firma di un contratto.</p>
+    </Section>
+    <Section id="modifiche" title="Modifiche">
+      <p>Potremo aggiornare questa Privacy Policy per riflettere modifiche del servizio. La data dell’ultima revisione è indicata in alto.</p>
+    </Section>
+  </>;
 }
 
 export default function PrivacyPage({ privacy = false }) {
@@ -41,21 +183,12 @@ export default function PrivacyPage({ privacy = false }) {
   return <div className="privacy-page">
     <header className="privacy-header"><Link to={user ? '/dashboard' : '/login'}><Brand caption="PORTALE CLIENTI"/></Link><Link className="button back-link" to={user ? '/dashboard' : '/login'}><Icon name="arrow-left"/> Torna indietro</Link></header>
     <main className="privacy-content">
-      <span className="eyebrow">TRASPARENZA SUI TUOI DATI</span>
-      <h1>{privacy ? 'Informativa privacy' : 'Cookie e preferenze'}</h1>
-      <p className="privacy-lead">Il portale usa strumenti tecnici per accedere, prenotare e ricevere aggiornamenti. Nessuna pubblicità personalizzata, analytics o profilazione è attivata dal codice attuale.</p>
+      <span className="eyebrow">{privacy ? 'PROTEZIONE DEI DATI' : 'COOKIE E TECNOLOGIE ANALOGHE'}</span>
+      <h1>{privacy ? 'Privacy Policy' : 'Cookie Policy'}</h1>
+      {policy && <p className="privacy-updated">Ultimo aggiornamento: <time dateTime={policy.updated_at || policy.version}>{formatDate(policy.updated_at || policy.version)}</time>{!policy.reviewed && ' · Versione per la fase di test del servizio'}</p>}
       <Feedback error={error}/>
-      {!policy && !error && <p role="status">Caricamento della configurazione…</p>}
-      {policy && <>
-        {!policy.reviewed && <aside className="privacy-draft" role="note"><strong>Testo in attesa di verifica legale.</strong> I dati del titolare, i contatti e l’informativa generale devono essere completati e verificati prima della pubblicazione in produzione.</aside>}
-        <section><h2>Chi gestisce i dati</h2><dl className="privacy-facts"><div><dt>Titolare</dt><dd>{policy.controller.name || 'Denominazione del titolare da fornire'}</dd></div><div><dt>Sede</dt><dd>{policy.controller.address || 'Sede del titolare da fornire'}</dd></div><div><dt>Contatti privacy</dt><dd>{policy.controller.email || 'Recapito privacy da fornire'}</dd></div></dl><p>Versione dell’informativa: {policy.version}. Il brand del servizio è EA-Express; la ragione sociale del titolare deve essere confermata.</p></section>
-        {privacy ? <section><h2>Informativa generale sul servizio</h2><p>I dati dell’account e della prenotazione sono trattati per autenticare il cliente, organizzare ritiri e consegne e gestire comunicazioni e contabilità. Gli indirizzi dei destinatari restano associati agli ordini; il preferito contiene esclusivamente l’indirizzo di ritiro scelto dal cliente.</p>{policy.privacy_url && /^https:\/\//i.test(policy.privacy_url) ? <p><a href={policy.privacy_url} rel="noopener noreferrer">Leggi l’informativa completa del titolare</a></p> : <p>L’informativa completa del titolare non è ancora configurata. Devono essere specificati basi giuridiche, destinatari e responsabili, conservazione dei dati, eventuali trasferimenti, diritti e modalità di esercizio. Questo testo preparatorio non li sostituisce.</p>}<p>Il consenso ai cookie e l’accettazione delle condizioni del servizio sono operazioni distinte. La consultazione di questa informativa non costituisce una firma di un contratto.</p><Link to="/cookies">Consulta l’inventario dei cookie e degli strumenti tecnici</Link></section> : <>
-          <section><h2>Cookie utilizzati</h2><p>Cookie di prima parte, impostati dal backend EA-Express. L’accesso del portale si basa su una sessione sul server: password e token di autenticazione non sono archiviati in localStorage.</p><div className="privacy-table-wrap"><table><caption>Inventario ricavato dalla configurazione attuale del server</caption><thead><tr><th>Nome</th><th>Finalità</th><th>Durata</th><th>Accesso JavaScript</th></tr></thead><tbody>{policy.cookies.map(cookie => <tr key={cookie.name}><th scope="row"><code>{cookie.name}</code></th><td>{cookie.purpose}</td><td>{lifetime(cookie)}{!cookie.session_only && cookie.name !== 'XSRF-TOKEN' && <small>Rinnovata con l’uso del servizio.</small>}</td><td>{cookie.http_only ? 'No · HttpOnly' : 'Sì · token tecnico CSRF'}</td></tr>)}</tbody></table></div><p>SameSite: <strong>{policy.same_site || 'non impostato'}</strong>. Trasmissione Secure: <strong>{policy.secure ? 'solo HTTPS' : 'non forzata in questo ambiente'}</strong>. In produzione il progetto abilita Secure per impostazione predefinita. I cookie sono inviati al dominio del backend configurato{policy.cookie_domain ? ` (${policy.cookie_domain})` : ''}.</p><p>La durata della sessione decorre dall’ultima attività. «Ricordami» è facoltativo e viene attivato solo su richiesta durante l’accesso. Il logout revoca l’accesso persistente sul browser utilizzato.</p></section>
-          <section><h2>Preferenze e altri strumenti</h2><ul><li><strong>Account sul server:</strong> indirizzo di ritiro preferito, tema chiaro/scuro, suoni delle notifiche e preferenze di comunicazione. L’indirizzo rimane disponibile finché non lo modifichi o elimini. Puoi cambiare tema e suoni dai pulsanti del portale.</li><li><strong>localStorage tecnico:</strong> <code>ea:notification-seen:customer:&lt;slug&gt;</code>, fino a 1.000 identificatori opachi di notifiche, per evitare avvisi sonori ripetuti tra schede. Scade dopo 7 giorni dall’ultimo aggiornamento; i valori scaduti vengono ignorati al successivo utilizzo. Non contiene indirizzi o contenuti dei messaggi.</li><li><strong>Memoria della pagina:</strong> token CSRF e dati del form/riepilogo. Il ritorno dal checkout mantiene i dati; ricaricare o chiudere la pagina li elimina.</li><li><strong>sessionStorage e IndexedDB:</strong> nessun utilizzo rilevato nel codice applicativo. Font e icone sono serviti localmente.</li><li><strong>Aggiornamenti in tempo reale:</strong> connessione autenticata al servizio Reverb configurato da EA-Express; nessuna geolocalizzazione o mappa live. Non risultano SDK di analytics, pixel, script pubblicitari o cookie di terze parti nel codice del portale.</li></ul></section>
-          <section id="preferenze"><h2>Le tue scelte</h2><p>Sono presenti solo strumenti tecnici e preferenze del servizio richieste dall’utente: non viene richiesto un consenso a categorie facoltative inesistenti. Per questo non mostriamo un banner «Accetta tutti». Il rifiuto del tracciamento pubblicitario è già rispettato, senza limitare accesso e prenotazioni.</p><p>Puoi eliminare i cookie dalle impostazioni del browser; eliminare o bloccare i cookie di sessione comporta un nuovo accesso o impedisce le funzioni autenticate. Puoi cancellare separatamente gli identificatori locali e ripristinare tema chiaro e audio disattivato.</p><button className="button secondary" disabled={busy} onClick={resetPreferences}>{busy ? 'Ripristino…' : 'Ripristina preferenze tecniche'}</button>{notice && <p role="status">{notice}</p>}<p>Se saranno introdotti strumenti facoltativi, dovranno restare bloccati fino a una scelta libera e granulare, con rifiuto e revoca accessibili e registrazione della versione dell’informativa e della scelta.</p><Link to="/privacy">Privacy Policy e diritti sui dati</Link></section>
-          <section><h2>Fonti dell’informativa</h2><p><a href="https://www.garanteprivacy.it/faq/Cookie" target="_blank" rel="noopener noreferrer">FAQ cookie del Garante</a> · <a href="https://www.garanteprivacy.it/home/docweb/-/docweb-display/docweb/9677876" target="_blank" rel="noopener noreferrer">Linee guida cookie e strumenti di tracciamento</a> · <a href="https://www.edpb.europa.eu/documents/guideline/guidelines-052020-on-consent-under-regulation-2016679_en" target="_blank" rel="noopener noreferrer">Linee guida EDPB sul consenso</a>.</p></section>
-        </>}
-      </>}
+      {!policy && !error && <p role="status">Caricamento…</p>}
+      {policy && (privacy ? <PrivacyPolicy policy={policy}/> : <CookiePolicy policy={policy} busy={busy} notice={notice} onReset={resetPreferences}/>)}
     </main><footer><PrivacyLinks/></footer>
   </div>;
 }
