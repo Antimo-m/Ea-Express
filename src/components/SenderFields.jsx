@@ -15,7 +15,9 @@ function SenderTypeChoice({ value, icon, label, selected, onChange }) {
 export default function SenderFields({ identity = {}, nameField = "name", selectableType = true, profileType }) {
   const [selectedType, setType] = useState(identity.sender_type || identity.customer_type || "business");
   const type = selectableType ? selectedType : profileType;
-  const [senderName, setSenderName] = useState(identity.store_name || identity.name || "");
+  const [senderName, setSenderName] = useState(identity.store_name || (selectableType && identity.sender_type === "private" ? "" : identity.name) || "");
+  const [firstName, setFirstName] = useState(identity.first_name || "");
+  const [lastName, setLastName] = useState(identity.last_name || "");
   const [businessType, setBusinessType] = useState(
     identity.business_type || "",
   );
@@ -25,7 +27,7 @@ export default function SenderFields({ identity = {}, nameField = "name", select
   return (
     <div className="sender-fields">
       {selectableType ? <fieldset className="sender-selector">
-        <legend>Tipo mittente<span className="required-mark" aria-hidden="true"> *</span></legend>
+        <legend>Tipo di account<span className="required-mark" aria-hidden="true"> *</span></legend>
         <div className="sender-type-options">
         {[
           ["private", "person", "Privato"],
@@ -36,7 +38,13 @@ export default function SenderFields({ identity = {}, nameField = "name", select
         ))}
         </div>
       </fieldset> : <p className="sender-profile-type"><Icon name={type === "private" ? "person" : type === "online_shop" ? "bag" : "shop"} /> <strong>{{private: "Privato", business: "Attività commerciale", online_shop: "Shop online"}[type] || "Completa il profilo"}</strong><span>Dal tuo profilo</span></p>}
-      <Field
+      {selectableType && type === "private" ? <div className="form-grid">
+        {identity.sender_type === "private" && !identity.first_name && identity.name && (
+          <p>Nome completo attuale: {identity.name}. Inserisci nome e cognome nei rispettivi campi.</p>
+        )}
+        <Field label="Nome" name="first_name" value={firstName} onChange={event => setFirstName(event.target.value)} autoComplete="given-name" maxLength={150} required />
+        <Field label="Cognome" name="last_name" value={lastName} onChange={event => setLastName(event.target.value)} autoComplete="family-name" maxLength={150} required />
+      </div> : <Field
         label={
           type === "private" ? "Nome e cognome del mittente" : "Nome attività"
         }
@@ -48,7 +56,7 @@ export default function SenderFields({ identity = {}, nameField = "name", select
         maxLength={150}
         required
         autoComplete={type === "private" ? "name" : "organization"}
-      />
+      />}
       {type === "business" && (
         <div className={nameField === "store_name" ? "booking-grid booking-business" : "form-grid"}>
           <SuggestedTextField

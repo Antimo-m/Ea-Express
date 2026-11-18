@@ -965,6 +965,20 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.equal(writes.filter(write=>write.path==='/auth/register').at(-1).data.name,'Café e Artigianato');
         assert.equal(await evaluate('return document.querySelector("input[name=business_type]").value;'),'Fiorista');
         assert.equal(await evaluate('return document.querySelector("input[name=email]").value;'),'registrazione@example.test');
+        await evaluate('document.querySelector("input[value=private]").click();');
+        assert.doesNotMatch(await evaluate('return document.querySelector(".sender-fields").textContent;'), /mittente/i);
+        assert.deepEqual(await evaluate('return [...document.querySelectorAll(".sender-fields input[autocomplete]")].map(input => [input.name, input.autocomplete, input.required]);'), [
+          ['first_name', 'given-name', true], ['last_name', 'family-name', true],
+        ]);
+        await fillInputs({first_name:' Anna  Maria ',last_name:' De  Luca '});
+        registrationError = false;
+        await evaluate('document.querySelector(".auth-form form").requestSubmit();');
+        await waitFor('!document.querySelector("input[name=first_name]")');
+        const registration = writes.filter(write => write.path === '/auth/register').at(-1).data;
+        assert.equal(registration.first_name, 'Anna Maria');
+        assert.equal(registration.last_name, 'De Luca');
+        assert.equal(registration.sender_type, 'private');
+        assert.equal(Object.hasOwn(registration, 'name'), false);
       } finally { registrationError = false; authenticated = true; }
     });
     await scenario('cambio password: errore conserva il profilo, successo richiede un nuovo accesso', async () => {

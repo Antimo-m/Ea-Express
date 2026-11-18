@@ -4,7 +4,7 @@ export function normalizePortalText(value) {
 
 export function normalizeSenderText(data) {
   return Object.fromEntries(Object.entries(data).map(([name, value]) => [name,
-    ['name', 'store_name', 'business_type', 'business_description'].includes(name) && typeof value === 'string'
+    ['name', 'first_name', 'last_name', 'store_name', 'business_type', 'business_description'].includes(name) && typeof value === 'string'
       ? normalizePortalText(value) : value,
   ]));
 }
