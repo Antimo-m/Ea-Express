@@ -119,7 +119,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         if (url.searchParams.get('preview') === '1') { json({count: emptyMode ? 0 : 2, day: url.searchParams.get('day')}); return; }
         json({ data: emptyMode ? [] : url.searchParams.get('scope') === 'filtered' ? [order, {...order, slug: user.slug}] : url.searchParams.getAll('ids[]').map(id => ({...order, slug:id})) }); return;
       }
-      if (path.startsWith('/orders/')) { json({ data: {...order, price_state: priceState, price_tone: {agreed:'green',rejected:'danger',awaiting_customer:'blue'}[priceState], price_label: {agreed:'Prezzo accettato',rejected:'Proposta rifiutata',awaiting_customer:'Prezzo da confermare'}[priceState]} }); return; }
+      if (path.startsWith('/orders/')) { json({ data: {...order, price_state: priceState === 'confirming' ? 'agreed' : priceState, price_tone: {agreed:'green',rejected:'danger',awaiting_customer:'blue',confirming:'warning'}[priceState], price_label: {agreed:'Prezzo accettato',rejected:'Proposta rifiutata',awaiting_customer:'Nuova proposta',confirming:'Da confermare'}[priceState], agreed_price_cents: priceState === 'agreed' ? 500 : null} }); return; }
       if (path === '/statistics') { statisticsRequests.push(Object.fromEntries(url.searchParams)); if (statisticsError) {response.statusCode=422;json({errors:{to:['Il periodo selezionato non è valido.']}});return;} json(statistics); return; }
       if (path === '/pending') { pendingRequests.push(Object.fromEntries(url.searchParams)); json({ data: emptyMode ? [] : [pending,{...pending,slug:user.slug}], totals: { incoming: 7550, outgoing: 0 }, meta }); return; }
       if (path.startsWith('/pending/')) { json({ data: pending }); return; }
@@ -221,7 +221,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       }
     });
-    await scenario('pagina 404: risorse assenti, countdown, redirect e pulizia timer; 403 e 500 restano errori', async () => {
+    await scenario('pagina 404: risorse assenti, countdown, redirect e pulizia timer; 403 neutra e 500 resta errore', async () => {
       await viewport(390); await navigate('/pagina-inesistente');
       assert.match(await evaluate('return document.querySelector(".not-found-page").textContent;'),/Error Not Found 404.*5 secondi/s);
       await new Promise(resolve=>setTimeout(resolve,1100));
@@ -238,11 +238,13 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
           await navigate(path);
           assert.ok(await evaluate('return !!document.querySelector(".not-found-page");'),path);
         }
-        for (const status of [403,500]) {
-          resourceStatus=status; await navigate(`/shipments/${slug}`);
-          assert.equal(await evaluate('return !!document.querySelector(".not-found-page");'),false);
-          assert.ok(await evaluate('return !!document.querySelector("[role=alert]");'));
-        }
+        resourceStatus=403; await navigate(`/shipments/${slug}`);
+        const unavailable=await evaluate('const page=document.querySelector(".unavailable-page");return page && {text:page.textContent,back:!!page.querySelector("button"),home:page.querySelector("a")?.getAttribute("href")};');
+        assert.match(unavailable.text,/Pagina non disponibile/); assert.doesNotMatch(unavailable.text,/clienti|staff|riservat|permess/i);
+        assert.equal(unavailable.back,true); assert.equal(unavailable.home,'/dashboard');
+        resourceStatus=500; await navigate(`/shipments/${slug}`);
+        assert.equal(await evaluate('return !!document.querySelector(".not-found-page");'),false);
+        assert.ok(await evaluate('return !!document.querySelector("[role=alert]");'));
       } finally { resourceStatus=0; }
       await navigate('/pagina-inesistente');
       await new Promise(resolve=>setTimeout(resolve,5200));
@@ -502,14 +504,17 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.equal(await evaluate('return document.querySelector("input[name=pickup_from]").value;'),'11:00');
       }
     });
-    await scenario('prezzi: badge accettato verde, rifiutato rosso e da confermare blu', async () => {
+    await scenario('prezzi: accettato verde, rifiutato rosso, nuova proposta blu, da confermare giallo con prezzo finale 0,00 €', async () => {
       await viewport(375);
-      for (const [state, tone, variable] of [['agreed','green','--ea-success'],['rejected','danger','--ea-danger'],['awaiting_customer','blue','--ea-info']]) {
+      for (const [state, tone, variable] of [['agreed','green','--ea-success'],['rejected','danger','--ea-danger'],['awaiting_customer','blue','--ea-info'],['confirming','warning','--ea-warning']]) {
         priceState=state;
         await navigate(`/shipments/${slug}`);
         await waitFor(`document.querySelector('.price-state--${tone}')`);
         const matches=await evaluate(`const badge=document.querySelector('.price-state--${tone}'),sample=document.createElement('span');sample.style.color='var(${variable})';document.body.append(sample);const matches=getComputedStyle(badge).color===getComputedStyle(sample).color;sample.remove();return matches;`);
         assert.equal(matches,true, `${state}: colore effettivo del badge`);
+        const facts=await evaluate('return Object.fromEntries([...document.querySelectorAll(".price-facts > div")].map(row=>[row.querySelector("dt").textContent,row.querySelector("dd").textContent]));');
+        assert.equal(facts['Tariffa prevista'].replace(/\s/g,' '),'5,00 €');
+        assert.equal(facts['Prezzo finale concordato'].replace(/\s/g,' '),state === 'agreed' ? '5,00 €' : '0,00 €', `${state}: prezzo finale`);
         await check('badge '+state,375);
       }
       priceState='agreed';

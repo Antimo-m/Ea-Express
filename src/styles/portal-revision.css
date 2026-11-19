@@ -34,7 +34,14 @@
 .checkout-section-title > span { color: var(--ea-brand); font: 500 .75rem var(--ea-font-mono); }
 .checkout-section-title h3 { margin: 0; font-size: 1.0625rem; }
 .checkout-addresses { display: grid; grid-template-columns: minmax(0, 1fr) 24px minmax(0, 1fr); gap: 16px; align-items: start; }
-.checkout-address { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; min-width: 0; overflow-wrap: anywhere; }
+.checkout-address { display: flex; flex-direction: column; align-items: stretch; gap: 10px; min-width: 0; overflow-wrap: anywhere; }
+h4.checkout-caption { margin: 0; text-transform: uppercase; }
+/* Coppie etichetta–valore condivise (riepilogo, salvataggio indirizzo, dettaglio ordine). */
+.key-values { display: grid; gap: 8px; margin: 0; min-width: 0; }
+.key-values > div { display: grid; grid-template-columns: minmax(104px, 40%) minmax(0, 1fr); gap: 12px; align-items: baseline; min-width: 0; }
+.key-values dt { margin: 0; color: var(--ea-muted); font-size: .8125rem; font-weight: 500; line-height: 1.35; }
+.key-values dd { margin: 0; color: var(--ea-ink); font-size: .9375rem; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+@media (min-width: 768px) { .key-values.checkout-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; } }
 .checkout-caption { display: flex; gap: 6px; align-items: center; color: var(--ea-muted); font: 500 .65rem var(--ea-font-mono); letter-spacing: .05em; }
 .checkout-address > strong { font-size: 1.0625rem; line-height: 1.35; }
 .checkout-address address { margin: 0; font-size: .9375rem; font-style: normal; line-height: 1.55; }
@@ -96,7 +103,7 @@
 .saved-pickup-message { margin-top: 12px; color: var(--ea-success); }
 .save-pickup-prompt { text-align: center; }
 .save-pickup-icon { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: var(--ea-orange-soft); color: var(--ea-brand); font-size: 28px; }
-.save-pickup-prompt address { margin: 16px 0; font-weight: 600; font-size: 1.0625rem; font-style: normal; overflow-wrap: anywhere; }
+.save-pickup-prompt .save-pickup-address { margin: 16px 0; padding: 14px 16px; border: 1px solid var(--ea-line); border-radius: var(--ea-radius-control, 12px); background: var(--ea-surface-muted); text-align: left; }
 .save-pickup-prompt p { color: var(--ea-muted); font-size: .9375rem; }
 
 .portal-auth { min-height: 100dvh; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
@@ -295,3 +302,20 @@
 @keyframes activity-appear { to { opacity: 1; } }
 .activity-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; border-radius: 0 999px 999px 0; background: var(--ea-signal); animation: app-loading-slide 1.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .activity-bar::before { animation: none; width: 100%; opacity: .7; } }
+/* Stato prezzo «Da confermare» (giallo) e dettaglio ordine a coppie etichetta–valore. */
+.price-state--warning { color: var(--ea-warning); background: var(--ea-orange-soft); border: 1px solid currentColor; }
+.price-panel .price-facts { margin-top: 4px; }
+.price-panel .price-facts .price-state { justify-self: start; }
+.price-panel .beta-price-note { align-items: center; margin-top: 14px; }
+.price-panel .beta-price-note .bi { flex-shrink: 0; line-height: 1; }
+.journey .key-values { margin-top: 10px; }
+.journey h3.eyebrow { margin: 0; }
+.request-details .key-values { margin-bottom: 16px; }
+.request-details .section-heading { align-items: center; gap: 12px; }
+.order-manage-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin: -8px 0 20px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--ea-danger) 30%, var(--ea-line)); border-radius: var(--ea-radius-control, 12px); background: var(--ea-surface); }
+.order-manage-bar p { margin: 0; font-size: .875rem; }
+.order-manage-bar .button.danger.order-cancel-button { flex: 0 0 auto; min-height: 44px; padding: 8px 16px; border: 1px solid var(--ea-danger); background: var(--ea-surface); color: var(--ea-danger); font-size: .875rem; white-space: nowrap; }
+.order-manage-bar .button.danger.order-cancel-button:hover { background: var(--ea-danger); color: var(--ea-on-color); }
+@media (max-width: 575px) { .order-manage-bar .order-cancel-button { width: 100%; justify-content: center; } }
+.unavailable-page .unavailable-mark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--ea-orange-soft); color: var(--ea-brand); font-size: 30px; }
+.unavailable-page .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }

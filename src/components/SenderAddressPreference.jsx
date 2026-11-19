@@ -2,7 +2,7 @@ import IconButton from "./IconButton";
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { request } from "../api/client";
-import { Feedback, Icon } from "./UI";
+import { Feedback, Icon, KeyValues } from "./UI";
 import Modal from "./Modal";
 import { pickupAddress, samePickupAddress, completePickupAddress } from "../utils/pickup-address";
 
@@ -108,8 +108,8 @@ export default function SenderAddressPreference({ ref, formRef, onUse, initial }
       {!prompt && error && <button type="button" className="button secondary" disabled={busy} onClick={reload}>Ricarica preferito</button>}
       {message && <p className="saved-pickup-message" role="status">{message}</p>}
     </div>
-    {createPortal(<Modal open={Boolean(prompt)} busy={busy} title="Salviamo il punto di ritiro?" description="Il tuo ordine è confermato. Puoi ritrovare questo indirizzo già compilato nei prossimi ritiri." onClose={closePrompt}>
-      <div className="modal-content-area save-pickup-prompt"><span className="save-pickup-icon" aria-hidden="true"><Icon name="bookmark-star" /></span><address>{prompt?.data.pickup_address} {prompt?.data.pickup_street_number}<br />{prompt?.data.pickup_postal_code} {prompt?.data.pickup_city}</address><p>Salviamo solo l’indirizzo di ritiro del mittente nel tuo account. I dati del destinatario rimangono legati a questo ordine.</p>{saved && <p>Questo indirizzo sostituirà il tuo attuale preferito.</p>}<Feedback error={error} />{error?.status === 409 && <p>Il preferito è cambiato da un altro dispositivo. L’ordine è confermato: potrai aggiornare l’indirizzo alla prossima prenotazione.</p>}</div>
+    {createPortal(<Modal open={Boolean(prompt)} busy={busy} title="Vuoi salvare questo indirizzo per i prossimi ritiri?" description="Il tuo ordine è confermato. Lo ritroverai già compilato alla prossima prenotazione." onClose={closePrompt}>
+      <div className="modal-content-area save-pickup-prompt"><span className="save-pickup-icon" aria-hidden="true"><Icon name="pin-map-fill" /></span><KeyValues className="save-pickup-address" aria-label="Indirizzo di ritiro da salvare" items={[["Indirizzo", prompt?.data.pickup_address], ["Numero civico", prompt?.data.pickup_street_number], ["CAP", prompt?.data.pickup_postal_code], ["Città", prompt?.data.pickup_city]]} /><p>Salviamo solo l’indirizzo di ritiro del mittente nel tuo account. I dati del destinatario rimangono legati a questo ordine.</p>{saved && <p>Questo indirizzo sostituirà il tuo attuale preferito.</p>}<Feedback error={error} />{error?.status === 409 && <p>Il preferito è cambiato da un altro dispositivo. L’ordine è confermato: potrai aggiornare l’indirizzo alla prossima prenotazione.</p>}</div>
       <footer className="modal-actions"><button type="button" className="button secondary" disabled={busy} onClick={closePrompt}>Continua senza salvare</button><button type="button" className="button secondary save-pickup-confirm" disabled={busy || error?.status === 409} aria-busy={busy || undefined} onClick={() => save(prompt.data, prompt.version, true)}><Icon name="bookmark-check" />{busy ? "Salvataggio…" : "Salva per i prossimi ritiri"}</button></footer>
     </Modal>, document.body)}
   </>;

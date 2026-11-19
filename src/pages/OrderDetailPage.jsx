@@ -5,11 +5,10 @@ import { useState } from "react";
 import { useLocation, useParams } from "react-router";
 import { getOrder, cancelOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
-import { Header, State, Status, Feedback, Icon, Empty } from "../components/UI";
+import { Header, State, Status, Feedback, Icon, Empty, KeyValues } from "../components/UI";
 import ShippingPrice from "../components/ShippingPrice";
 import MessageThread from "../components/MessageThread";
 import { date, money, displayName } from "../utils/format";
-import { IndicativePriceNote } from "../components/BetaNotice";
 function Detail({ order, reload, pickups, messages }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [success, setSuccess] = useState(useLocation().state?.success || "");
@@ -19,13 +18,16 @@ function Detail({ order, reload, pickups, messages }) {
     setSuccess('Richiesta annullata.');
     reload();
   }
+  const street = (address, number) => [address, number].filter(Boolean).join(" ");
+  const senderType = order.sender_type === "private" ? "Privato" : order.sender_type === "online_shop" ? "Shop online" : order.business_type || "Attività";
+  const packageLabel = order.package_type === 'fragile' ? 'Fragile' : order.package_type === 'other' ? order.package_description : 'Standard';
   return (
     <>
       <Header
         backTo={messages ? "/messages" : base}
         eyebrow={messages ? "CONVERSAZIONE" : "SPEDIZIONE"}
         title={messages ? `Conversazione · ${displayName(order)}` : displayName(order)}
-        description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city} · Destinatario: ${order.recipient_name}`}
+        description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city}`}
       >
         <IconButton action="print" label="Stampa etichetta" to={order.can_print === false ? undefined : `/shipments/${order.slug}/label`} aria-disabled={order.can_print === false} onClick={event => { if (order.can_print === false) { event.preventDefault(); setSuccess("Al momento non ci sono ordini da stampare"); } }} />
         <Status order={order} /><span className="service-badge">{order.shipping_type === "external" ? "Fuori regione" : "Regionale"}</span>
@@ -33,39 +35,31 @@ function Detail({ order, reload, pickups, messages }) {
           <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.slug}/edit`} />
         )}
       </Header>
+      {!messages && order.can_cancel && <div className="order-manage-bar"><p className="muted">Puoi annullare la richiesta finché non viene presa in carico.</p><button type="button" className="button danger order-cancel-button" onClick={() => setCancelOpen(true)}><Icon name="x-circle" /> Annulla richiesta</button></div>}
       <Feedback success={success} />
-
-      {!messages && <div className="order-summary"><aside className="order-focus-summary"><span className="eyebrow">{order.reference}</span><Status order={order}/><h2>{order.recipient_name}</h2><p>{order.delivery_address} {order.delivery_street_number}, {order.delivery_city}</p><strong>{order.rider?.name || 'Rider da assegnare'}</strong>{order.estimated_at && <p>Arrivo stimato: {date(order.estimated_at, true)}</p>}<IconButton action="message" icon="chat-dots" label="Contatta il rider" to={`/messages/${order.slug}`} /></aside></div>}
+      {!messages && order.can_cancel && (
+        <ConfirmDeleteModal onReload={reload} open={cancelOpen} name={displayName(order)} actionLabel="Annulla richiesta" description="La richiesta sarà annullata e resterà consultabile nello storico." onClose={() => setCancelOpen(false)} onConfirm={cancel}>
+          <label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label>
+        </ConfirmDeleteModal>
+      )}
       {!messages && (
         <div className="detail-grid">
           <div>
-            <section className="panel">
+            <section className="panel" aria-labelledby="route-heading">
               <div className="section-heading">
-                <h2>Il percorso della consegna</h2>
+                <h2 id="route-heading">Mittente e destinatario</h2>
                 <Icon name="signpost-split" />
               </div>
               <div className="journey">
                 <div>
                   <span className="journey-point" />
-                  <p className="eyebrow">RITIRO</p>
-                  <h3>{order.pickup_address} {order.pickup_street_number}</h3>
-                  <p>{order.pickup_postal_code} {order.pickup_city}</p>
-                  <small>
-                    {date(order.pickup_date)} · {order.pickup_from}–
-                    {order.pickup_to}
-                  </small>
+                  <h3 className="eyebrow">Mittente · ritiro</h3>
+                  <KeyValues items={[["Nome mittente", order.store_name], ["Tipologia", senderType], ["Indirizzo di ritiro", street(order.pickup_address, order.pickup_street_number)], ["CAP", order.pickup_postal_code], ["Città", order.pickup_city], ["Data del ritiro", date(order.pickup_date)], ["Fascia oraria", order.pickup_from && order.pickup_to ? `${order.pickup_from}–${order.pickup_to}` : null]]} />
                 </div>
                 <div>
                   <span className="journey-point destination" />
-                  <p className="eyebrow">DESTINAZIONE</p>
-                  <h3>{order.delivery_address} {order.delivery_street_number}</h3>
-                  <p>{order.delivery_postal_code} {order.delivery_city}</p>
-                  <small>
-                    {order.recipient_name} · {order.recipient_phone}
-                  </small>
-                  {order.delivery_window && (
-                    <p className="small">Preferenza: {order.delivery_window}</p>
-                  )}
+                  <h3 className="eyebrow">Destinatario · consegna</h3>
+                  <KeyValues items={[["Nome destinatario", order.recipient_name], ["Telefono destinatario", order.recipient_phone], ["Indirizzo di consegna", street(order.delivery_address, order.delivery_street_number)], ["CAP", order.delivery_postal_code], ["Città", order.delivery_city], ["Zona", order.delivery_zone], ["Preferenza di consegna", order.delivery_window]]} />
                 </div>
               </div>
             </section>
@@ -91,78 +85,15 @@ function Detail({ order, reload, pickups, messages }) {
             </section>
           </div>
           <aside>
-            <section className="panel">
-              <h2>Dettagli della richiesta</h2><p className={order.package_type==='fragile'?'fragile-badge':'muted'}>{order.package_type==='fragile'?'FRAGILE':order.package_type==='other'?order.package_description:'Pacco standard'}</p>
-              <dl className="facts">
-                <div>
-                  <dt>Mittente</dt>
-                  <dd>
-                    {order.store_name}
-                    <small className="muted">
-                      {" "}
-                      ·{" "}
-                      {order.sender_type === "private"
-                        ? "Privato"
-                        : order.sender_type === "online_shop" ? "Shop online" : order.business_type || "Attività"}
-                    </small>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Valore merce</dt>
-                  <dd>
-                    {order.parcel_value_cents == null
-                      ? "Non dichiarato"
-                      : money(order.parcel_value_cents)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Rider</dt>
-                  <dd>{order.rider?.name || "Da assegnare"}</dd>
-                </div>
-                <div>
-                  <dt>pacchi</dt>
-                  <dd>{order.parcel_count}</dd>
-                </div>
-                <div>
-                  <dt>Contenuto</dt>
-                  <dd>
-                    {contentLabel(order)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Priorità</dt>
-                  <dd>{order.urgency === "urgent" ? "Urgente" : "Standard"}</dd>
-                </div>
-                <div>
-                  <dt>Costo spedizione</dt>
-                  <dd>{money(order.price_cents)}<IndicativePriceNote /></dd>
-                </div>
-                {order.estimated_at && (
-                  <div>
-                    <dt>Arrivo stimato</dt>
-                    <dd>{date(order.estimated_at, true)}</dd>
-                  </div>
-                )}
-                {order.delivered_at && (
-                  <div>
-                    <dt>Consegnata il</dt>
-                    <dd>{date(order.delivered_at, true)}</dd>
-                  </div>
-                )}
-              </dl>
+            <section className="panel request-details" aria-labelledby="request-details-heading">
+              <div className="section-heading"><h2 id="request-details-heading">Dettagli della richiesta</h2>{order.package_type === 'fragile' && <span className="fragile-badge">FRAGILE</span>}</div>
+              <KeyValues items={[["Stato della richiesta", order.status_label], ["Rider", order.rider?.name || "Da assegnare"], ["Numero colli", order.parcel_count], ["Caratteristiche", packageLabel], ["Contenuto", contentLabel(order)], ["Priorità", order.urgency === "urgent" ? "Urgente" : "Standard"], ["Valore merce dichiarato", order.parcel_value_cents == null ? "Non dichiarato" : money(order.parcel_value_cents)], ["Arrivo stimato", order.estimated_at ? date(order.estimated_at, true) : null], ["Consegnata il", order.delivered_at ? date(order.delivered_at, true) : null]]} />
               <IconButton action="message" icon="chat-dots" label="Contatta il rider" to={`/messages/${order.slug}`} />
             </section>
             {order.customer_notes && (
               <section className="panel notes">
                 <h3>Le tue istruzioni</h3>
                 <p>{order.customer_notes}</p>
-              </section>
-            )}
-            {order.can_cancel && (
-              <section className="panel cancellation"><h3>Gestisci la richiesta</h3><IconButton action="delete" label="Annulla richiesta" onClick={() => setCancelOpen(true)} />
-                <ConfirmDeleteModal onReload={reload} open={cancelOpen} name={displayName(order)} actionLabel="Annulla richiesta" description="La richiesta sarà annullata e resterà consultabile nello storico." onClose={() => setCancelOpen(false)} onConfirm={cancel}>
-                  <label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label>
-                </ConfirmDeleteModal>
               </section>
             )}
           </aside>

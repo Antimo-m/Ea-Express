@@ -3,6 +3,7 @@ import { FormErrorsContext } from "../context/FormErrorsContext";
 import { Link } from "react-router";
 import { date, displayName } from "../utils/format";
 import NotFoundPage from "../pages/NotFoundPage";
+import UnavailablePage from "../pages/UnavailablePage";
 import ShipmentRoute from "./ShipmentRoute";
 export function Icon({ name, ...props }) {
   return <i className={`bi bi-${name}`} aria-hidden="true" {...props} />;
@@ -27,6 +28,12 @@ export function Header({
     </header>
     </>
   );
+}
+/** Coppie etichetta–valore: mostra soltanto i dati realmente presenti, mai etichette vuote. */
+export function KeyValues({ items, className = "", ...props }) {
+  const rows = items.filter(([, value]) => value !== null && value !== undefined && value !== "" && value !== false);
+  if (!rows.length) return null;
+  return <dl className={`key-values ${className}`.trim()} {...props}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
 }
 export function Status({ order }) {
   return (
@@ -118,6 +125,7 @@ export function Loading({ rows = 3 }) {
 export function State({ resource, children, notFound = false }) {
   if (resource.loading) return <Loading />;
   if (notFound && resource.error?.status === 404) return <NotFoundPage />;
+  if (notFound && resource.error?.status === 403) return <UnavailablePage />;
   if (resource.error)
     return (
       <div className="panel">
