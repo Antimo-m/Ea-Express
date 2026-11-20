@@ -7,6 +7,7 @@ import { getOrder, cancelOrder } from "../api/shipments";
 import { useApi } from "../hooks/useApi";
 import { Header, State, Status, Feedback, Icon, Empty, KeyValues } from "../components/UI";
 import ShippingPrice from "../components/ShippingPrice";
+import ShipmentJourney from "../components/ShipmentJourney";
 import MessageThread from "../components/MessageThread";
 import { date, money, displayName } from "../utils/format";
 function Detail({ order, reload, pickups, messages }) {
@@ -42,6 +43,7 @@ function Detail({ order, reload, pickups, messages }) {
           <label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label>
         </ConfirmDeleteModal>
       )}
+      {!messages && <ShipmentJourney progress={order.progress} from={order.pickup_city} to={order.delivery_city} />}
       {!messages && (
         <div className="detail-grid">
           <div>
@@ -54,12 +56,12 @@ function Detail({ order, reload, pickups, messages }) {
                 <div>
                   <span className="journey-point" />
                   <h3 className="eyebrow">Mittente · ritiro</h3>
-                  <KeyValues items={[["Nome mittente", order.store_name], ["Tipologia", senderType], ["Indirizzo di ritiro", street(order.pickup_address, order.pickup_street_number)], ["CAP", order.pickup_postal_code], ["Città", order.pickup_city], ["Data del ritiro", date(order.pickup_date)], ["Fascia oraria", order.pickup_from && order.pickup_to ? `${order.pickup_from}–${order.pickup_to}` : null]]} />
+                  <KeyValues items={[["Mittente", order.store_name], ["Tipologia", senderType], ["Indirizzo di ritiro", street(order.pickup_address, order.pickup_street_number)], ["CAP", order.pickup_postal_code], ["Città", order.pickup_city], ["Data del ritiro", date(order.pickup_date)], ["Fascia oraria", order.pickup_from && order.pickup_to ? `${order.pickup_from}–${order.pickup_to}` : null]]} />
                 </div>
                 <div>
                   <span className="journey-point destination" />
                   <h3 className="eyebrow">Destinatario · consegna</h3>
-                  <KeyValues items={[["Nome destinatario", order.recipient_name], ["Telefono destinatario", order.recipient_phone], ["Indirizzo di consegna", street(order.delivery_address, order.delivery_street_number)], ["CAP", order.delivery_postal_code], ["Città", order.delivery_city], ["Zona", order.delivery_zone], ["Preferenza di consegna", order.delivery_window]]} />
+                  <KeyValues items={[["Destinatario", order.recipient_name], ["Telefono destinatario", order.recipient_phone], ["Indirizzo di consegna", street(order.delivery_address, order.delivery_street_number)], ["CAP", order.delivery_postal_code], ["Città", order.delivery_city], ["Zona", order.delivery_zone], ["Preferenza di consegna", order.delivery_window]]} />
                 </div>
               </div>
             </section>

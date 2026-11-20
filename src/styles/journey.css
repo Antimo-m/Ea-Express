@@ -1,0 +1,123 @@
+/* Percorso animato della spedizione: stessa grafica del dettaglio ordine nel gestionale.
+   Si muovono solo transform (translate/scale); ruote e sobbalzo esistono solo durante lo spostamento. */
+.trip { --trip-duration: 1.4s; --trip-ease: cubic-bezier(.55, .05, .2, 1); --trip-truck: 116px; overflow: hidden; }
+.trip-heading { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.trip-heading h2 { margin: 0; font-size: 1.15rem; }
+.trip-now { display: grid; justify-items: end; gap: 2px; margin: 0; text-align: right; }
+.trip-now-label { color: var(--ea-muted); font-size: .6875rem; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.trip-now strong { color: var(--ea-ink); font-size: 1.2rem; line-height: 1.2; }
+.trip-now-count { color: var(--ea-muted); font-family: var(--ea-font-mono); font-size: .6875rem; }
+.trip[data-trip-state="stopped"] .trip-now strong { color: var(--ea-danger); }
+.trip[data-trip-state="paused"] .trip-now strong { color: var(--ea-warning); }
+.trip[data-trip-state="arrived"] .trip-now strong { color: var(--ea-success); }
+
+.trip-scene {
+  position: relative; margin: 18px 0 0; padding: 100px 0 46px; border-radius: var(--ea-radius-card); isolation: isolate;
+  background:
+    radial-gradient(90% 120% at 88% -10%, #e6a23d2e, transparent 60%),
+    radial-gradient(70% 90% at 0% 120%, #2557744d, transparent 60%),
+    linear-gradient(180deg, #1f2932 0%, #141a20 100%);
+  box-shadow: inset 0 1px 0 #ffffff12, inset 0 -18px 30px #0000003d, 0 14px 30px -18px #141a2099;
+}
+.trip-scene::after { content: ''; position: absolute; inset: auto 0 0; height: 46%; z-index: -1; border-radius: inherit; background: repeating-linear-gradient(90deg, #ffffff06 0 1px, transparent 1px 44px); mask-image: linear-gradient(180deg, transparent, #000); }
+.trip-road {
+  position: relative; height: 12px; border-radius: 999px; container-type: inline-size;
+  margin-inline: max(calc(100% / (var(--trip-stops) * 2)), calc(var(--trip-truck) / 2 + 6px));
+  background: linear-gradient(180deg, #36424d, #26303a); box-shadow: inset 0 2px 3px #00000080, 0 1px 0 #ffffff14;
+}
+.trip-road::before { content: ''; position: absolute; inset: 5px 10px; background: repeating-linear-gradient(90deg, #ffffff40 0 12px, transparent 12px 26px); }
+.trip-road-fill {
+  position: absolute; inset-block: 0; left: 0; width: 100%; border-radius: inherit; transform-origin: 0 50%;
+  scale: calc(var(--trip-at) / max(var(--trip-stops) - 1, 1)) 1;
+  background: linear-gradient(90deg, #b06d16, #e6a23d 55%, #ffcc7a); box-shadow: 0 0 16px #e6a23d8c;
+  transition: scale var(--trip-duration) var(--trip-ease);
+}
+.trip-stop {
+  position: absolute; top: 50%; left: calc(var(--stop) / max(var(--trip-stops) - 1, 1) * 100%); z-index: 1;
+  display: grid; place-items: center; width: 18px; height: 18px; translate: -50% -50%; border-radius: 50%;
+  border: 3px solid #141a20; background: #4a5663; color: #141a20; font-size: .625rem;
+  transition: background-color .45s ease, box-shadow .45s ease;
+}
+.trip-stop.is-complete { background: #e6a23d; box-shadow: 0 0 0 3px #e6a23d33, 0 0 12px #e6a23d99; }
+.trip-stop.is-current { background: #fff; box-shadow: 0 0 0 4px #ffffff26, 0 0 0 10px #e6a23d24; }
+.trip-stop.is-destination { width: 28px; height: 28px; background: #5d6a77; }
+.trip-stop.is-destination.is-complete { background: #3fbf8f; box-shadow: 0 0 0 4px #3fbf8f33, 0 0 16px #3fbf8faa; }
+.trip-stop.is-pending { background: #4a5663; box-shadow: none; }
+.trip-vehicle {
+  position: absolute; bottom: calc(100% - 5px); left: 0; z-index: 2; width: var(--trip-truck);
+  translate: calc(var(--trip-at) / max(var(--trip-stops) - 1, 1) * 100cqw - 50%) 0;
+  transition: translate var(--trip-duration) var(--trip-ease);
+}
+.trip-truck { display: block; width: 100%; height: auto; overflow: visible; transform-origin: 50% 100%; }
+.trip-truck-shadow { fill: #0000006b; }
+.trip-truck-box { fill: #f5f2ec; }
+.trip-truck-stripe, .trip-truck-cab { fill: #e6a23d; }
+.trip-truck-mark { fill: #141a20; font: 800 15px/1 var(--ea-font-display, var(--ea-font)); letter-spacing: -.5px; }
+.trip-truck-glass { fill: #1d2a35; }
+.trip-truck-light { fill: #fff1c9; }
+.trip-truck-chassis { fill: #0f1418; }
+.trip-tyre { fill: #0c0f12; }
+.trip-rim { fill: #c9d0d7; }
+.trip-spoke { stroke: #6f7b87; stroke-width: 1.8; stroke-linecap: round; }
+.trip-signal {
+  position: absolute; left: 50%; bottom: calc(100% + 6px); display: grid; place-items: center; width: 28px; height: 28px; translate: -50% 0;
+  border-radius: 50%; background: #e6a23d; color: #141a20; font-size: .9rem; box-shadow: 0 0 0 4px #e6a23d33;
+}
+.trip-signal.is-stopped { background: #e2554d; color: #fff; box-shadow: 0 0 0 4px #e2554d33; }
+.trip-place { position: absolute; top: calc(100% + 12px); display: inline-flex; align-items: center; gap: 5px; max-width: 45%; overflow: hidden; color: #c3ccd4; font-family: var(--ea-font-mono); font-size: .6875rem; letter-spacing: .02em; text-overflow: ellipsis; white-space: nowrap; }
+.trip-place .bi { color: #e6a23d; font-size: .55rem; }
+.trip-place--from { left: 0; translate: -9px 0; }
+.trip-place--to { right: 0; translate: 9px 0; }
+.trip-place--to .bi { color: #3fbf8f; font-size: .75rem; }
+.trip[data-trip-state="stopped"] .trip-truck { filter: saturate(.25) brightness(.8); }
+.trip[data-trip-state="stopped"] .trip-road-fill { background: linear-gradient(90deg, #7a4b14, #a8743a); box-shadow: none; }
+
+.trip.is-driving .trip-wheel { animation: trip-wheel .42s linear infinite; }
+.trip.is-driving .trip-truck { animation: trip-bob .3s ease-in-out infinite alternate; }
+.trip.is-preparing :is(.trip-road-fill, .trip-vehicle, .trip-stop) { transition: none; }
+.trip.has-arrived :is(.trip-stop.is-current, .trip-stop.is-destination.is-complete) { animation: trip-arrive .9s ease-out; }
+@keyframes trip-wheel { to { rotate: 360deg; } }
+@keyframes trip-bob { from { translate: 0 0; } to { translate: 0 -1.5px; } }
+@keyframes trip-arrive { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+.trip-exception { display: grid; gap: 4px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--ea-warning); border-left-width: 4px; border-radius: var(--ea-radius-control); }
+.trip-exception.is-stopped { border-color: var(--ea-danger); }
+.trip-exception time, .trip-exception small { color: var(--ea-muted); font-size: .75rem; }
+.trip-exception p { margin: 0; }
+
+.trip-stages { display: grid; gap: 0; margin: 0; padding: 16px 0 0; list-style: none; }
+.trip-stage { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; align-items: start; }
+.trip-stage-dot { display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--ea-line); border-radius: 50%; color: var(--ea-on-color, #fff); font-size: .7rem; }
+.trip-stage.is-complete .trip-stage-dot { border-color: var(--ea-brand); background: var(--ea-brand); }
+.trip-stage.is-current .trip-stage-dot { border-color: var(--ea-brand); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ea-brand) 20%, transparent); }
+.trip-stage strong { display: block; color: var(--ea-ink); font-size: .875rem; line-height: 1.3; }
+.trip-stage div > span, .trip-stage small { display: block; color: var(--ea-muted); font-size: .75rem; }
+.trip-stage small { margin-top: 4px; line-height: 1.35; }
+.trip-stage.is-future { opacity: .6; }
+
+/* Tablet e desktop: l'elenco si allinea alle tappe della strada. */
+@media (min-width: 768px) {
+  .trip-stages { grid-template-columns: repeat(var(--trip-stops), minmax(0, 1fr)); }
+  .trip-stage { display: block; padding: 0 6px; text-align: center; }
+  .trip-stage-dot { display: none; }
+  .trip-stage strong { font-size: .8rem; }
+  .trip-stage div > span, .trip-stage small { font-size: .6875rem; }
+  .trip-stage.is-current strong { color: var(--ea-brand); }
+}
+/* Smartphone: resta visibile la tappa corrente (o l'ultima, a consegna avvenuta); le altre restano agli screen reader. */
+@media (max-width: 767px) {
+  .trip { --trip-truck: 84px; }
+  .trip-heading { align-items: flex-start; }
+  .trip-now { justify-items: start; text-align: left; }
+  .trip-scene { padding: 84px 0 40px; }
+  .trip-place { font-size: .625rem; }
+  .trip-stop { width: 14px; height: 14px; border-width: 2px; }
+  .trip-stop.is-destination { width: 24px; height: 24px; }
+  .trip-stop.is-current { box-shadow: 0 0 0 3px #ffffff26; }
+  .trip-stage:not([aria-current="step"]) { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .trip[data-trip-state="arrived"] .trip-stage:last-child { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trip :is(.trip-road-fill, .trip-vehicle, .trip-stop) { transition: none; }
+  .trip :is(.trip-wheel, .trip-truck, .trip-stop) { animation: none !important; }
+}
