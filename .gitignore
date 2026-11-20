@@ -58,6 +58,8 @@ dist/
 !/tests/notifications.test.mjs
 !/tests/pickup-address.test.mjs
 !/tests/booking-rules.test.mjs
+!/tests/phone.test.mjs
+!/tests/phone-numbers.json
 !/tests/pickup-schedule.test.mjs
 !/tests/text-policy.test.mjs
 

@@ -12,7 +12,7 @@ const slug = '24369069-5868-49fd-b04c-3709fa3b5a81';
 const user = { slug: 'f4c0dc18-3893-4a91-b468-e88c408aa2e6', name: 'Cliente dimostrativo per collaudo interfaccia e distribuzione di prova', email: 'cliente@example.test', sender_type: 'business', business_type: 'Negozio', portal_preferences: {theme:'light',notification_sound:false}, notify_orders: true, notify_messages: true };
 const order = {
   slug, reference: 'EA-EXPRESS-2026-TEST-0123456789', version: 1, store_name: user.name,
-  recipient_name: 'Destinatario dimostrativo per collaudo interfaccia', recipient_phone: '0000000000',
+  recipient_name: 'Destinatario dimostrativo per collaudo interfaccia', recipient_phone: '3331234567',
   pickup_address: 'Via di Prova del Collaudo Interfaccia', pickup_street_number: '123', pickup_postal_code: '80100', pickup_city: 'Napoli',
   delivery_address: 'Via Dimostrativa della Distribuzione di Prova', delivery_street_number: '123', delivery_postal_code: '81100', delivery_city: 'Caserta', delivery_province: 'Caserta', delivery_region: 'Campania',
   pickup_date: '2026-10-24', pickup_from: '09:00', pickup_to: '12:00', sender_type: 'business', shipping_type: 'regional',

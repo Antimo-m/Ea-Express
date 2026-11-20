@@ -184,7 +184,7 @@ export function Form({ errors, onSubmit, onInvalidCapture, ref, ...props }) {
     </FormErrorsContext.Provider>
   );
 }
-export function Field({ label, name, children, help, width, ...props }) {
+export function Field({ label, name, children, help, width, validate, ...props }) {
   const errors = useContext(FormErrorsContext);
   const [localError, setLocalError] = useState("");
   const [clearedError, setClearedError] = useState();
@@ -209,6 +209,9 @@ export function Field({ label, name, children, help, width, ...props }) {
     [error ? `${id}-error` : "", help ? `${id}-help` : ""]
       .filter(Boolean)
       .join(" ") || undefined;
+  const applyRule = control => {
+    if (validate && control) control.setCustomValidity(control.value.trim() === "" ? "" : validate(control.value) || "");
+  };
   const accessibility = {
     id,
     "aria-required": required || undefined,
@@ -220,11 +223,13 @@ export function Field({ label, name, children, help, width, ...props }) {
     },
     onChange: event => {
       inputProps.onChange?.(event);
+      applyRule(event.currentTarget);
       setClearedError(serverError);
       if (error) setLocalError(validationMessage(event.currentTarget));
     },
     onBlur: event => {
       inputProps.onBlur?.(event);
+      applyRule(event.currentTarget);
       setLocalError(validationMessage(event.currentTarget));
     },
   };
@@ -234,7 +239,7 @@ export function Field({ label, name, children, help, width, ...props }) {
       {children ? (
         cloneElement(children, accessibility)
       ) : (
-        <input name={name} {...props} {...accessibility} />
+        <input name={name} {...props} {...accessibility} ref={validate ? applyRule : undefined} />
       )}
       {help && (
         <small id={`${id}-help`} className="field-help">

@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import SuggestedTextField from "../components/SuggestedTextField";
 import { validatePortalText } from "../services/text-policy";
 import { normalizeSenderText } from "../utils/text-policy";
+import { phoneError } from "../utils/phone";
 import Modal from "../components/Modal";
 import CheckoutReview from "../components/CheckoutReview";
 import ShippingQuote from "../components/ShippingQuote";
@@ -150,7 +151,7 @@ function OrderForm({ order, pickups }) {
           </div>
           <div className="booking-grid booking-contact">
             {field("recipient_name", "Nome destinatario", { maxLength: 150, autoComplete: "section-recipient shipping name" })}
-            {field("recipient_phone", "Telefono destinatario", { type: "tel", maxLength: 30, minLength: 6, autoComplete: "section-recipient shipping tel" })}
+            {field("recipient_phone", "Telefono destinatario", { type: "tel", inputMode: "tel", maxLength: 30, autoComplete: "section-recipient shipping tel", validate: phoneError })}
           </div>
           <div className="booking-grid booking-address">
             {field("delivery_address", "Indirizzo di consegna", { autoComplete: "section-recipient shipping address-line1", onChange: event => setStreet(event.target.value) })}
