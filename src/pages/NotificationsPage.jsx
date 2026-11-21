@@ -14,6 +14,7 @@ import {
   Feedback,
   Icon,
   Pagination,
+  PriorityBadge,
 } from "../components/UI";
 import { date } from "../utils/format";
 function GroupHistory({ slug, onRead, busy }) {
@@ -70,7 +71,7 @@ function NotificationGroup({ group, onRead, busy }) {
           <Icon name="box-seam" />
         </span>
         <div>
-          <h2>{group.customer_name || "Cliente"}</h2><small>Spedizione {group.reference}</small>
+          <h2>{group.customer_name || "Cliente"}</h2><small className="notification-group-meta">Spedizione {group.reference} <PriorityBadge urgency={group.urgency} /></small>
           <p>
             {group.total} aggiornamenti · {date(group.latest_at, true)}
           </p>

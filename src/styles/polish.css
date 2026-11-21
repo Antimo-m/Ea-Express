@@ -135,3 +135,9 @@
   .status.is-status-changed::after { animation: none; opacity: 0; }
 }
 .password-control > .password-toggle { --ea-icon-size: 44px; }
+
+/* Priorità dell'ordine (notifiche): rosso urgente, verde standard, sempre con etichetta testuale. */
+.priority-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: var(--ea-radius-button); border: 1px solid transparent; font-size: var(--ea-text-xs); font-weight: 700; line-height: 1.4; white-space: nowrap; vertical-align: middle; }
+.priority-badge--urgent { background: color-mix(in srgb, var(--ea-danger) 12%, var(--ea-surface)); color: var(--ea-danger); border-color: color-mix(in srgb, var(--ea-danger) 40%, transparent); }
+.priority-badge--standard { background: color-mix(in srgb, var(--ea-success) 12%, var(--ea-surface)); color: var(--ea-success); border-color: color-mix(in srgb, var(--ea-success) 35%, transparent); }
+.notification-group-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }

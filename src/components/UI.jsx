@@ -66,6 +66,15 @@ export function Status({ order }) {
     </span>
   );
 }
+/**
+ * Priorità dell'ordine: rosso per urgente, verde per standard, sempre con l'etichetta testuale.
+ * Mostrata solo quando il dato arriva dall'ordine; senza dato non si indovina.
+ */
+export function PriorityBadge({ urgency }) {
+  if (!["urgent", "standard"].includes(urgency)) return null;
+  const urgent = urgency === "urgent";
+  return <span className={`priority-badge priority-badge--${urgency}`}><Icon name={urgent ? "lightning-charge-fill" : "check-circle"} />{urgent ? "Urgente" : "Standard"}</span>;
+}
 export function Empty({
   title = "Non c’è ancora nulla qui",
   text = "Le nuove attività compariranno in questa sezione.",

@@ -130,7 +130,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         const recognized = url.searchParams.get('city') === 'Caserta';
         json(inactiveZone && recognized ? {available:false,availability_status:'inactive',price_cents:null,reason:'Al momento questa zona non è attiva per le consegne, ma sarà presto disponibile.'} : {available:recognized,price_cents:recognized?500:null,reason:recognized?'Tariffa verificata.':'Completa la destinazione.'}); return;
       }
-      if (path === '/notifications') { json({ data: emptyMode ? [] : [{ order_slug: slug, customer_name: user.name, reference: order.reference, total: 3, unread: 1, latest_at: '2026-10-23T12:00:00Z' }], meta }); return; }
+      if (path === '/notifications') { json({ data: emptyMode ? [] : [{ order_slug: slug, customer_name: user.name, reference: order.reference, total: 3, unread: 1, latest_at: '2026-10-23T12:00:00Z', urgency: 'urgent' }, { order_slug: user.slug, customer_name: user.name, reference: 'EA-STANDARD-01', total: 1, unread: 0, latest_at: '2026-10-22T12:00:00Z', urgency: 'standard' }, { order_slug: '0f4c0dc1-3893-4a91-b468-e88c408aa2e7', customer_name: user.name, reference: 'EA-SENZA-DATO', total: 1, unread: 0, latest_at: '2026-10-21T12:00:00Z' }], meta }); return; }
       if (path.startsWith('/notifications/orders/')) { json({ data: [
         { id: '514f7189-32ed-475f-937b-50e06c331bb7', title: 'Aggiornamento del rider per la spedizione in consegna al destinatario', is_message: false, created_at: '2026-10-23T12:00:00Z', read_at: null, order_slug: slug },
         { id: '467de175-a71a-453d-989e-aab3da0a1c74', title: 'Nuovo messaggio dal team sulla tua spedizione', is_message: true, created_at: '2026-10-23T11:00:00Z', read_at: '2026-10-23T11:30:00Z', order_slug: slug },
@@ -547,6 +547,19 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.ok(header.stateRow && !header.overlap && !header.headerService, JSON.stringify({ width, header }));
         assert.match(header.service, /service-badge--regional/);
         await check(`/shipments/${slug}`, width);
+      }
+    });
+    await scenario('notifiche: priorità urgente rossa e standard verde con etichetta, nessuna priorità inventata', async () => {
+      for (const width of [360, 390, 768, 1440]) {
+        await viewport(width); await navigate('/notifications');
+        await waitFor('document.querySelectorAll(".notification-group").length === 3');
+        const badges = await evaluate('return [...document.querySelectorAll(".notification-group")].map(group=>{const badge=group.querySelector(".priority-badge");if(!badge)return null;const style=getComputedStyle(badge);const rgb=value=>{const parts=value.match(/[\\d.]+/g).slice(0,3).map(Number);return value.startsWith("color(")?parts.map(v=>v*255):parts;};const lum=c=>{const [r,g,b]=c.map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4});return .2126*r+.7152*g+.0722*b};const a=lum(rgb(style.color)),b=lum(rgb(style.backgroundColor));return {text:badge.textContent.trim(),color:rgb(style.color),contrast:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};});');
+        assert.equal(badges[0].text, 'Urgente'); assert.equal(badges[1].text, 'Standard'); assert.equal(badges[2], null, 'senza dato nessun badge');
+        assert.ok(badges[0].color[0] > badges[0].color[1] && badges[0].color[0] > badges[0].color[2], 'urgente rosso '+JSON.stringify(badges[0]));
+        assert.ok(badges[1].color[1] > badges[1].color[0], 'standard verde '+JSON.stringify(badges[1]));
+        assert.ok(badges[0].contrast >= 4.5 && badges[1].contrast >= 4.5, JSON.stringify(badges));
+        assert.equal(await evaluate('return document.querySelector(".notification-group .mini-badge")?.textContent;'), '1 nuovi', 'lo stato di lettura resta distinto');
+        await check('/notifications', width);
       }
     });
     await scenario('avvisi in tempo reale: solo le novità, apertura della spedizione e lettura', async () => {
