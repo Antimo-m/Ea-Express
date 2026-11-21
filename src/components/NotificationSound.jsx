@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createNotificationMonitor } from "../services/notification-monitor";
-import { notificationFeed } from "../api/workspace";
+import { notificationFeed, readNotification } from "../api/workspace";
 import { useAuth } from "../hooks/useAuth";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Icon } from "./UI";
+import LiveToasts from "./LiveToasts";
+
+const toastLifetime = 7000;
 export default function NotificationSound() {
   const { user, updateDisplayPreferences } = useAuth();
   const monitor = useRef(null);
@@ -11,6 +14,31 @@ export default function NotificationSound() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const soundEnabled = Boolean(user.portal_preferences?.notification_sound);
+  const [toasts, setToasts] = useState([]);
+  const toastTimers = useRef(new Map());
+  const navigate = useNavigate();
+  const closeToast = useCallback((id) => {
+    window.clearTimeout(toastTimers.current.get(id));
+    toastTimers.current.delete(id);
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+  const showToasts = useCallback((items) => {
+    const fresh = items.filter((item) => item.order_slug).slice(0, 3);
+    setToasts((current) => [...fresh, ...current.filter((toast) => !fresh.some((item) => item.id === toast.id))].slice(0, 3));
+    for (const item of fresh) {
+      window.clearTimeout(toastTimers.current.get(item.id));
+      toastTimers.current.set(item.id, window.setTimeout(() => closeToast(item.id), toastLifetime));
+    }
+  }, [closeToast]);
+  useEffect(() => { const timers = toastTimers.current; return () => timers.forEach((timer) => window.clearTimeout(timer)); }, []);
+  async function openToast(toast) {
+    closeToast(toast.id);
+    navigate(`/${toast.is_message ? "messages" : "shipments"}/${toast.order_slug}`);
+    try {
+      await readNotification(toast.id);
+      window.dispatchEvent(new CustomEvent("ea:workspace-updated", { detail: { kind: "notifications" } }));
+    } catch { /* La notifica resta da leggere nella campanella. */ }
+  }
   useEffect(() => {
     const current = createNotificationMonitor({
       scope: `customer:${user.slug}`,
@@ -18,12 +46,13 @@ export default function NotificationSound() {
       initialEnabled: false,
       saveEnabled: value => updateDisplayPreferences({notification_sound: value}),
       onChange: (next) => setState((previous) => ({ ...previous, ...next })),
+      onFresh: showToasts,
     });
     monitor.current = current;
     const update = () => current.refresh();
     window.addEventListener('ea:workspace-updated', update);
     return () => { current.dispose(); window.removeEventListener('ea:workspace-updated', update); };
-  }, [user.slug, updateDisplayPreferences]);
+  }, [user.slug, updateDisplayPreferences, showToasts]);
   useEffect(() => { monitor.current?.setEnabled(soundEnabled); }, [soundEnabled]);
   async function toggle() {
     if (busy) return;
@@ -57,6 +86,7 @@ export default function NotificationSound() {
       <Icon name="bell" />
       {state.unread > 0 && <span className="notification-badge" aria-hidden="true">{state.unread > 99 ? '99+' : state.unread}</span>}
     </Link>
+    <LiveToasts toasts={toasts} onOpen={openToast} onClose={closeToast} />
     </>
   );
 }

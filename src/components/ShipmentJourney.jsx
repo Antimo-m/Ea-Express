@@ -1,18 +1,50 @@
 import { useLayoutEffect, useRef } from "react";
 import { Icon } from "./UI";
+import Truck from "./Truck";
 import { date } from "../utils/format";
 
 // Percorso animato della spedizione. La posizione arriva sempre dal backend (stato registrato):
 // qui si anima soltanto il passaggio dalla tappa precedente a quella nuova quando i dati si aggiornano.
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const confettiColors = ["#e6a23d", "#3fbf8f", "#f5f2ec", "#ffcc7a", "#6fa8dc"];
+const celebratedKey = "ea:delivered-celebrated";
 
-function drive(root, previous, target) {
+// Una sola festa per spedizione e per dispositivo: le visite successive mostrano solo la scritta "Consegnato!".
+const celebratedIds = () => { try { return JSON.parse(localStorage.getItem(celebratedKey) || "[]"); } catch { return []; } };
+const alreadyCelebrated = (id) => Boolean(id) && celebratedIds().includes(id);
+function markCelebrated(id) {
+  if (!id) return;
+  try { localStorage.setItem(celebratedKey, JSON.stringify([...celebratedIds().filter((seen) => seen !== id), id].slice(-200))); }
+  catch { /* Senza memoria locale la festa si ripete alla prossima apertura: nessun dato viene perso. */ }
+}
+
+function celebrate(root, id) {
+  const burst = root.querySelector(".trip-confetti");
+  if (!burst || reducedMotion()) return () => {};
+  root.classList.add("is-celebrating");
+  burst.replaceChildren(...Array.from({ length: 22 }, (_, index) => {
+    const piece = document.createElement("span");
+    const angle = -Math.PI + (index / 21) * Math.PI * 0.85;
+    const reach = 46 + ((index * 37) % 5) * 12;
+    piece.style.setProperty("--dx", `${Math.round(Math.cos(angle) * reach)}px`);
+    piece.style.setProperty("--dy", `${Math.round(Math.sin(angle) * reach * 0.9) - 10}px`);
+    piece.style.setProperty("--spin", `${((index * 53) % 360) + 180}deg`);
+    piece.style.setProperty("--delay", `${(index % 4) * 40}ms`);
+    piece.style.background = confettiColors[index % confettiColors.length];
+    return piece;
+  }));
+  const timer = window.setTimeout(() => { burst.replaceChildren(); root.classList.remove("is-celebrating"); markCelebrated(id); }, 1900);
+  return () => { window.clearTimeout(timer); burst.replaceChildren(); root.classList.remove("is-celebrating"); };
+}
+
+function drive(root, previous, target, onArrive) {
   const duration = Math.min(2.6, 1 + Math.abs(target - previous) * 0.35);
   const stops = [...root.querySelectorAll(".trip-stop")];
   const forward = target > previous;
   const timers = [];
   let frame = 0;
   let finished = false;
+  let cleanupArrival;
 
   root.classList.add("is-preparing");
   root.style.setProperty("--trip-at", String(previous));
@@ -41,12 +73,14 @@ function drive(root, previous, target) {
     stops.forEach((stop) => { stop.style.transitionDelay = ""; });
     root.classList.add("has-arrived");
     timers.push(window.setTimeout(() => root.classList.remove("has-arrived"), 1000));
+    cleanupArrival = onArrive?.();
   };
   const onEnd = (event) => { if (event.propertyName === "translate") finish(); };
   vehicle?.addEventListener("transitionend", onEnd);
   timers.push(window.setTimeout(finish, duration * 1000 + 250));
 
   return () => {
+    cleanupArrival?.();
     cancelAnimationFrame(frame);
     timers.forEach((timer) => window.clearTimeout(timer));
     vehicle?.removeEventListener("transitionend", onEnd);
@@ -56,39 +90,25 @@ function drive(root, previous, target) {
   };
 }
 
-function Truck() {
-  return (
-    <svg className="trip-truck" viewBox="0 0 112 60" focusable="false">
-      <ellipse className="trip-truck-shadow" cx="56" cy="55" rx="46" ry="3.6" />
-      <rect className="trip-truck-box" x="4" y="6" width="66" height="36" rx="6" />
-      <rect className="trip-truck-stripe" x="4" y="30" width="66" height="5" />
-      <text className="trip-truck-mark" x="37" y="24" textAnchor="middle">EA</text>
-      <path className="trip-truck-cab" d="M72 16h17.5a6 6 0 0 1 5.2 3l6.6 11.4a6 6 0 0 1 .8 3V42H72z" />
-      <path className="trip-truck-glass" d="M77 20h11.4a3 3 0 0 1 2.6 1.5l4.4 7.5H77z" />
-      <rect className="trip-truck-light" x="98" y="34" width="4" height="3.4" rx="1.2" />
-      <rect className="trip-truck-chassis" x="2" y="41" width="102" height="4.5" rx="2.2" />
-      {[24, 84].map((x) => (
-        <g key={x} className="trip-wheel" style={{ transformOrigin: `${x}px 46px` }}>
-          <circle cx={x} cy="46" r="8.5" className="trip-tyre" />
-          <circle cx={x} cy="46" r="4" className="trip-rim" />
-          <path d={`M${x} 39.5v13M${x - 6.5} 46h13`} className="trip-spoke" />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-export default function ShipmentJourney({ progress, from, to }) {
+export default function ShipmentJourney({ progress, from, to, celebrationId }) {
   const root = useRef(null);
   const position = progress?.position;
+  const arrived = progress?.state === "arrived";
   const previous = useRef(position);
 
   useLayoutEffect(() => {
     const before = previous.current;
     previous.current = position;
     if (!root.current || before == null || position == null || before === position || reducedMotion() || document.hidden) return undefined;
-    return drive(root.current, before, position);
-  }, [position]);
+    return drive(root.current, before, position, () => (arrived && !alreadyCelebrated(celebrationId) ? celebrate(root.current, celebrationId) : undefined));
+  }, [position, arrived, celebrationId]);
+
+  // Prima apertura di una spedizione già consegnata: festa una volta sola, senza ripeterla a ogni aggiornamento.
+  useLayoutEffect(() => {
+    if (!arrived || !root.current || document.hidden || reducedMotion()) return undefined;
+    if (root.current.classList.contains("is-driving")) return undefined;
+    return alreadyCelebrated(celebrationId) ? undefined : celebrate(root.current, celebrationId);
+  }, [arrived, celebrationId]);
 
   if (!progress?.steps?.length) return null;
   const { steps, exception, state } = progress;
@@ -105,18 +125,24 @@ export default function ShipmentJourney({ progress, from, to }) {
       <div className="trip-scene" aria-hidden="true">
         <div className="trip-road">
           <span className="trip-road-fill" />
-          {from && <span className="trip-place trip-place--from"><Icon name="circle-fill" /> {from}</span>}
-          {to && <span className="trip-place trip-place--to">{to} <Icon name="geo-alt-fill" /></span>}
           {steps.map((step, index) => (
             <span key={step.status} className={`trip-stop is-${step.state}${index === steps.length - 1 ? " is-destination" : ""}`} style={{ "--stop": index }}>
               {index === steps.length - 1 && <Icon name="flag-fill" />}
             </span>
           ))}
+          {state === "arrived" && <span className="trip-arrived">Consegnato!</span>}
+          <span className="trip-confetti" />
           <span className="trip-vehicle">
             {exception && <span className={`trip-signal${stopped ? " is-stopped" : ""}`}><Icon name={stopped ? "x-lg" : "exclamation-lg"} /></span>}
             <Truck />
           </span>
         </div>
+        {(from || to) && (
+          <div className="trip-places">
+            {from && <span className="trip-place trip-place--from"><Icon name="circle-fill" /><span>{from}</span></span>}
+            {to && <span className="trip-place trip-place--to"><span>{to}</span><Icon name="geo-alt-fill" /></span>}
+          </div>
+        )}
       </div>
       {exception && (
         <div className={`trip-exception${stopped ? " is-stopped" : ""}`} role="status">

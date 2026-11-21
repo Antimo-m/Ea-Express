@@ -1,7 +1,7 @@
 function address(order, prefix) {
   const street = [order[`${prefix}_address`], order[`${prefix}_street_number`]].filter(Boolean).join(" ");
   const city = [order[`${prefix}_postal_code`], order[`${prefix}_city`]].filter(Boolean).join(" ");
-  return [street, city, order[`${prefix}_province`], order[`${prefix}_region`]].filter(Boolean).join(", ");
+  return [street, city, order[`${prefix}_province`]].filter(Boolean).join(", ");
 }
 
 export default function ShipmentRoute({ order }) {

@@ -12,7 +12,7 @@
 .trip[data-trip-state="arrived"] .trip-now strong { color: var(--ea-success); }
 
 .trip-scene {
-  position: relative; margin: 18px 0 0; padding: 100px 0 46px; border-radius: var(--ea-radius-card); isolation: isolate;
+  position: relative; overflow: hidden; margin: 18px 0 0; padding: 100px 0 20px; border-radius: var(--ea-radius-card); isolation: isolate;
   background:
     radial-gradient(90% 120% at 88% -10%, #e6a23d2e, transparent 60%),
     radial-gradient(70% 90% at 0% 120%, #2557744d, transparent 60%),
@@ -64,10 +64,12 @@
   border-radius: 50%; background: #e6a23d; color: #141a20; font-size: .9rem; box-shadow: 0 0 0 4px #e6a23d33;
 }
 .trip-signal.is-stopped { background: #e2554d; color: #fff; box-shadow: 0 0 0 4px #e2554d33; }
-.trip-place { position: absolute; top: calc(100% + 12px); display: inline-flex; align-items: center; gap: 5px; max-width: 45%; overflow: hidden; color: #c3ccd4; font-family: var(--ea-font-mono); font-size: .6875rem; letter-spacing: .02em; text-overflow: ellipsis; white-space: nowrap; }
+/* Città sotto la strada: vanno a capo invece di essere tagliate, qualunque sia la lunghezza del nome. */
+.trip-places { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px 16px; margin: 16px calc(max(calc(100% / (var(--trip-stops) * 2)), calc(var(--trip-truck) / 2 + 6px)) - 9px) 0; }
+.trip-place { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; max-width: calc(50% - 8px); color: #c3ccd4; font-family: var(--ea-font-mono); font-size: .6875rem; line-height: 1.35; letter-spacing: .02em; overflow-wrap: break-word; text-wrap: balance; }
 .trip-place .bi { color: #e6a23d; font-size: .55rem; }
-.trip-place--from { left: 0; translate: -9px 0; }
-.trip-place--to { right: 0; translate: 9px 0; }
+.trip-place--to { margin-inline-start: auto; text-align: right; }
+.trip-place .bi { flex: none; }
 .trip-place--to .bi { color: #3fbf8f; font-size: .75rem; }
 .trip[data-trip-state="stopped"] .trip-truck { filter: saturate(.25) brightness(.8); }
 .trip[data-trip-state="stopped"] .trip-road-fill { background: linear-gradient(90deg, #7a4b14, #a8743a); box-shadow: none; }
@@ -76,6 +78,25 @@
 .trip.is-driving .trip-truck { animation: trip-bob .3s ease-in-out infinite alternate; }
 .trip.is-preparing :is(.trip-road-fill, .trip-vehicle, .trip-stop) { transition: none; }
 .trip.has-arrived :is(.trip-stop.is-current, .trip-stop.is-destination.is-complete) { animation: trip-arrive .9s ease-out; }
+
+/* Consegna completata: scritta sopra la bandierina e, una volta sola, coriandoli dalla destinazione. */
+.trip-arrived {
+  position: absolute; left: 100%; bottom: calc(100% + var(--trip-truck) * .54 + 6px); z-index: 3; translate: calc(-100% + 16px) 0;
+  padding: 4px 10px; border-radius: 999px; background: #3fbf8f; color: #0c2a1e; box-shadow: 0 6px 16px -6px #3fbf8fcc;
+  font-size: .75rem; font-weight: 750; letter-spacing: .01em; white-space: nowrap;
+}
+.trip.is-celebrating .trip-arrived { animation: trip-badge-pop .7s cubic-bezier(.2, 1.6, .4, 1) both; }
+.trip-confetti { position: absolute; left: 100%; top: 50%; z-index: 4; width: 0; height: 0; pointer-events: none; }
+.trip-confetti > span {
+  position: absolute; left: -3px; top: -5px; width: 6px; height: 10px; border-radius: 2px; opacity: 0;
+  animation: trip-confetti 1.5s cubic-bezier(.15, .7, .3, 1) var(--delay) forwards;
+}
+@keyframes trip-badge-pop { from { opacity: 0; scale: .4; } to { opacity: 1; scale: 1; } }
+@keyframes trip-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+  55% { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--spin) * .6)); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 46px)) rotate(var(--spin)); }
+}
 @keyframes trip-wheel { to { rotate: 360deg; } }
 @keyframes trip-bob { from { translate: 0 0; } to { translate: 0 -1.5px; } }
 @keyframes trip-arrive { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 100% { transform: scale(1); } }
@@ -109,7 +130,9 @@
   .trip { --trip-truck: 84px; }
   .trip-heading { align-items: flex-start; }
   .trip-now { justify-items: start; text-align: left; }
-  .trip-scene { padding: 84px 0 40px; }
+  .trip-scene { padding: 84px 0 16px; }
+  .trip-places { margin: 14px 12px 0; gap: 6px 12px; }
+  .trip-place { max-width: calc(50% - 6px); }
   .trip-place { font-size: .625rem; }
   .trip-stop { width: 14px; height: 14px; border-width: 2px; }
   .trip-stop.is-destination { width: 24px; height: 24px; }
@@ -120,4 +143,6 @@
 @media (prefers-reduced-motion: reduce) {
   .trip :is(.trip-road-fill, .trip-vehicle, .trip-stop) { transition: none; }
   .trip :is(.trip-wheel, .trip-truck, .trip-stop) { animation: none !important; }
+  .trip :is(.trip-arrived, .trip-confetti > span) { animation: none !important; }
+  .trip-confetti { display: none; }
 }

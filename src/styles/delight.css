@@ -1,0 +1,70 @@
+/* Piccoli momenti di piacere: avvisi in tempo reale con il camioncino e pagina vuota del primo ritiro. */
+
+/* Avvisi in tempo reale */
+.live-toasts {
+  position: fixed; right: 24px; bottom: 24px; z-index: var(--ea-layer-popup, 1200);
+  display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); pointer-events: none;
+}
+.live-toast {
+  display: grid; grid-template-columns: 58px minmax(0, 1fr) 36px; align-items: center; gap: 4px;
+  padding: 8px 6px 8px 10px; border: 1px solid var(--ea-line); border-radius: var(--ea-radius-card);
+  background: var(--ea-surface); color: var(--ea-ink); box-shadow: var(--ea-shadow-dialog, 0 18px 40px -18px #141a2066);
+  pointer-events: auto; animation: live-toast-in .45s cubic-bezier(.2, .9, .3, 1.15) both;
+}
+.live-toast-visual {
+  position: relative; display: grid; place-items: center; width: 54px; height: 40px; overflow: hidden;
+  border-radius: 10px; background: linear-gradient(180deg, #1f2932, #141a20);
+}
+.live-toast-visual::after { content: ''; position: absolute; inset: auto 4px 7px; height: 2px; border-radius: 2px; background: repeating-linear-gradient(90deg, #ffffff40 0 6px, transparent 6px 11px); }
+.live-toast-truck { position: relative; z-index: 1; width: 44px; margin-bottom: 6px; animation: live-toast-drive .9s cubic-bezier(.2, .8, .3, 1) both; }
+.live-toast-truck .trip-truck { display: block; width: 100%; height: auto; }
+.live-toast-truck .trip-wheel { animation: trip-wheel .42s linear 2; }
+.live-toast--message .live-toast-visual { background: var(--ea-orange-soft); color: var(--ea-brand); font-size: 1.25rem; }
+.live-toast-body {
+  display: grid; gap: 2px; min-width: 0; padding: 6px 4px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer;
+  border-radius: var(--ea-radius-control);
+}
+.live-toast-body strong { overflow-wrap: anywhere; font-size: .9rem; line-height: 1.3; }
+.live-toast-body span { color: var(--ea-muted); font-family: var(--ea-font-mono); font-size: .6875rem; overflow-wrap: anywhere; }
+.live-toast-body:focus-visible, .live-toast-close:focus-visible { outline: 3px solid var(--ea-focus); outline-offset: 2px; }
+.live-toast-close {
+  display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%;
+  background: none; color: var(--ea-muted); cursor: pointer;
+}
+.live-toast-close:hover { background: var(--ea-hover, var(--ea-surface-muted)); color: var(--ea-ink); }
+@keyframes live-toast-in { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes live-toast-drive { from { transform: translateX(-56px); } to { transform: none; } }
+@media (max-width: 991px) {
+  .live-toasts { right: 16px; left: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); width: auto; }
+}
+
+/* Pagina vuota del primo ritiro */
+.first-shipment { display: grid; justify-items: center; gap: 8px; padding: 28px 20px 32px; text-align: center; }
+.first-shipment h3 { margin: 10px 0 0; font-size: 1.1rem; }
+.first-shipment p { max-width: 42ch; margin: 0; color: var(--ea-muted); line-height: 1.5; }
+.first-shipment-action { margin-top: 10px; }
+.first-shipment-scene {
+  position: relative; width: min(280px, 100%); height: 112px; overflow: hidden; border-radius: var(--ea-radius-card);
+  background:
+    radial-gradient(90% 120% at 88% -10%, #e6a23d2e, transparent 60%),
+    linear-gradient(180deg, #1f2932 0%, #141a20 100%);
+  box-shadow: inset 0 1px 0 #ffffff12, 0 14px 30px -18px #141a2099;
+}
+.first-shipment-road { position: absolute; inset: auto 14px 18px; height: 8px; border-radius: 999px; background: linear-gradient(180deg, #36424d, #26303a); }
+.first-shipment-road::before { content: ''; position: absolute; inset: 3px 8px; background: repeating-linear-gradient(90deg, #ffffff40 0 10px, transparent 10px 22px); }
+.first-shipment-truck { position: absolute; left: 50%; bottom: 22px; z-index: 1; width: 104px; translate: -50% 0; transition: translate .6s cubic-bezier(.3, .8, .3, 1.2); }
+.first-shipment-truck .trip-truck { display: block; width: 100%; height: auto; overflow: visible; }
+.first-shipment-sign {
+  position: absolute; top: 16px; right: 22px; display: grid; place-items: center; width: 26px; height: 26px;
+  border-radius: 6px; background: #e6a23d; color: #141a20; font: 800 .7rem/1 var(--ea-font-display, var(--ea-font));
+}
+.first-shipment-sign::after { content: ''; position: absolute; top: 100%; left: 50%; width: 2px; height: 46px; translate: -50% 0; background: #c3ccd4; }
+.first-shipment:has(.first-shipment-action:is(:hover, :focus-visible)) .first-shipment-truck { translate: calc(-50% + 16px) 0; }
+.first-shipment:has(.first-shipment-action:is(:hover, :focus-visible)) .first-shipment-truck .trip-wheel { animation: trip-wheel .42s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .live-toast, .live-toast-truck, .live-toast-truck .trip-wheel { animation: none !important; }
+  .first-shipment-truck { transition: none; }
+  .first-shipment:has(.first-shipment-action:is(:hover, :focus-visible)) .first-shipment-truck { translate: -50% 0; }
+  .first-shipment:has(.first-shipment-action:is(:hover, :focus-visible)) .first-shipment-truck .trip-wheel { animation: none; }
+}

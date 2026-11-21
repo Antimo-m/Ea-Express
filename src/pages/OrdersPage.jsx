@@ -90,7 +90,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
         <State resource={resource}>
           {(data) => (
             <>
-              <OrderList orders={data.data} base={base} messages={messages} />
+              <OrderList orders={data.data} base={base} messages={messages} firstRun={!messages && !Object.entries(values).some(([key, value]) => key !== "page" && value)} />
               <Pagination
                 meta={data.meta}
                 onPage={(page) => changeFilters({ ...values, page })}

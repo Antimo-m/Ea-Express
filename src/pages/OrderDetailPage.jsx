@@ -43,7 +43,7 @@ function Detail({ order, reload, pickups, messages }) {
           <label className="field"><span>Motivo dell’annullamento</span><textarea name="reason" required maxLength={500} rows={3}/></label>
         </ConfirmDeleteModal>
       )}
-      {!messages && <ShipmentJourney progress={order.progress} from={order.pickup_city} to={order.delivery_city} />}
+      {!messages && <ShipmentJourney progress={order.progress} from={order.pickup_city} to={order.delivery_city} celebrationId={order.slug} />}
       {!messages && (
         <div className="detail-grid">
           <div>

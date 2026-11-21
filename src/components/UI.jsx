@@ -5,6 +5,7 @@ import { date, displayName } from "../utils/format";
 import NotFoundPage from "../pages/NotFoundPage";
 import UnavailablePage from "../pages/UnavailablePage";
 import ShipmentRoute from "./ShipmentRoute";
+import FirstShipment from "./FirstShipment";
 export function Icon({ name, ...props }) {
   return <i className={`bi bi-${name}`} aria-hidden="true" {...props} />;
 }
@@ -280,7 +281,8 @@ export function Pagination({ meta, onPage }) {
     </nav>
   );
 }
-export function OrderList({ orders, base = "/shipments", messages = false }) {
+export function OrderList({ orders, base = "/shipments", messages = false, firstRun = false }) {
+  if (!orders.length && firstRun) return <FirstShipment />;
   if (!orders.length)
     return (
       <Empty

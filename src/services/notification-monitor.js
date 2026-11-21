@@ -2,6 +2,7 @@ export function createNotificationMonitor({
   scope,
   load,
   onChange = () => {},
+  onFresh = () => {},
   initialEnabled,
   saveEnabled,
 }) {
@@ -73,6 +74,11 @@ export function createNotificationMonitor({
     ].slice(-1000);
     write(seenKey, {items: seen, expires: Date.now() + 7 * 24 * 60 * 60 * 1000});
     if (!baseline && fresh && enabled) tone();
+    // Avviso a schermo per le novità arrivate mentre il portale è aperto (non per quelle già presenti all'apertura).
+    if (!baseline) {
+      const arrived = result.items.filter((item) => !item.read_at && !stored.has(item.id));
+      if (arrived.length) onFresh(arrived);
+    }
     baseline = false;
     onChange({ enabled, unread: result.unread, available: true });
   }

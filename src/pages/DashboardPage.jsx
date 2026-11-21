@@ -69,7 +69,7 @@ export default function DashboardPage() {
             {data.live_order && <aside className="order-focus-summary" aria-label="Spedizione in primo piano"><div><span className="eyebrow">IN PRIMO PIANO</span><h2>{data.live_order.reference}</h2><p>{date(data.live_order.pickup_date)} · {data.live_order.pickup_from}–{data.live_order.pickup_to}</p><ShipmentRoute order={data.live_order}/></div><Status order={data.live_order}/><Link className="button secondary" to={`/shipments/${data.live_order.slug}`}>Segui la spedizione <Icon name="arrow-up-right"/></Link></aside>}
             <div className="dashboard-grid">
               <DataPanel title="Spedizioni recenti" description="Le ultime richieste e il loro stato." className="data-panel--flush" actions={<Link to="/shipments">Vedi tutte <Icon name="arrow-right" /></Link>}>
-                <OrderList orders={data.recent} />
+                <OrderList orders={data.recent} firstRun />
               </DataPanel>
               <section className="panel pickup-panel">
                 <div className="section-heading">

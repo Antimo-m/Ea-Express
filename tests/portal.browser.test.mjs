@@ -36,7 +36,7 @@ const statistics = {
 test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze richieste', { skip: !existsSync(chrome) || !existsSync(built), timeout: 180000 }, async t => {
   const scenario = (name, callback) => t.test(name, {skip: Boolean(process.env.EA_PORTAL_TEST_FILTER) && !new RegExp(process.env.EA_PORTAL_TEST_FILTER).test(name)}, callback);
   const temporary = mkdtempSync(join(tmpdir(), 'ea-portal-ui-'));
-  let browser, socket, authenticated = true, otpPending = false, errorMode = false, emptyMode = false, loadingMode = false;
+  let browser, socket, authenticated = true, otpPending = false, errorMode = false, emptyMode = false, loadingMode = false, dashboardEmpty = false, feedItems = [];
   const writes = [];
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
@@ -105,6 +105,8 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       }
       if (errorMode && path === '/orders') { response.statusCode = 500; json({}); return; }
       if (resourceStatus && /^\/(orders|pending)\//.test(path)) { response.statusCode = resourceStatus; json({}); return; }
+      if (path === '/notifications/feed') { json({ unread: feedItems.length, items: feedItems }); return; }
+      if (path === '/dashboard' && dashboardEmpty) { json({ metrics: { active: 0, pickups: 0, delivered: 0, attention: 0, unread: 0 }, live_order: null, recent: [], next_pickups: [] }); return; }
       if (path === '/dashboard') { json({ metrics: { active: 13, pickups: 5, delivered: 10, attention: 1, unread: 2 }, live_order: order, recent: [order, { ...order, slug: user.slug }], next_pickups: [order] }); return; }
       if (path === '/orders') {
         const search=url.searchParams.get('q') || '';
@@ -500,6 +502,56 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       assert.equal(await evaluate('return !!document.querySelector(".ea-modal[open] [name=sender_type]");'),false);
       assert.doesNotMatch(await evaluate('return document.querySelector(".ea-modal[open]").textContent;'),/Tipo mittente/);
     });
+    await scenario('percorso con il camion: le città restano intere a ogni lunghezza e larghezza', async () => {
+      const original = {pickup_city: order.pickup_city, delivery_city: order.delivery_city, progress: order.progress};
+      const statuses = ['received','accepted','rider_arriving','picked_up','in_transit','out_for_delivery','delivered'];
+      Object.assign(order, {pickup_city: 'San Giuseppe Vesuviano', delivery_city: 'Giugliano in Campania', progress: {position: 4, state: 'moving', exception: null, steps: statuses.map((status, index) => ({status, label: status, state: index < 4 ? 'complete' : index === 4 ? 'current' : 'pending', at: null, optional: false, note: null}))}});
+      try {
+        for (const width of [320,390,1440]) {
+          await viewport(width); await navigate(`/shipments/${slug}`);
+          await waitFor('document.querySelectorAll(".trip-place").length === 2');
+          const places = await evaluate('const scene=document.querySelector(".trip-scene").getBoundingClientRect();return [...document.querySelectorAll(".trip-place")].map(place=>{const box=place.getBoundingClientRect(),text=place.querySelector(":scope > span");return {text:text.textContent,clipped:text.scrollWidth>text.clientWidth+1,inside:box.left>=scene.left-1&&box.right<=scene.right+1&&box.bottom<=scene.bottom,left:box.left,right:box.right};});');
+          assert.deepEqual(places.map(place=>place.text),['San Giuseppe Vesuviano','Giugliano in Campania']);
+          assert.ok(places.every(place=>!place.clipped && place.inside) && places[0].right<=places[1].left,JSON.stringify({width,places}));
+        }
+      } finally { Object.assign(order, original); }
+    });
+    await scenario('avvisi in tempo reale: solo le novità, apertura della spedizione e lettura', async () => {
+      const notice = (id, title, is_message = false) => ({ id, title, reference: order.reference, order_slug: slug, is_message, read_at: null, created_at: '2026-10-23T12:00:00Z', customer_name: user.name });
+      feedItems = [notice('gia-presente', 'Ordine confermato')];
+      try {
+        for (const width of [320, 1440]) {
+          await viewport(width); await navigate('/dashboard'); await new Promise(resolve => setTimeout(resolve, 400));
+          assert.equal(await evaluate('return document.querySelectorAll(".live-toast").length;'), 0);
+          feedItems = [notice(`consegna-${width}`, 'In consegna'), ...feedItems];
+          await evaluate('window.dispatchEvent(new CustomEvent("ea:workspace-updated", { detail: { kind: "sync" } }));');
+          await waitFor('document.querySelectorAll(".live-toast").length === 1');
+          const toast = await evaluate('const box=document.querySelector(".live-toast").getBoundingClientRect();return {text:document.querySelector(".live-toast").textContent,left:box.left,right:box.right,bottom:box.bottom,height:innerHeight};');
+          assert.match(toast.text, /In consegna/);
+          assert.ok(toast.left >= 0 && toast.right <= width && toast.bottom <= toast.height, JSON.stringify({width, toast}));
+          await evaluate('document.querySelector(".live-toast-body").click();');
+          await waitFor(`location.pathname === '/shipments/${slug}' && !document.querySelector(".live-toast")`);
+          for (let attempt = 0; attempt < 50 && !writes.some(write => write.path === `/notifications/consegna-${width}/read`); attempt++) await new Promise(resolve => setTimeout(resolve, 40));
+          assert.ok(writes.some(write => write.path === `/notifications/consegna-${width}/read`), `notifica letta ${width}`);
+        }
+      } finally { feedItems = []; }
+    });
+    await scenario('consegna completata: scritta e coriandoli una volta sola per spedizione', async () => {
+      const original = {progress: order.progress, status: order.status};
+      const statuses = ['received','accepted','rider_arriving','picked_up','in_transit','out_for_delivery','delivered'];
+      order.status = 'delivered'; order.progress = {position: 6, state: 'arrived', exception: null, steps: statuses.map(status => ({status, label: status, state: 'complete', at: null, optional: false, note: null}))};
+      try {
+        await viewport(390); await evaluate('localStorage.removeItem("ea:delivered-celebrated");');
+        await navigate(`/shipments/${slug}`);
+        await waitFor('document.querySelector(".trip-arrived")');
+        assert.equal(await evaluate('return document.querySelector(".trip-arrived").textContent;'), 'Consegnato!');
+        assert.ok(await evaluate('return document.querySelectorAll(".trip-confetti > span").length;') > 0);
+        await waitFor('!document.querySelector(".trip-confetti > span") && JSON.parse(localStorage.getItem("ea:delivered-celebrated") || "[]").length === 1');
+        await navigate(`/shipments/${slug}`);
+        await waitFor('document.querySelector(".trip-arrived")');
+        assert.equal(await evaluate('return document.querySelectorAll(".trip-confetti > span").length;'), 0);
+      } finally { Object.assign(order, original); }
+    });
     await scenario('time picker: conferma allineata, limiti orario, tastiera e touch a tutte le larghezze richieste', async () => {
       for (const width of [320,360,375,390,430,768,1440]) {
         await viewport(width); await navigate('/pickups/new');
@@ -616,7 +668,14 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     });
     await scenario('stati vuoti ed errore conservano navigazione e possibilità di riprovare', async () => {
       emptyMode = true;
-      for (const path of ['/shipments', '/rates', '/pending', '/notifications']) { await navigate(path); assert.ok(await evaluate('return !!document.querySelector(".empty");')); await check(path, 767); }
+      for (const path of ['/shipments?status=delivered', '/rates', '/pending', '/notifications']) { await navigate(path); assert.ok(await evaluate('return !!document.querySelector(".empty");')); await check(path, 767); }
+      for (const path of ['/shipments', '/dashboard']) {
+        if (path === '/dashboard') dashboardEmpty = true;
+        await navigate(path);
+        assert.equal(await evaluate('return document.querySelector(".first-shipment .first-shipment-action")?.getAttribute("href");'), '/pickups/new', path);
+        await check(path, 390);
+      }
+      dashboardEmpty = false;
       emptyMode = false; errorMode = true; await navigate('/shipments');
       assert.ok(await evaluate('return !!document.querySelector("[role=alert]");'));
       errorMode = false; await evaluate('[...document.querySelectorAll("button")].find(n=>n.textContent==="Riprova").click();');
