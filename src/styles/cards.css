@@ -1,0 +1,47 @@
+/* Linguaggio comune delle card del portale: profondità, accento al passaggio, riflesso che segue il puntatore. */
+:root { --card-shadow: 0 1px 2px color-mix(in srgb, var(--ea-graphite) 5%, transparent), 0 8px 24px color-mix(in srgb, var(--ea-graphite) 5%, transparent); --card-shadow-hover: 0 2px 4px color-mix(in srgb, var(--ea-graphite) 6%, transparent), 0 18px 40px color-mix(in srgb, var(--ea-graphite) 11%, transparent); --card-glow: color-mix(in srgb, var(--ea-signal) 14%, transparent); --card-accent: var(--ea-info); }
+
+:is(.shipment-card, .metric-tile, .pickup-card, .notification-group, .order-focus-summary, .pending-account-panel, .rate-card, .dashboard-actions, .month-recap) {
+  position: relative; isolation: isolate; box-shadow: var(--card-shadow);
+  transition: transform .22s cubic-bezier(.2, .8, .2, 1), box-shadow .22s ease, border-color .22s ease, background-color .22s ease;
+}
+:is(.shipment-card, .metric-tile, .pickup-card, .notification-group, .order-focus-summary, .pending-account-panel, .rate-card):hover {
+  transform: translateY(-2px); box-shadow: var(--card-shadow-hover); border-color: color-mix(in srgb, var(--card-accent) 45%, var(--ea-line));
+  background-image: radial-gradient(420px circle at var(--glow-x, 50%) var(--glow-y, 0%), var(--card-glow), transparent 45%);
+}
+:is(.dashboard-actions, .month-recap):hover { box-shadow: var(--card-shadow-hover); }
+:is(.shipment-card, .metric-tile, .pickup-card):active { transform: translateY(0) scale(.995); }
+
+/* Card spedizione: accento per stato e angolo luminoso. */
+.shipment-card { overflow: hidden; }
+.shipment-card::before { content: ""; position: absolute; z-index: -1; inset: -50px -50px auto auto; inline-size: 150px; block-size: 150px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--card-accent) 12%, transparent), transparent 70%); transition: transform .4s ease; pointer-events: none; }
+.shipment-card:hover::before { transform: scale(1.3); }
+.shipment-card:has(.status-delivered) { --card-accent: var(--ea-success); --card-glow: color-mix(in srgb, var(--ea-success) 12%, transparent); }
+.shipment-card:has(.status-cancelled, .status-rejected, .status-delivery_issue, .status-delivery_attempted) { --card-accent: var(--ea-danger); --card-glow: color-mix(in srgb, var(--ea-danger) 10%, transparent); }
+.shipment-card:has(.status-received, .status-accepted, .status-pickup_scheduled) { --card-accent: var(--ea-signal); }
+.shipment-card { box-shadow: var(--card-shadow), inset 4px 0 0 color-mix(in srgb, var(--card-accent) 70%, transparent); }
+.shipment-card:hover { box-shadow: var(--card-shadow-hover), inset 4px 0 0 var(--card-accent); }
+.shipment-card .shipment-card-date .bi { transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.shipment-card:hover .shipment-card-date .bi { transform: rotate(-10deg) scale(1.15); }
+
+/* Indicatori della panoramica: cifra in evidenza, icona in un riquadro colorato che reagisce. */
+.metric-tile { overflow: hidden; }
+.metric-tile header .bi { display: inline-grid; place-items: center; inline-size: 34px; block-size: 34px; border-radius: 11px; background: color-mix(in srgb, var(--card-accent) 12%, var(--ea-surface)); color: var(--card-accent); transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.metric-tile:hover header .bi { transform: scale(1.12) rotate(-6deg); }
+.metric-tile::after { content: ""; position: absolute; z-index: -1; inset: auto -30px -40px auto; inline-size: 120px; block-size: 120px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--card-accent) 12%, transparent), transparent 70%); pointer-events: none; }
+.metric-tile--attention { --card-accent: var(--ea-signal); }
+.metric-tile-value { font-variant-numeric: tabular-nums; }
+
+/* Notifiche e sospesi: accento laterale e apertura evidenziata. */
+.notification-group[open], .pending-account-panel:focus-within { border-color: color-mix(in srgb, var(--card-accent) 50%, var(--ea-line)); }
+.notification-group:has(.mini-badge) { --card-accent: var(--ea-signal); box-shadow: var(--card-shadow), inset 4px 0 0 var(--ea-signal); }
+.notification-group .notification-icon { transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.notification-group:hover .notification-icon { transform: scale(1.1) rotate(-8deg); }
+.pickup-card .pickup-date { transition: color .2s ease; }
+.pickup-card:hover .pickup-date { color: var(--ea-info); }
+
+@media (hover: none) { :is(.shipment-card, .metric-tile, .pickup-card, .notification-group, .order-focus-summary, .pending-account-panel, .rate-card):hover { transform: none; background-image: none; } }
+@media (prefers-reduced-motion: reduce) {
+  :is(.shipment-card, .metric-tile, .pickup-card, .notification-group, .order-focus-summary, .pending-account-panel, .rate-card, .dashboard-actions, .month-recap) { transition: none !important; transform: none !important; }
+  .shipment-card::before, .metric-tile header .bi, .notification-group .notification-icon, .shipment-card .shipment-card-date .bi { transition: none !important; transform: none !important; }
+}

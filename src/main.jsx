@@ -15,3 +15,5 @@ import "./styles/portal-revision.css";
 import "./styles/journey.css";
 import "./styles/delight.css";
 import "./styles/polish.css";
+import "./styles/cards.css";
+import "./services/card-glow";
