@@ -22,7 +22,7 @@ export default function OrdersPage({ pickups = false, messages = false }) {
   const [checking, setChecking] = useState(false);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const values = Object.fromEntries([...params].filter(([key]) => ["q","status","from","to","shipping_type","sender_type","has_messages","page"].includes(key)));
+  const values = Object.fromEntries([...params].filter(([key]) => ["q","status","from","to","shipping_type","has_messages","page"].includes(key)));
   const resource = useApi(listOrders, {
     ...values,
     ...(pickups ? { kind: "pickup" } : {}),
@@ -85,7 +85,6 @@ export default function OrdersPage({ pickups = false, messages = false }) {
             <Field label="Ritiro dal" name="from" type="date" defaultValue={values.from || ""}/>
             <Field label="Al" name="to" type="date" defaultValue={values.to || ""}/>
             <Field label="Servizio"><select name="shipping_type" defaultValue={values.shipping_type || ""}><option value="">Tutti</option><option value="regional">Regionali</option><option value="external">Fuori regione</option></select></Field>
-            <Field label="Tipo mittente"><select name="sender_type" defaultValue={values.sender_type || ""}><option value="">Tutti</option><option value="private">Privato</option><option value="business">Attività commerciale</option><option value="online_shop">Shop online</option></select></Field>
             {messages && <Field label="Conversazioni"><select name="has_messages" defaultValue={values.has_messages || "0"}><option value="0">Tutte le spedizioni</option><option value="1">Con messaggi</option></select></Field>}
           </>}/>
         <State resource={resource}>

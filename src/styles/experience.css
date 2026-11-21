@@ -793,7 +793,7 @@ a.metric-tile:hover { border-color: var(--ea-info); }
   .ea-modal .modal-heading > .icon-button { --ea-icon-size: 44px; grid-column: 2; }
   .ea-modal .modal-heading h2 { font-size: 1.25rem; }
   .ea-modal .modal-actions { padding: 16px; }
-  .ea-modal .modal-actions > .icon-button { flex: 0 0 44px; }
+  .ea-modal .modal-actions > .icon-button:not(.action-with-text) { flex: 0 0 44px; }
   .order-list .order-row { padding: 18px 16px; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; }
   .order-row > div:first-child { grid-column: 1; }
   .order-row > div:nth-child(2), .order-row > div:nth-child(3), .order-row > .order-statuses { grid-column: 1 / -1; }

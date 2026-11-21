@@ -483,6 +483,23 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       }
     });
+    await scenario('annulla compilazione: bottoni del modale orizzontali e su una riga, filtri senza tipo mittente', async () => {
+      for (const width of [320,390,768,1440]) {
+        await viewport(width); await navigate(`/shipments/${slug}/edit`);
+        await evaluate('[...document.querySelectorAll(".booking-final-actions button")].find(button=>button.textContent.trim()==="Annulla").click();');
+        await waitFor('document.querySelector(".ea-modal[open] .modal-actions .action-delete")');
+        const buttons = await evaluate('return [...document.querySelectorAll(".ea-modal[open] .modal-actions > *")].map(button=>{const box=button.getBoundingClientRect(),walker=document.createTreeWalker(button,NodeFilter.SHOW_TEXT),lines=new Set();for(let node=walker.nextNode();node;node=walker.nextNode()){if(!node.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(node);for(const rect of range.getClientRects())if(rect.width>1)lines.add(Math.round(rect.top));}return {text:button.textContent.trim(),width:box.width,height:box.height,lines:lines.size};});');
+        assert.equal(buttons.length,2,JSON.stringify({width,buttons}));
+        assert.ok(buttons.every(button=>button.width>button.height*2 && button.lines===1),JSON.stringify({width,buttons}));
+        await evaluate('document.querySelector(".ea-modal[open] .modal-back").click();');
+        await waitFor('!document.querySelector(".ea-modal[open]")');
+      }
+      await viewport(390); await navigate('/shipments?sender_type=business');
+      await evaluate('document.querySelector(".filter-more").click();');
+      await waitFor('document.querySelector(".ea-modal[open]")');
+      assert.equal(await evaluate('return !!document.querySelector(".ea-modal[open] [name=sender_type]");'),false);
+      assert.doesNotMatch(await evaluate('return document.querySelector(".ea-modal[open]").textContent;'),/Tipo mittente/);
+    });
     await scenario('time picker: conferma allineata, limiti orario, tastiera e touch a tutte le larghezze richieste', async () => {
       for (const width of [320,360,375,390,430,768,1440]) {
         await viewport(width); await navigate('/pickups/new');
