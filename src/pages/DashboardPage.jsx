@@ -2,6 +2,7 @@ import MetricTile from '../components/MetricTile';
 import DataPanel from '../components/DataPanel';
 import IconButton from "../components/IconButton";
 import ShipmentRoute from "../components/ShipmentRoute";
+import MonthRecap from "../components/MonthRecap";
 import { Link } from "react-router";
 import { dashboard } from "../api/workspace";
 import { useApi } from "../hooks/useApi";
@@ -59,6 +60,7 @@ export default function DashboardPage() {
                 <MetricTile key={label} label={label} value={value} icon={icon} to={to} tone={label === 'Richiedono attenzione' && value > 0 ? 'attention' : 'neutral'} />
               ))}
             </section>
+            <MonthRecap recap={data.month_recap} />
             {data.metrics.unread > 0 && (
               <Link className="notice" to="/notifications">
                 <Icon name="bell" />

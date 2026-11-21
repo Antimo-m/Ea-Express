@@ -10,6 +10,10 @@ import ShippingPrice from "../components/ShippingPrice";
 import ShipmentJourney from "../components/ShipmentJourney";
 import MessageThread from "../components/MessageThread";
 import { date, money, displayName } from "../utils/format";
+function ServiceBadge({ type }) {
+  const external = type === "external";
+  return <span className={`service-badge service-badge--${external ? "external" : "regional"}`}><Icon name={external ? "signpost-split" : "geo-alt"} />{external ? "Fuori regione" : "Regionale"}</span>;
+}
 function Detail({ order, reload, pickups, messages }) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [success, setSuccess] = useState(useLocation().state?.success || "");
@@ -26,15 +30,18 @@ function Detail({ order, reload, pickups, messages }) {
     <>
       <Header
         backTo={messages ? "/messages" : base}
+        backLabel={messages ? "Torna ai messaggi" : pickups ? "Torna ai ritiri" : "Torna alle spedizioni"}
+        toolbar={<IconButton action="print" label="Stampa etichetta" to={order.can_print === false ? undefined : `/shipments/${order.slug}/label`} aria-disabled={order.can_print === false} onClick={event => { if (order.can_print === false) { event.preventDefault(); setSuccess("Al momento non ci sono ordini da stampare"); } }} />}
         eyebrow={messages ? "CONVERSAZIONE" : "SPEDIZIONE"}
         title={messages ? `Conversazione · ${displayName(order)}` : displayName(order)}
         description={`${order.reference} · ${order.pickup_city} → ${order.delivery_city}`}
       >
-        <IconButton action="print" label="Stampa etichetta" to={order.can_print === false ? undefined : `/shipments/${order.slug}/label`} aria-disabled={order.can_print === false} onClick={event => { if (order.can_print === false) { event.preventDefault(); setSuccess("Al momento non ci sono ordini da stampare"); } }} />
-        <Status order={order} /><span className="service-badge">{order.shipping_type === "external" ? "Fuori regione" : "Regionale"}</span>
-        {order.can_edit && (
-          <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.slug}/edit`} />
-        )}
+        <div className="order-state-actions">
+          <Status order={order} />
+          {order.can_edit && (
+            <IconButton action="edit" label="Modifica spedizione" to={`${base}/${order.slug}/edit`} />
+          )}
+        </div>
       </Header>
       {!messages && order.can_cancel && <div className="order-manage-bar"><p className="muted">Puoi annullare la richiesta finché non viene presa in carico.</p><button type="button" className="button danger order-cancel-button" onClick={() => setCancelOpen(true)}><Icon name="x-circle" /> Annulla richiesta</button></div>}
       <Feedback success={success} />
@@ -50,7 +57,7 @@ function Detail({ order, reload, pickups, messages }) {
             <section className="panel" aria-labelledby="route-heading">
               <div className="section-heading">
                 <h2 id="route-heading">Mittente e destinatario</h2>
-                <Icon name="signpost-split" />
+                <ServiceBadge type={order.shipping_type} />
               </div>
               <div className="journey">
                 <div>

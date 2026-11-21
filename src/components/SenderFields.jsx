@@ -1,6 +1,7 @@
 import { useState } from "react";
 import SuggestedTextField from "./SuggestedTextField";
 import { Field, Icon } from "./UI";
+import { businessTypes } from "../utils/business-types";
 
 function SenderTypeChoice({ value, icon, label, selected, onChange }) {
   return (
@@ -67,7 +68,7 @@ export default function SenderFields({ identity = {}, nameField = "name", select
             onChange={(event) => setBusinessType(event.target.value)}
             readOnly={!selectableType}
             maxLength={100}
-            suggestions={["Abbigliamento", "Alimentari", "Fiorista", "Artigianato", "E-commerce", "Documenti e servizi"]}
+            suggestions={businessTypes}
             placeholder="Scegli o scrivi liberamente"
             help={selectableType ? "Scegli un suggerimento oppure scrivi liberamente." : "Tipologia attività salvata nel profilo."}
           />

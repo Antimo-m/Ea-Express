@@ -118,7 +118,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       }
       if (path.endsWith('/messages')) { json({ data: emptyMode ? [] : [{ slug, body: 'Il percorso è rallentato. Ti aggiorno appena arrivo alla destinazione concordata.', sender: 'team', created_at: '2026-10-23T12:00:00Z', delivered_at: null, read_at: null }], meta }); return; }
       if (path === '/orders/labels') {
-        if (url.searchParams.get('preview') === '1') { json({count: emptyMode ? 0 : 2, day: url.searchParams.get('day')}); return; }
+        if (url.searchParams.get('preview') === '1') { const day = emptyMode ? [] : [slug, user.slug].map((id, index) => ({ slug: id, reference: `EA-GIORNATA-${index + 1}-CON-RIFERIMENTO-LUNGO`, store_name: 'Bottega Partenopea', pickup: 'Via Roma 15, Napoli', recipient_name: index ? 'Lucia Bianchi' : 'Mario Rossi', delivery: 'Via Milano 20, Giugliano in Campania', parcel_count: 1, pickup_from: '09:00', pickup_to: '12:00' })); json({count: day.length, day: url.searchParams.get('day'), orders: [...day, ...day]}); return; }
         json({ data: emptyMode ? [] : url.searchParams.get('scope') === 'filtered' ? [order, {...order, slug: user.slug}] : url.searchParams.getAll('ids[]').map(id => ({...order, slug:id})) }); return;
       }
       if (path.startsWith('/orders/')) { json({ data: {...order, price_state: priceState === 'confirming' ? 'agreed' : priceState, price_tone: {agreed:'green',rejected:'danger',awaiting_customer:'blue',confirming:'warning'}[priceState], price_label: {agreed:'Prezzo accettato',rejected:'Proposta rifiutata',awaiting_customer:'Nuova proposta',confirming:'Da confermare'}[priceState], agreed_price_cents: priceState === 'agreed' ? 500 : null} }); return; }
@@ -215,9 +215,9 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     await scenario('spedizioni, messaggi e sospesi separano ogni entità con uno spazio coerente', async () => {
       for (const width of [320,375,390,430,768,1440]) {
         await viewport(width);
-        for (const [path, selector] of [['/shipments','.order-row'],['/messages','.order-row'],['/pending','.pending-account-panel']]) {
+        for (const [path, selector] of [['/shipments','.shipment-card'],['/messages','.shipment-card'],['/pending','.pending-account-panel']]) {
           await navigate(path);
-          const gaps = await evaluate(`const nodes=[...document.querySelectorAll('${selector}')];return nodes.slice(1).map((node,index)=>node.getBoundingClientRect().top-nodes[index].getBoundingClientRect().bottom);`);
+          const gaps = await evaluate(`const nodes=[...document.querySelectorAll('${selector}')];return nodes.slice(1).map((node,index)=>{const current=node.getBoundingClientRect(),previous=nodes[index].getBoundingClientRect();return current.top<previous.bottom?current.left-previous.right:current.top-previous.bottom;});`);
           assert.ok(gaps.length && gaps.every(gap=>gap>=16),JSON.stringify({path,width,gaps}));
           await check(path,width);
         }
@@ -516,6 +516,39 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       } finally { Object.assign(order, original); }
     });
+    await scenario('password con occhio, intestazione del dettaglio, badge del servizio e condizioni beta', async () => {
+      authenticated = false;
+      try { for (const width of [360, 768, 1440]) {
+        await viewport(width);
+        for (const path of ['/login', '/register']) {
+          await navigate(path);
+          await fillInputs({ password: 'Segreta-di-prova-123' });
+          const toggles = await evaluate('return [...document.querySelectorAll(".password-control")].map(control=>{const input=control.querySelector("input"),button=control.querySelector(".password-toggle"),i=input.getBoundingClientRect(),b=button.getBoundingClientRect();return {type:input.type,buttonType:button.type,label:button.getAttribute("aria-label"),pressed:button.getAttribute("aria-pressed"),inside:b.left>=i.left&&b.right<=i.right+1&&b.top>=i.top-1&&b.bottom<=i.bottom+1,size:Math.round(b.width)};});');
+          assert.ok(toggles.length >= (path === '/register' ? 2 : 1), path);
+          assert.ok(toggles.every(toggle => toggle.type === 'password' && toggle.buttonType === 'button' && toggle.label === 'Mostra password' && toggle.pressed === 'false' && toggle.inside && toggle.size >= 44), JSON.stringify({ path, width, toggles }));
+          const writesBefore = writes.length;
+          await click('.password-control .password-toggle');
+          assert.deepEqual(await evaluate('const control=document.querySelector(".password-control");return {type:control.querySelector("input").type,value:control.querySelector("input").value,label:control.querySelector("button").getAttribute("aria-label"),pressed:control.querySelector("button").getAttribute("aria-pressed"),icon:control.querySelector("button i").className};'), { type: 'text', value: 'Segreta-di-prova-123', label: 'Nascondi password', pressed: 'true', icon: 'bi bi-eye-slash' });
+          await evaluate('document.querySelector(".password-control .password-toggle").focus();');
+          await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+          await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+          await waitFor('document.querySelector(".password-control input").type === "password"');
+          assert.equal(writes.length, writesBefore, 'Il pulsante occhio non invia il modulo');
+          assert.equal(await evaluate('return document.querySelector(".password-control input").value;'), 'Segreta-di-prova-123');
+        }
+        await navigate('/condizioni-beta');
+        const beta = await evaluate('const logo=document.querySelector(".privacy-header").getBoundingClientRect(),back=document.querySelector(".beta-back a"),card=document.querySelector(".privacy-content").getBoundingClientRect(),b=back.getBoundingClientRect();return {order:logo.bottom<=b.top&&b.bottom<=card.top,text:back.textContent.trim(),label:back.getAttribute("aria-label")};');
+        assert.ok(beta.order && beta.text === '' && beta.label.length > 5, JSON.stringify({ width, beta }));
+      } } finally { authenticated = true; }
+      for (const width of [360, 390, 768, 1440]) {
+        await viewport(width); await navigate(`/shipments/${slug}`);
+        const header = await evaluate('const toolbar=document.querySelector(".page-toolbar"),back=toolbar.querySelector(".page-back a"),print=toolbar.querySelector(".action-print"),b=back.getBoundingClientRect(),p=print.getBoundingClientRect(),state=document.querySelector(".order-state-actions"),badge=state.querySelector(".status").getBoundingClientRect(),edit=state.querySelector(".action-edit")?.getBoundingClientRect();const service=document.querySelector("#route-heading").closest(".panel").querySelector(".service-badge");return {sameRow:Math.abs((b.top+b.bottom)/2-(p.top+p.bottom)/2)<=2,backLeft:b.left<p.left,printRight:Math.abs(document.querySelector(".page-heading").getBoundingClientRect().right-p.right)<=2,backText:back.textContent.trim(),backLabel:back.getAttribute("aria-label"),stateRow:!edit||Math.abs((badge.top+badge.bottom)/2-(edit.top+edit.bottom)/2)<=3,overlap:edit?badge.right>edit.left:false,headerService:!!document.querySelector(".page-heading .service-badge"),service:service?.className,color:service&&getComputedStyle(service).color};');
+        assert.ok(header.sameRow && header.backLeft && header.printRight && header.backText === '' && header.backLabel === 'Torna alle spedizioni', JSON.stringify({ width, header }));
+        assert.ok(header.stateRow && !header.overlap && !header.headerService, JSON.stringify({ width, header }));
+        assert.match(header.service, /service-badge--regional/);
+        await check(`/shipments/${slug}`, width);
+      }
+    });
     await scenario('avvisi in tempo reale: solo le novità, apertura della spedizione e lettura', async () => {
       const notice = (id, title, is_message = false) => ({ id, title, reference: order.reference, order_slug: slug, is_message, read_at: null, created_at: '2026-10-23T12:00:00Z', customer_name: user.name });
       feedItems = [notice('gia-presente', 'Ordine confermato')];
@@ -600,22 +633,46 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       }
       await navigate('/shipments/labels');
       assert.equal(await evaluate('return document.querySelectorAll(".parcel-label").length;'),0);
-      emptyMode = false; await viewport(1440); await navigate('/shipments?q=Caserta');
-      await click('.action-print-multiple');
-      await waitFor('document.querySelector(".label-selection")');
-      assert.equal(await evaluate('return location.pathname;'), '/shipments');
-      await evaluate(`const select=document.querySelector('.label-selection select');select.value=${JSON.stringify(slug)};select.dispatchEvent(new Event('change',{bubbles:true}));`);
-      await click('.label-selection .actions > button:last-child');
+      emptyMode = false;
+      const openPicker = async () => { await navigate('/shipments?q=Caserta'); await click('.action-print-multiple'); await waitFor('document.querySelector("dialog[open] .label-picker")'); };
+      const chooseDay = async () => {
+        await evaluate('const date=document.querySelector("dialog[open] input[name=print_day]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(date,"2026-10-24");date.dispatchEvent(new Event("input",{bubbles:true}));date.dispatchEvent(new Event("change",{bubbles:true}));');
+        await waitFor('!document.querySelector("dialog[open] .label-picker-check .action-search").disabled');
+        await click('dialog[open] .label-picker-check .action-search');
+        await waitFor('document.querySelector("dialog[open] .label-picker-status").textContent === "2 etichette selezionate su 2 ordini"');
+      };
+      for (const width of [360,390,768,1440]) {
+        await viewport(width); await openPicker();
+        const layout = await evaluate(`const dialog=document.querySelector('dialog[open]');const field=[...dialog.querySelectorAll('.field')].find(node=>node.textContent.includes('Oppure scegli'));const search=dialog.querySelector('.label-picker-check .action-search').getBoundingClientRect();const status=dialog.querySelector('.label-picker-status').getBoundingClientRect();const box=dialog.querySelector('.label-picker').getBoundingClientRect();const cancel=dialog.querySelector('.label-picker-cancel');const c=cancel.getBoundingClientRect();return {below:search.top>=field.getBoundingClientRect().bottom-1,above:search.bottom<=status.top+1,right:Math.abs(box.right-search.right)<=24,label:dialog.querySelector('.label-picker-check .action-search').getAttribute('aria-label'),red:getComputedStyle(cancel).color,hit:document.elementFromPoint(c.left+c.width/2,c.top+c.height/2)?.closest('.label-picker-cancel')===cancel};`);
+        assert.ok(layout.below && layout.above && layout.right && layout.hit, JSON.stringify({width, layout}));
+        assert.equal(layout.label, 'Verifica giornata');
+        await chooseDay();
+        const cards = await evaluate(`return [...document.querySelectorAll('dialog[open] .label-pick')].map(card=>{const r=card.getBoundingClientRect(),b=card.querySelector('strong').getBoundingClientRect();return {left:b.left-r.left,right:r.right-b.right,overflow:card.scrollWidth>card.clientWidth+1};});`);
+        assert.equal(cards.length, 2, 'ogni ordine compare una sola volta');
+        assert.ok(cards.every(card => card.left >= 12 && card.right >= 0 && !card.overflow), JSON.stringify({width, cards}));
+        await check('selezione etichette giornata', width);
+        await click('dialog[open] .label-picker-cancel');
+        await waitFor('!document.querySelector("dialog[open]")');
+        assert.equal(await evaluate('return location.pathname + location.search;'), '/shipments?q=Caserta');
+      }
+      await viewport(1440); await openPicker();
+      await evaluate(`const select=document.querySelector('dialog[open] .label-picker-select');select.value=${JSON.stringify(slug)};select.dispatchEvent(new Event('change',{bubbles:true}));`);
+      await waitFor('document.querySelector("dialog[open] .label-picker-status").textContent === "1 etichetta selezionata"');
+      await click('dialog[open] .label-picker-actions > .button:last-child');
       await waitFor('document.querySelectorAll(".label-batch .parcel-label").length===1');
       assert.deepEqual(await evaluate('return new URLSearchParams(location.search).getAll("ids[]");'),[slug]);
-      await navigate('/shipments?q=Caserta');
-      await click('.action-print-multiple');
-      await waitFor('document.querySelector(".label-selection")');
-      await evaluate('const date=document.querySelector("input[name=print_day]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(date,"2026-10-24");date.dispatchEvent(new Event("input",{bubbles:true}));date.dispatchEvent(new Event("change",{bubbles:true}));');
-      await waitFor('!document.querySelector(".label-selection-fields > button").disabled');
-      await click('.label-selection-fields > button');
-      await waitFor('document.querySelector(".label-selection [role=status]").textContent.includes("2 etichette")');
-      await click('.label-selection .actions > button:last-child');
+      await openPicker(); await chooseDay();
+      await click(`dialog[open] .label-pick`);
+      await waitFor('document.querySelector("dialog[open] .label-picker-status").textContent === "1 etichetta selezionata su 2 ordini"');
+      await click('dialog[open] .label-picker-bulk .button:last-child');
+      await waitFor('document.querySelector("dialog[open] .label-picker-status").textContent === "0 etichette selezionate su 2 ordini"');
+      await click('dialog[open] .label-picker-bulk .button:first-child');
+      await click(`dialog[open] .label-pick`);
+      await click('dialog[open] .label-picker-actions > .button:last-child');
+      await waitFor('document.querySelectorAll(".label-batch .parcel-label").length===1');
+      assert.deepEqual(await evaluate('return new URLSearchParams(location.search).getAll("ids[]");'),[user.slug]);
+      await openPicker(); await chooseDay();
+      await click('dialog[open] .label-picker-actions > .button.secondary');
       await waitFor('document.querySelectorAll(".label-batch .parcel-label").length===2');
       assert.equal(await evaluate('return new URLSearchParams(location.search).get("day");'), '2026-10-24');
       assert.equal(await evaluate('return new URLSearchParams(location.search).get("q");'), 'Caserta');
@@ -663,7 +720,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await send('Page.navigate', { url: origin + '/shipments' });
       await waitFor('document.querySelector(".orders-register .skeletons[role=status]")');
       assert.equal(await evaluate('return document.querySelector(".orders-register .skeletons").getAttribute("aria-label");'), 'Caricamento in corso');
-      await waitFor('document.querySelectorAll(".order-row").length === 2');
+      await waitFor('document.querySelectorAll(".shipment-card").length === 2');
       loadingMode = false;
     });
     await scenario('stati vuoti ed errore conservano navigazione e possibilità di riprovare', async () => {
@@ -679,7 +736,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       emptyMode = false; errorMode = true; await navigate('/shipments');
       assert.ok(await evaluate('return !!document.querySelector("[role=alert]");'));
       errorMode = false; await evaluate('[...document.querySelectorAll("button")].find(n=>n.textContent==="Riprova").click();');
-      await waitFor('document.querySelectorAll(".order-row").length === 2');
+      await waitFor('document.querySelectorAll(".shipment-card").length === 2');
     });
     await scenario('aggiornamenti della stessa spedizione: card separate, bordi completi e contenuto leggibile', async () => {
       for (const width of [320, 390, 768, 1440]) {

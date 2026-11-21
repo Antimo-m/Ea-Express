@@ -10,10 +10,7 @@ export function Label({ order, showTools = true }) {
   const [format, setFormat] = useState('a6');
   return <>
     {showTools && <div className="print-toolbar">
-      <Header title="Documento di spedizione" description="Etichetta da applicare al pacco o ricevuta completa da conservare. La stampa include soltanto il documento.">
-        <IconButton action="back" to={`/shipments/${order.slug}`} label="Torna alla spedizione" text />
-        <IconButton action="print" label={format === 'a6' ? 'Stampa etichetta' : 'Stampa ricevuta'} onClick={() => window.print()} />
-      </Header>
+      <Header title="Documento di spedizione" description="Etichetta da applicare al pacco o ricevuta completa da conservare. La stampa include soltanto il documento." backTo={`/shipments/${order.slug}`} backLabel="Torna alla spedizione" toolbar={<IconButton action="print" label={format === 'a6' ? 'Stampa etichetta' : 'Stampa ricevuta'} onClick={() => window.print()} />} />
       <div className="form-grid">
         <Field label="Documento"><select value={format} onChange={event => setFormat(event.target.value)}><option value="a6">Etichetta pacco · A6</option><option value="a4">Ricevuta completa · A4</option></select></Field>
 

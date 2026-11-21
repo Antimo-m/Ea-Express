@@ -1,0 +1,137 @@
+/* Rifinitura di intestazioni, badge, card e selezione etichette. */
+
+/* Riga superiore: ritorno a sinistra, azioni di pagina (stampa) a destra. */
+.page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; min-height: 44px; }
+.page-toolbar .page-back { margin: 0; }
+.page-toolbar-actions { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
+.page-back-icon { inline-size: 44px; block-size: 44px; padding: 0; display: inline-grid; place-items: center; }
+.page-back-icon .action-icon { display: inline-grid; place-items: center; }
+
+/* Stato della richiesta e modifica restano sulla stessa riga anche su smartphone. */
+.order-state-actions { display: inline-flex; align-items: center; gap: 10px; flex-wrap: nowrap; min-width: 0; }
+.order-state-actions .order-statuses { min-width: 0; }
+
+/* Servizio regionale (verde) / fuori regione (giallo), nella card di mittente e destinatario. */
+.service-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--ea-radius-button); font-size: var(--ea-text-xs); font-weight: 650; line-height: 1.3; white-space: nowrap; border: 1px solid transparent; }
+.service-badge--regional { background: color-mix(in srgb, var(--ea-success) 13%, var(--ea-surface)); color: var(--ea-success); border-color: color-mix(in srgb, var(--ea-success) 30%, transparent); }
+.service-badge--external { background: color-mix(in srgb, var(--ea-signal) 28%, var(--ea-surface)); color: var(--ea-warning); border-color: color-mix(in srgb, var(--ea-signal) 55%, transparent); }
+
+/* Condizioni beta: logo, poi freccia di ritorno, poi la card delle condizioni. */
+.privacy-header--stacked { padding-bottom: 16px; }
+.beta-back { display: flex; margin: 0 0 16px; }
+
+/* Password: icona occhio dentro il campo, sempre raggiungibile con il tocco e con la tastiera. */
+.password-control { position: relative; display: block; inline-size: 100%; }
+.password-control > input { inline-size: 100%; padding-inline-end: 52px; }
+.password-control > .password-toggle { position: absolute; inset-block: 0; inset-inline-end: 2px; margin-block: auto; inline-size: 44px; block-size: 44px; display: inline-grid; place-items: center; padding: 0; border: 0; border-radius: var(--ea-radius-control); background: transparent; color: var(--ea-muted); cursor: pointer; }
+.password-control > .password-toggle:hover { color: var(--ea-ink); background: var(--ea-hover); }
+.password-control > .password-toggle:focus-visible { outline: 3px solid var(--ea-focus); outline-offset: -3px; }
+.password-control > .password-toggle[aria-pressed="true"] { color: var(--ea-info); }
+
+/* Card delle spedizioni: identità e stato, poi data del ritiro, poi il percorso mittente → destinatario. */
+.shipment-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 16px; padding: 16px; }
+.shipment-card { position: relative; display: grid; align-content: start; gap: 12px; min-width: 0; padding: 16px 18px 18px; border: 1px solid var(--ea-line); border-radius: 22px; background: var(--ea-surface); color: var(--ea-ink); text-decoration: none; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.shipment-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--ea-info) 45%, var(--ea-line)); box-shadow: 0 12px 28px color-mix(in srgb, var(--ea-graphite) 9%, transparent); }
+.shipment-card:active { transform: translateY(0); }
+.shipment-card:focus-visible { outline: 3px solid var(--ea-focus); outline-offset: 2px; }
+.shipment-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.shipment-card-identity { display: grid; gap: 2px; min-width: 0; }
+.shipment-card .order-display-name { font-size: var(--ea-text-base); font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.shipment-card .order-code { font: .75rem/1.35 var(--ea-font-mono); color: var(--ea-muted); overflow-wrap: anywhere; }
+.shipment-card .order-statuses { flex: none; }
+.shipment-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; min-width: 0; }
+.shipment-card-date { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 5px 12px; border-radius: var(--ea-radius-button); background: var(--ea-surface-muted); font-size: var(--ea-text-sm); line-height: 1.35; color: var(--ea-muted); }
+.shipment-card-date .bi { color: var(--ea-info); }
+.shipment-card-date time { color: var(--ea-ink); font-weight: 650; }
+.shipment-card .message-count { font-size: var(--ea-text-xs); }
+.shipment-card-open { margin-inline-start: auto; color: var(--ea-muted); transition: transform .18s ease, color .18s ease; }
+.shipment-card:hover .shipment-card-open, .shipment-card:focus-visible .shipment-card-open { color: var(--ea-info); transform: translate(2px, -2px); }
+.shipment-card .shipment-route { position: relative; gap: 10px; padding-top: 12px; border-top: 1px solid var(--ea-line); }
+.shipment-card .shipment-route > div { position: relative; padding-inline-start: 22px; }
+.shipment-card .shipment-route > div::before { content: ""; position: absolute; inset-inline-start: 2px; top: 4px; inline-size: 10px; block-size: 10px; border-radius: 50%; border: 2px solid var(--ea-signal); background: var(--ea-surface); }
+.shipment-card .shipment-route > div:nth-of-type(2)::before { border-color: var(--ea-operational); background: var(--ea-operational); }
+.shipment-card .shipment-route-arrow { position: absolute; inset-inline-start: 8px; top: 34px; block-size: calc(100% - 92px); min-block-size: 12px; border-inline-start: 2px dotted color-mix(in srgb, var(--ea-muted) 50%, transparent); font-size: 0; }
+.shipment-card .shipment-route .shipment-rider { margin-top: 0; padding-inline-start: 22px; }
+@media (prefers-reduced-motion: reduce) { .shipment-card, .shipment-card-open { transition: none; } .shipment-card:hover { transform: none; } }
+
+/* Modale di stampa: giornata o spedizione singola, verifica con la lente, ordini selezionabili uno per uno. */
+.ea-modal:has(.label-picker) { inline-size: min(680px, calc(100vw - 24px)); }
+.label-picker { display: grid; gap: 14px; }
+.label-picker-fields { display: grid; gap: 14px; }
+.label-picker-fields .field { min-width: 0; }
+.label-picker-select { inline-size: 100%; max-inline-size: 100%; padding-inline: 16px 44px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.label-picker-check { display: flex; justify-content: flex-end; margin-block-start: -4px; }
+.label-picker-status { margin: 0; font-weight: 650; color: var(--ea-ink); }
+.label-picker-message { margin: 0; color: var(--ea-danger); font-size: var(--ea-text-sm); }
+.label-picker-day { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.label-picker-day legend { padding: 0; margin-block-end: 4px; font-size: var(--ea-text-sm); font-weight: 650; color: var(--ea-muted); }
+.label-picker-bulk { display: flex; flex-wrap: wrap; gap: 8px; }
+.label-picker-bulk .button { min-height: 40px; padding-inline: 14px; font-size: var(--ea-text-sm); }
+.label-picker-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.label-pick { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: start; padding: 14px 16px; border: 1px solid var(--ea-line); border-radius: 18px; background: var(--ea-surface); cursor: pointer; transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease; }
+.label-pick:hover { border-color: color-mix(in srgb, var(--ea-info) 45%, var(--ea-line)); }
+.label-pick > input { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.label-pick:has(input:focus-visible) { outline: 3px solid var(--ea-focus); outline-offset: 2px; }
+.label-pick.is-selected { border-color: var(--ea-operational); background: color-mix(in srgb, var(--ea-operational) 7%, var(--ea-surface)); box-shadow: inset 3px 0 0 var(--ea-operational); }
+.label-pick-check { display: inline-grid; place-items: center; inline-size: 24px; block-size: 24px; margin-block-start: 2px; border: 2px solid var(--ea-control-border); border-radius: 8px; color: transparent; font-size: .875rem; transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
+.label-pick.is-selected .label-pick-check { border-color: var(--ea-operational); background: var(--ea-operational); color: var(--ea-on-color); transform: scale(1.05); }
+.label-pick-body { display: grid; gap: 6px; min-width: 0; }
+.label-pick-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; }
+.label-pick-heading strong { font: 600 .8125rem/1.4 var(--ea-font-mono); overflow-wrap: anywhere; min-width: 0; }
+.label-pick-heading small { color: var(--ea-muted); font-size: var(--ea-text-xs); }
+.label-pick-party { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 8px; font-size: var(--ea-text-sm); line-height: 1.4; }
+.label-pick-party small { grid-row: span 2; color: var(--ea-muted); font-size: var(--ea-text-xs); padding-block-start: 1px; }
+.label-pick-party b { font-weight: 650; overflow-wrap: anywhere; }
+.label-pick-party span { color: var(--ea-muted); overflow-wrap: anywhere; }
+.label-picker-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+.label-picker-actions .label-picker-cancel { margin-inline-end: auto; }
+.label-picker-actions .button[aria-disabled="true"] { opacity: .55; }
+.button.danger.label-picker-cancel { background: var(--ea-danger); border-color: var(--ea-danger); color: var(--ea-on-color); }
+.button.danger.label-picker-cancel:hover { background: color-mix(in srgb, var(--ea-danger) 86%, black); }
+@media (max-width: 560px) {
+  .label-pick-party { grid-template-columns: minmax(0, 1fr); }
+  .label-pick-party small { grid-row: auto; }
+  .label-picker-actions > .button { flex: 1 1 100%; justify-content: center; }
+  .label-picker-actions .label-picker-cancel { margin-inline-end: 0; order: 3; }
+}
+@media (prefers-reduced-motion: reduce) { .label-pick, .label-pick-check { transition: none; } }
+.label-picker-actions { position: sticky; bottom: 0; z-index: 1; background: var(--ea-popup); }
+
+/* Riepilogo del mese nella panoramica. */
+.month-recap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: stretch; margin-block: 0 24px; padding: 22px 24px; border: 1px solid var(--ea-line); border-radius: var(--ea-radius-card); background: linear-gradient(135deg, color-mix(in srgb, var(--ea-operational) 8%, var(--ea-surface)), var(--ea-surface) 60%); }
+.month-recap-summary { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.month-recap-summary h2 { margin: 0; font-size: clamp(1.2rem, 2.4vw, 1.5rem); line-height: 1.3; }
+.month-recap-summary h2 strong { color: var(--ea-operational); }
+.month-recap-summary > p { display: inline-flex; align-items: center; gap: 8px; margin: 0; color: var(--ea-muted); font-weight: 600; }
+.month-recap-summary > p .bi { color: var(--ea-operational); }
+.month-milestone { display: grid; gap: 8px; margin-block-start: 6px; padding: 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--ea-surface-muted) 80%, transparent); }
+.month-milestone-label { display: flex; align-items: center; gap: 8px; font-size: var(--ea-text-sm); }
+.month-milestone-label .bi { color: var(--ea-signal); }
+.month-milestone-bar { block-size: 8px; border-radius: 999px; background: color-mix(in srgb, var(--ea-muted) 18%, transparent); overflow: hidden; }
+.month-milestone-bar > span { display: block; block-size: 100%; inline-size: var(--progress); border-radius: inherit; background: linear-gradient(90deg, var(--ea-signal), var(--ea-operational)); transform-origin: left; animation: month-grow-x .9s cubic-bezier(.2, .8, .2, 1) both; }
+.month-recap-chart { display: grid; grid-template-rows: auto 1fr auto; gap: 10px; margin: 0; min-width: 0; }
+.month-recap-chart figcaption { font-size: var(--ea-text-xs); color: var(--ea-muted); font-weight: 600; }
+.month-recap-chart ol { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; gap: 8px; min-block-size: 128px; margin: 0; padding: 0; list-style: none; }
+.month-recap-chart li { display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 6px; block-size: 100%; }
+.month-bar { position: relative; align-self: end; inline-size: min(100%, 40px); block-size: var(--height); min-block-size: 4px; border-radius: 10px 10px 4px 4px; background: color-mix(in srgb, var(--ea-info) 24%, var(--ea-surface)); transform-origin: bottom; animation: month-grow-y .8s cubic-bezier(.2, .8, .2, 1) both; }
+.month-bar b { position: absolute; inset-block-end: calc(100% + 3px); inset-inline: 0; text-align: center; font-size: var(--ea-text-xs); color: var(--ea-muted); }
+.month-recap-chart li small { font-size: var(--ea-text-xs); color: var(--ea-muted); text-transform: capitalize; }
+.month-recap-chart li.is-current .month-bar { background: var(--ea-operational); }
+.month-recap-chart li.is-current .month-bar b, .month-recap-chart li.is-current small { color: var(--ea-ink); font-weight: 700; }
+.month-recap-link { justify-self: end; display: inline-flex; align-items: center; gap: 6px; font-size: var(--ea-text-sm); color: var(--ea-info); }
+@keyframes month-grow-y { from { transform: scaleY(0); } }
+@keyframes month-grow-x { from { transform: scaleX(0); } }
+@media (max-width: 767px) { .month-recap { grid-template-columns: minmax(0, 1fr); padding: 18px 16px; } .month-recap-chart ol { min-block-size: 110px; } }
+@media (prefers-reduced-motion: reduce) { .month-bar, .month-milestone-bar > span { animation: none; } }
+
+/* Badge di stato "vivi": un solo effetto quando lo stato di una spedizione cambia davvero. */
+.status.is-status-changed { position: relative; isolation: isolate; overflow: hidden; animation: status-pop .45s cubic-bezier(.2, .8, .2, 1), status-glow 1.6s ease-out; }
+.status.is-status-changed::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: currentColor; transform-origin: left center; animation: status-fill 1.2s cubic-bezier(.2, .8, .2, 1) both; pointer-events: none; }
+@keyframes status-pop { 0% { transform: scale(.94); opacity: .6; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes status-glow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 40%, transparent); } 70% { box-shadow: 0 0 0 8px color-mix(in srgb, currentColor 0%, transparent); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes status-fill { 0% { transform: scaleX(0); opacity: .22; } 55% { transform: scaleX(1); opacity: .18; } 100% { transform: scaleX(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .status.is-status-changed { animation: status-glow 1.2s steps(1, end); }
+  .status.is-status-changed::after { animation: none; opacity: 0; }
+}
+.password-control > .password-toggle { --ea-icon-size: 44px; }

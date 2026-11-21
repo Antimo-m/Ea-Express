@@ -13,7 +13,8 @@ export default function BetaTermsPage() {
   const back = user ? "/dashboard" : "/register";
   return (
     <div className="privacy-page">
-      <header className="privacy-header"><Link to={back}><Brand caption="PORTALE CLIENTI" /></Link><Link className="button back-link" to={back}><Icon name="arrow-left" /> Torna indietro</Link></header>
+      <header className="privacy-header privacy-header--stacked"><Link to={back}><Brand caption="PORTALE CLIENTI" /></Link></header>
+      <nav className="page-back beta-back" aria-label="Navigazione pagina"><Link className="icon-button action-back page-back-icon" to={back} aria-label={user ? "Torna alla panoramica" : "Torna alla registrazione"} data-tooltip="Torna indietro"><span className="action-icon" aria-hidden="true"><Icon name="arrow-left" /></span></Link></nav>
       <main className="privacy-content beta-terms">
         <span className="eyebrow">VERSIONE BETA</span>
         <h1>Condizioni d’uso della beta</h1>

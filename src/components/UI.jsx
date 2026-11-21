@@ -14,11 +14,19 @@ export function Header({
   title,
   description,
   backTo,
+  backLabel,
+  toolbar,
   children,
 }) {
+  const back = backTo && (backLabel
+    ? <Link className="icon-button action-back page-back-icon" to={backTo} aria-label={backLabel} data-tooltip={backLabel}><span className="action-icon" aria-hidden="true"><Icon name="arrow-left" /></span></Link>
+    : <Link className="back-link" to={backTo}><Icon name="arrow-left"/> Torna indietro</Link>);
   return (
     <>
-    {backTo && <nav className="page-back" aria-label="Navigazione pagina"><Link className="back-link" to={backTo}><Icon name="arrow-left"/> Torna indietro</Link></nav>}
+    {(back || toolbar) && <div className="page-toolbar">
+      {back && <nav className="page-back" aria-label="Navigazione pagina">{back}</nav>}
+      {toolbar && <div className="page-toolbar-actions">{toolbar}</div>}
+    </div>}
     <header className="page-heading">
       <div>
         <p className="eyebrow">{eyebrow}</p>
@@ -36,10 +44,25 @@ export function KeyValues({ items, className = "", ...props }) {
   if (!rows.length) return null;
   return <dl className={`key-values ${className}`.trim()} {...props}>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
 }
+/** Ultimo stato visto per ogni spedizione in questa sessione: l'effetto parte solo quando lo stato cambia davvero. */
+const seenStatuses = new Map();
 export function Status({ order }) {
+  const badge = useRef(null);
+  useEffect(() => {
+    const previous = seenStatuses.get(order.slug);
+    seenStatuses.set(order.slug, order.status);
+    const node = badge.current;
+    if (!node || !previous || previous === order.status) return;
+    node.classList.remove("is-status-changed");
+    void node.offsetWidth;
+    node.classList.add("is-status-changed");
+    const finish = event => { if (event.animationName === "status-glow") node.classList.remove("is-status-changed"); };
+    node.addEventListener("animationend", finish);
+    return () => node.removeEventListener("animationend", finish);
+  }, [order.slug, order.status]);
   return (
     <span className="order-statuses">
-      <span className={`status status-${order.status}`}>{order.status_label}</span>
+      <span ref={badge} className={`status status-${order.status}`}>{order.status_label}</span>
     </span>
   );
 }
@@ -185,6 +208,30 @@ export function Form({ errors, onSubmit, onInvalidCapture, ref, ...props }) {
     </FormErrorsContext.Provider>
   );
 }
+/**
+ * Campo password con pulsante occhio: mostra o nasconde il testo senza cambiarne il valore.
+ * Torna nascosto all'invio del modulo, così i gestori di password vedono sempre un campo password.
+ */
+function PasswordInput(props) {
+  const [visible, setVisible] = useState(false);
+  const input = useRef(null);
+  useEffect(() => {
+    const form = input.current?.form;
+    if (!form) return;
+    const hide = () => setVisible(false);
+    form.addEventListener("submit", hide);
+    return () => form.removeEventListener("submit", hide);
+  }, []);
+  const label = visible ? "Nascondi password" : "Mostra password";
+  return (
+    <span className="password-control">
+      <input {...props} ref={input} type={visible ? "text" : "password"} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+      <button type="button" className="password-toggle" aria-controls={props.id} aria-pressed={visible} aria-label={label} data-tooltip={label} onClick={() => setVisible(current => !current)}>
+        <Icon name={visible ? "eye-slash" : "eye"} />
+      </button>
+    </span>
+  );
+}
 export function Field({ label, name, children, help, width, validate, ...props }) {
   const errors = useContext(FormErrorsContext);
   const [localError, setLocalError] = useState("");
@@ -239,6 +286,8 @@ export function Field({ label, name, children, help, width, validate, ...props }
       <label htmlFor={id}>{label}{required && <span className="required-mark" aria-hidden="true"> *</span>}</label>
       {children ? (
         cloneElement(children, accessibility)
+      ) : props.type === "password" ? (
+        <PasswordInput name={name} {...props} {...accessibility} />
       ) : (
         <input name={name} {...props} {...accessibility} ref={validate ? applyRule : undefined} />
       )}
@@ -291,43 +340,27 @@ export function OrderList({ orders, base = "/shipments", messages = false, first
       />
     );
   return (
-    <div className="order-list">
-      <div className="order-table-head">
-        <span>Cliente / spedizione</span>
-        <span>Percorso</span>
-        <span>Ritiro</span>
-        <span>Stato</span>
-        <span />
-      </div>
+    <div className="shipment-cards">
       {orders.map((order) => (
-        <Link className="order-row" key={order.slug} to={`${base}/${order.slug}`}>
-          <div>
-            <strong className="order-display-name">{displayName(order)}</strong>
-            <small className="order-code" title={order.reference}>{order.reference}</small>
+        <Link className="shipment-card" key={order.slug} to={`${base}/${order.slug}`}>
+          <div className="shipment-card-top">
+            <div className="shipment-card-identity">
+              <strong className="order-display-name">{displayName(order)}</strong>
+              <small className="order-code" title={order.reference}>{order.reference}</small>
+            </div>
+            <Status order={order} />
+          </div>
+          <div className="shipment-card-meta">
+            <span className="shipment-card-date"><Icon name="calendar3" /><time dateTime={order.pickup_date}>{date(order.pickup_date)}</time>{order.pickup_from && <span>{order.pickup_from} – {order.pickup_to}</span>}</span>
             {messages && (
-              <span
-                className={
-                  order.unread_messages_count
-                    ? "message-count unread-count"
-                    : "message-count"
-                }
-              >
+              <span className={order.unread_messages_count ? "message-count unread-count" : "message-count"}>
                 <Icon name="chat-left-text" />{" "}
-                {order.unread_messages_count
-                  ? `${order.unread_messages_count} da leggere`
-                  : `${order.messages_count || 0} messaggi`}
+                {order.unread_messages_count ? `${order.unread_messages_count} da leggere` : `${order.messages_count || 0} messaggi`}
               </span>
             )}
+            <span className="shipment-card-open" aria-hidden="true"><Icon name="arrow-up-right" /></span>
           </div>
           <ShipmentRoute order={order} />
-          <div>
-            <strong>{date(order.pickup_date)}</strong>
-            <span>
-              {order.pickup_from} – {order.pickup_to}
-            </span>
-          </div>
-          <Status order={order} />
-          <Icon name="arrow-up-right" />
         </Link>
       ))}
     </div>
