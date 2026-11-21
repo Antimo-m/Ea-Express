@@ -181,7 +181,7 @@ export default function PrivacyPage({ privacy = false }) {
     } finally {setBusy(false);}
   }
   return <div className="privacy-page">
-    <header className="privacy-header"><Link to={user ? '/dashboard' : '/login'}><Brand caption="PORTALE CLIENTI"/></Link><Link className="button back-link" to={user ? '/dashboard' : '/login'}><Icon name="arrow-left"/> Torna indietro</Link></header>
+    <header className="privacy-header"><Link to={user ? '/dashboard' : '/login'}><Brand caption="PORTALE CLIENTI"/></Link><Link className="icon-button action-back page-back-icon" to={user ? '/dashboard' : '/login'} aria-label="Torna indietro" data-tooltip="Torna indietro"><span className="action-icon" aria-hidden="true"><Icon name="arrow-left"/></span></Link></header>
     <main className="privacy-content">
       <span className="eyebrow">{privacy ? 'PROTEZIONE DEI DATI' : 'COOKIE E TECNOLOGIE ANALOGHE'}</span>
       <h1>{privacy ? 'Privacy Policy' : 'Cookie Policy'}</h1>

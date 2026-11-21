@@ -5,7 +5,7 @@ export default function IconButton({ action = 'neutral', icon, label, to, loadin
   if (icon === 'arrow-left' && action === 'neutral') action = 'back';
   if (action === 'confirm') { icon = 'check-lg'; text = false; }
   if (action === 'add') { icon = 'plus-lg'; text = false; }
-  if (action === 'message') text = false;
+  if (action === 'message' || action === 'back') text = false;
   if (action === 'edit' && (!icon || ['pencil', 'pencil-square'].includes(icon))) text = false;
   const content = <><span className="action-icon" aria-hidden="true"><Icon name={icon || icons[action] || 'three-dots'} />{action === 'print-multiple' && <span className="print-plus">+</span>}</span>{text && <span>{label}</span>}</>;
   const attributes = { ...props, className: `icon-button action-${action} ${text ? 'action-with-text' : ''} ${className}`, 'aria-label': label, 'data-tooltip': label, 'aria-busy': loading || undefined };

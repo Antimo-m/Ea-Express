@@ -141,3 +141,25 @@
 .priority-badge--urgent { background: color-mix(in srgb, var(--ea-danger) 12%, var(--ea-surface)); color: var(--ea-danger); border-color: color-mix(in srgb, var(--ea-danger) 40%, transparent); }
 .priority-badge--standard { background: color-mix(in srgb, var(--ea-success) 12%, var(--ea-surface)); color: var(--ea-success); border-color: color-mix(in srgb, var(--ea-success) 35%, transparent); }
 .notification-group-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+
+/* Conversazione: invio a sola icona. */
+.message-send { display: inline-grid; place-items: center; inline-size: 48px; min-inline-size: 48px; block-size: 48px; padding: 0 !important; border-radius: 50% !important; font-size: 1.1rem; }
+
+/* Regola globale «Torna indietro»: sola freccia, sempre a sinistra anche nei modali. */
+.modal-back-icon { display: inline-grid !important; place-items: center; inline-size: 44px !important; min-inline-size: 44px; block-size: 44px; padding: 0 !important; border-radius: 50% !important; flex: 0 0 44px !important; }
+.ea-modal .modal-actions > .modal-back, .ea-modal .modal-actions > .action-back, .checkout-actions > .button-back { order: -2 !important; margin-inline: 0 auto !important; }
+.ea-modal .modal-actions > .danger, .ea-modal .modal-actions > .action-delete { order: 1 !important; margin-inline-start: auto; }
+
+/* Regola globale dei contatori: badge circolare centrato, pillola per i numeri a più cifre. */
+.count-badge, .notification-badge {
+  display: inline-grid !important; place-items: center; box-sizing: border-box; min-inline-size: 1.9em; block-size: 1.9em; padding: 0 .5em !important;
+  border-radius: 999px !important; font-size: .72rem !important; font-weight: 700; line-height: 1 !important; text-align: center; font-variant-numeric: tabular-nums; vertical-align: middle; white-space: nowrap;
+}
+.count-badge[hidden], .notification-badge[hidden] { display: none !important; }
+@media (max-width: 380px) {
+  .ea-modal .modal-actions:has(> .modal-back-icon) { flex-wrap: nowrap !important; }
+  .ea-modal .modal-actions:has(> .modal-back-icon) > :not(.modal-back-icon) { flex: 1 1 auto !important; min-width: 0; padding-inline: 12px !important; font-size: .85rem; white-space: nowrap; }
+}
+.ea-modal .modal-actions:has(> .modal-back-icon) { flex-wrap: nowrap !important; }
+.ea-modal .modal-actions:has(> .modal-back-icon) > :not(.modal-back-icon) { inline-size: auto !important; width: auto !important; max-inline-size: calc(100% - 56px); margin-inline-start: auto !important; }
+.modal-back-icon[hidden], .modal-back[hidden] { display: none !important; }

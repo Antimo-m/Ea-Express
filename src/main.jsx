@@ -16,4 +16,5 @@ import "./styles/journey.css";
 import "./styles/delight.css";
 import "./styles/polish.css";
 import "./styles/cards.css";
+import "./styles/page-title.css";
 import "./services/card-glow";

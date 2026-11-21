@@ -58,13 +58,6 @@ export default function MessageThread({ slug }) {
             Una conversazione dedicata a questa spedizione. Il pagamento è confermato soltanto dalla registrazione dell’incasso nel gestionale.
           </p>
         </div>
-        <button
-          className="icon-button"
-          aria-label="Aggiorna messaggi"
-          onClick={resource.reload}
-        >
-          <Icon name="arrow-clockwise" />
-        </button>
       </div>
       <State resource={resource}>
         {(data) => (
@@ -115,9 +108,8 @@ export default function MessageThread({ slug }) {
           required
           placeholder="Scrivi un messaggio…"
         />
-        <button className="button" disabled={busy || !body.trim()}>
-          <Icon name="send" />
-          {busy ? "Invio…" : "Invia"}
+        <button className="button message-send" disabled={busy || !body.trim()} aria-label={busy ? "Invio in corso" : "Invia messaggio"} aria-busy={busy || undefined} data-tooltip="Invia">
+          <Icon name={busy ? "hourglass-split" : "send"} />
         </button>
       </form>
     </section>

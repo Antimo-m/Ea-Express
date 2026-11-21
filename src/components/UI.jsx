@@ -18,9 +18,9 @@ export function Header({
   toolbar,
   children,
 }) {
-  const back = backTo && (backLabel
-    ? <Link className="icon-button action-back page-back-icon" to={backTo} aria-label={backLabel} data-tooltip={backLabel}><span className="action-icon" aria-hidden="true"><Icon name="arrow-left" /></span></Link>
-    : <Link className="back-link" to={backTo}><Icon name="arrow-left"/> Torna indietro</Link>);
+  // Regola globale: «Torna indietro» è sempre la sola freccia sul margine sinistro, con etichetta accessibile.
+  const label = backLabel || "Torna indietro";
+  const back = backTo && <Link className="icon-button action-back page-back-icon" to={backTo} aria-label={label} data-tooltip={label}><span className="action-icon" aria-hidden="true"><Icon name="arrow-left" /></span></Link>;
   return (
     <>
     {(back || toolbar) && <div className="page-toolbar">

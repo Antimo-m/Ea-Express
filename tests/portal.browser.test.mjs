@@ -492,7 +492,10 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await waitFor('document.querySelector(".ea-modal[open] .modal-actions .action-delete")');
         const buttons = await evaluate('return [...document.querySelectorAll(".ea-modal[open] .modal-actions > *")].map(button=>{const box=button.getBoundingClientRect(),walker=document.createTreeWalker(button,NodeFilter.SHOW_TEXT),lines=new Set();for(let node=walker.nextNode();node;node=walker.nextNode()){if(!node.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(node);for(const rect of range.getClientRects())if(rect.width>1)lines.add(Math.round(rect.top));}return {text:button.textContent.trim(),width:box.width,height:box.height,lines:lines.size};});');
         assert.equal(buttons.length,2,JSON.stringify({width,buttons}));
-        assert.ok(buttons.every(button=>button.width>button.height*2 && button.lines===1),JSON.stringify({width,buttons}));
+        // Regola globale: «Torna indietro» è la sola freccia a sinistra; l'azione resta testuale, su una riga, a destra.
+        const layout = await evaluate('const back=document.querySelector(".ea-modal[open] .modal-back"),action=document.querySelector(".ea-modal[open] .modal-actions .action-delete"),b=back.getBoundingClientRect(),a=action.getBoundingClientRect();return {label:back.getAttribute("aria-label"),text:back.textContent.trim(),round:Math.abs(b.width-b.height)<=1&&b.width>=44,leftOfAction:b.right<=a.left,sameRow:Math.abs((b.top+b.bottom)/2-(a.top+a.bottom)/2)<=2};');
+        assert.ok(layout.label && layout.text === '' && layout.round && layout.leftOfAction && layout.sameRow, JSON.stringify({width,layout}));
+        assert.ok(buttons[1].width>buttons[1].height*2 && buttons[1].lines===1,JSON.stringify({width,buttons}));
         await evaluate('document.querySelector(".ea-modal[open] .modal-back").click();');
         await waitFor('!document.querySelector(".ea-modal[open]")');
       }
