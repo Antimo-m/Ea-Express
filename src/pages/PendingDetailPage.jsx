@@ -1,5 +1,6 @@
 import DataPanel from "../components/DataPanel";
-import { useParams } from "react-router";
+import { useLocation, useParams } from "react-router";
+import { sectionReturn } from "../utils/section-return";
 import { request } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { Header, State, Empty } from "../components/UI";
@@ -7,10 +8,11 @@ import { date, money } from "../utils/format";
 
 const loadPending = ({ slug }) => request(`/pending/${slug}`);
 export default function PendingDetailPage() {
+  const location = useLocation();
   const { slug } = useParams();
   const resource = useApi(loadPending, { slug }, false, 30000);
   return <>
-    <Header backTo="/pending" title="Dettaglio sospeso" description="Consulta il saldo e lo storico dei pagamenti registrati da EA-Express." />
+    <Header backTo={sectionReturn(location, "/pending")} title="Dettaglio sospeso" description="Consulta il saldo e lo storico dei pagamenti registrati da EA-Express." />
     <State resource={resource} notFound>{({ data: account }) => <>
       <DataPanel title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>}>
         <dl className="facts">

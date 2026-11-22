@@ -1,6 +1,7 @@
 import { cloneElement, useContext, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 import { FormErrorsContext } from "../context/FormErrorsContext";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import { returnState } from "../utils/section-return";
 import { date, displayName } from "../utils/format";
 import NotFoundPage from "../pages/NotFoundPage";
 import UnavailablePage from "../pages/UnavailablePage";
@@ -340,6 +341,7 @@ export function Pagination({ meta, onPage }) {
   );
 }
 export function OrderList({ orders, base = "/shipments", messages = false, firstRun = false, empty }) {
+  const location = useLocation();
   if (!orders.length && firstRun) return <FirstShipment />;
   if (!orders.length && empty) return <Empty title={empty.title} text={empty.text} icon={empty.icon} />;
   if (!orders.length)
@@ -352,7 +354,7 @@ export function OrderList({ orders, base = "/shipments", messages = false, first
   return (
     <div className="shipment-cards">
       {orders.map((order) => (
-        <Link className="shipment-card" key={order.slug} to={`${base}/${order.slug}`}>
+        <Link className="shipment-card" key={order.slug} to={`${base}/${order.slug}`} state={returnState(location)}>
           <div className="shipment-card-top">
             <div className="shipment-card-identity">
               <strong className="order-display-name">{displayName(order)}</strong>

@@ -1,7 +1,8 @@
 import MetricTile from '../components/MetricTile';
 import DataPanel from '../components/DataPanel';
 import FilterToolbar from "../components/FilterToolbar";
-import { Link, useSearchParams } from "react-router";
+import { Link, useLocation, useSearchParams } from "react-router";
+import { returnState } from "../utils/section-return";
 import { request, query } from "../api/client";
 import { useApi } from "../hooks/useApi";
 import { Header, State, Empty, Pagination, Field } from "../components/UI";
@@ -9,6 +10,7 @@ import { date, money } from "../utils/format";
 const loadPending = params => request(`/pending${query(params)}`);
 export default function PendingPage() {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const view = params.get("view") || "open";
   const direction = params.get("direction") || "";
   const resource = useApi(loadPending, { page: params.get("page") || 1, view, direction }, false, 30000);
@@ -21,7 +23,7 @@ export default function PendingPage() {
         <MetricTile label="Devi pagare EA-Express" value={money(data.totals.incoming)} icon="arrow-up-right" note="Residuo dei sospesi aperti in entrata per EA-Express" tone="attention" />
         <MetricTile label="EA-Express deve pagarti" value={money(data.totals.outgoing)} icon="arrow-down-left" note="Residuo dei sospesi aperti in uscita per EA-Express" />
       </section>
-      {data.data.length ? <div className="entity-card-list">{data.data.map(account => <DataPanel key={account.slug} title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>} footer={<Link className="button secondary" to={`/pending/${account.slug}`}>Dettaglio e storico pagamenti →</Link>}>
+      {data.data.length ? <div className="entity-card-list">{data.data.map(account => <DataPanel key={account.slug} title={account.subject} description={account.description} className="pending-account-panel" actions={<span className="status">{account.status_label}</span>} footer={<Link className="button secondary" to={`/pending/${account.slug}`} state={returnState(location)}>Dettaglio e storico pagamenti →</Link>}>
         <dl className="facts">
           <div><dt>Importo</dt><dd>{money(account.amount_cents)}</dd></div>
           <div><dt>Già saldato</dt><dd>{money(account.settled_cents)}</dd></div>

@@ -10,13 +10,15 @@ import ShippingPrice from "../components/ShippingPrice";
 import ShipmentJourney from "../components/ShipmentJourney";
 import MessageThread from "../components/MessageThread";
 import { date, money, displayName } from "../utils/format";
+import { sectionReturn } from "../utils/section-return";
 function ServiceBadge({ type }) {
   const external = type === "external";
   return <span className={`service-badge service-badge--${external ? "external" : "regional"}`}><Icon name={external ? "signpost-split" : "geo-alt"} />{external ? "Fuori regione" : "Regionale"}</span>;
 }
 function Detail({ order, reload, pickups, messages }) {
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [success, setSuccess] = useState(useLocation().state?.success || "");
+  const location = useLocation();
+  const [success, setSuccess] = useState(location.state?.success || "");
   const base = pickups ? "/pickups" : "/shipments";
   async function cancel(data) {
     await cancelOrder(order.slug, { version: order.version, reason: data.get('reason') });
@@ -29,7 +31,7 @@ function Detail({ order, reload, pickups, messages }) {
   return (
     <>
       <Header
-        backTo={messages ? "/messages" : base}
+        backTo={sectionReturn(location, messages ? "/messages" : base)}
         backLabel={messages ? "Torna ai messaggi" : pickups ? "Torna ai ritiri" : "Torna alle spedizioni"}
         toolbar={<IconButton action="print" label="Stampa etichetta" to={order.can_print === false ? undefined : `/shipments/${order.slug}/label`} aria-disabled={order.can_print === false} onClick={event => { if (order.can_print === false) { event.preventDefault(); setSuccess("Al momento non ci sono ordini da stampare"); } }} />}
         eyebrow={messages ? "CONVERSAZIONE" : "SPEDIZIONE"}
