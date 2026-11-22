@@ -17,4 +17,5 @@ import "./styles/delight.css";
 import "./styles/polish.css";
 import "./styles/cards.css";
 import "./styles/page-title.css";
+import "./styles/feedback.css";
 import "./services/card-glow";

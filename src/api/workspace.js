@@ -10,3 +10,7 @@ export const readAllNotifications = () =>
 export const notificationFeed = () => request("/notifications/feed");
 export const notificationHistory = ({ slug, page }) =>
   request(`/notifications/orders/${slug}${query({ page })}`);
+
+/** Segnalazione con eventuali allegati: `data` è un FormData. */
+export const sendFeedback = (data) =>
+  request("/feedback", { method: "POST", data });

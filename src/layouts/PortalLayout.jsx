@@ -20,7 +20,7 @@ const groups = [
   ]],
   ['Attività del negozio', [['/statistics', 'bar-chart', 'Statistiche'], ['/pending', 'hourglass-split', 'Sospesi']]],
   ['Configurazione commerciale', [['/rates', 'tags', 'Listini']]],
-  ['Account e sistema', [['/profile', 'person-circle', 'Profilo e sicurezza'], ['/settings', 'sliders', 'Impostazioni'], ['/notifications', 'bell', 'Notifiche']]],
+  ['Account e sistema', [['/profile', 'person-circle', 'Profilo e sicurezza'], ['/settings', 'sliders', 'Impostazioni'], ['/notifications', 'bell', 'Notifiche'], ['/feedback', 'bug', 'Feedback e segnalazioni']]],
 ];
 export default function PortalLayout() {
   const { user, logout } = useAuth();

@@ -49,21 +49,23 @@ export async function request(
   { method = "GET", data, retry = true } = {},
 ) {
   if (method !== "GET" && !csrfToken) await csrf();
+  // I moduli con allegati viaggiano come multipart: il browser imposta il Content-Type con il boundary.
+  const multipart = typeof FormData !== "undefined" && data instanceof FormData;
   let response;
   activity(1);
   try {
     response = await fetch(`${base}${path}`, {
       method,
       credentials: "include",
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(multipart ? 90000 : 20000),
       headers: {
         Accept: "application/json",
         "X-Requested-With": "XMLHttpRequest",
         ...(method !== "GET"
-          ? { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken }
+          ? { ...(multipart ? {} : { "Content-Type": "application/json" }), "X-CSRF-TOKEN": csrfToken }
           : {}),
       },
-      ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
+      ...(data !== undefined ? { body: multipart ? data : JSON.stringify(data) } : {}),
     });
   } catch (failure) {
     const error = new ApiError(0);

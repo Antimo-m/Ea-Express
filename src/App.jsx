@@ -31,6 +31,7 @@ const PendingDetailPage = lazy(() => import('./pages/PendingDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const BetaTermsPage = lazy(() => import('./pages/BetaTermsPage'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
 function Session() {
   const auth = useAuth();
   if (auth.loading) return <AppLoading label="Verifica dell’accesso…" />;
@@ -91,6 +92,7 @@ export default function App() {
                 <Route path="notifications" element={<NotificationsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="settings" element={<ProfilePage settings />} />
+                <Route path="feedback" element={<FeedbackPage />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />
