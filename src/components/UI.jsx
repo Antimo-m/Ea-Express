@@ -339,8 +339,9 @@ export function Pagination({ meta, onPage }) {
     </nav>
   );
 }
-export function OrderList({ orders, base = "/shipments", messages = false, firstRun = false }) {
+export function OrderList({ orders, base = "/shipments", messages = false, firstRun = false, empty }) {
   if (!orders.length && firstRun) return <FirstShipment />;
+  if (!orders.length && empty) return <Empty title={empty.title} text={empty.text} icon={empty.icon} />;
   if (!orders.length)
     return (
       <Empty
