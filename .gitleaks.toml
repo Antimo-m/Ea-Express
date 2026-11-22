@@ -1,0 +1,9 @@
+# Regole Gitleaks del portale: quelle predefinite più un'eccezione mirata per un valore finto dei test.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Password finta usata solo dal test browser del campo password"
+condition = "AND"
+paths = ['''^tests/portal\.browser\.test\.mjs$''']
+regexes = ['''^Segreta-di-prova-123$''']
