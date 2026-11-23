@@ -580,11 +580,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       }
     });
-    await scenario('annulla compilazione: solo cestino rosso in fondo a destra nel modulo e nel modale, filtri senza tipo mittente', async () => {
+    await scenario('annulla compilazione: cestino a sinistra e Prosegui (solo freccia) a destra nel modulo, cestino a destra nel modale, filtri senza tipo mittente', async () => {
       for (const path of ['/shipments/new', `/shipments/${slug}/edit`]) for (const width of [320,390,768,1440]) {
         await viewport(width); await navigate(path);
-        const form = await evaluate('const bar=document.querySelector(".booking-final-actions"),cancel=bar.querySelector(".booking-cancel"),next=bar.querySelector(".booking-review-button"),b=bar.getBoundingClientRect(),c=cancel.getBoundingClientRect(),n=next.getBoundingClientRect();return {text:cancel.textContent.trim(),label:cancel.getAttribute("aria-label"),icon:!!cancel.querySelector(".bi-trash"),rightEdge:Math.abs(b.right-c.right)<=1,afterNext:c.left>=n.right,sameRow:Math.abs((c.top+c.bottom)/2-(n.top+n.bottom)/2)<=2,touch:c.width>=40&&c.height>=40,scroll:document.documentElement.scrollWidth<=innerWidth+1};');
-        assert.ok(form.text === '' && form.label === 'Annulla compilazione' && form.icon && form.rightEdge && form.afterNext && form.sameRow && form.touch && form.scroll, JSON.stringify({path,width,form}));
+        const form = await evaluate('const bar=document.querySelector(".booking-final-actions"),cancel=bar.querySelector(".booking-cancel"),next=bar.querySelector(".booking-review-button"),b=bar.getBoundingClientRect(),c=cancel.getBoundingClientRect(),n=next.getBoundingClientRect();return {text:cancel.textContent.trim(),label:cancel.getAttribute("aria-label"),icon:!!cancel.querySelector(".bi-trash"),leftEdge:Math.abs(c.left-b.left)<=1,nextText:next.textContent.trim(),nextLabel:next.getAttribute("aria-label"),nextIcon:!!next.querySelector(".bi-arrow-right"),nextRightEdge:Math.abs(b.right-n.right)<=1,cancelBeforeNext:c.right<n.left,sameRow:Math.abs((c.top+c.bottom)/2-(n.top+n.bottom)/2)<=2,touch:c.width>=40&&c.height>=40&&n.width>=44&&n.height>=44,scroll:document.documentElement.scrollWidth<=innerWidth+1};');
+        assert.ok(form.text === '' && form.label === 'Annulla compilazione' && form.icon && form.leftEdge && form.nextText === '' && form.nextLabel === 'Prosegui al riepilogo' && form.nextIcon && form.nextRightEdge && form.cancelBeforeNext && form.sameRow && form.touch && form.scroll, JSON.stringify({path,width,form}));
         const danger = await evaluate('const probe=document.createElement("span");probe.style.color="var(--ea-danger)";document.body.append(probe);const red=getComputedStyle(probe).color;probe.remove();return {red,background:getComputedStyle(document.querySelector(".booking-cancel")).backgroundColor};');
         assert.equal(danger.background, danger.red, JSON.stringify({path,width,danger}));
         await click('.booking-cancel');
@@ -980,6 +980,8 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await check('/checkout', width);
         const actions = await evaluate('const back=document.querySelector(".checkout-actions .button-back").getBoundingClientRect(),confirm=document.querySelector(".checkout-continue").getBoundingClientRect();return {back:{left:back.left,right:back.right,top:back.top},confirm:{left:confirm.left,right:confirm.right,top:confirm.top}};');
         assert.ok(actions.back.right<=actions.confirm.left && Math.abs(actions.back.top-actions.confirm.top)<1,JSON.stringify({width,actions}));
+        const confirmButton = await evaluate('const bar=document.querySelector(".checkout-actions"),button=document.querySelector(".checkout-continue"),b=bar.getBoundingClientRect(),c=button.getBoundingClientRect();return {text:button.textContent.trim(),label:button.getAttribute("aria-label"),icon:!!button.querySelector(".bi-check2"),rightEdge:Math.abs(b.right-c.right)<=1,round:Math.abs(c.width-c.height)<=1&&c.width>=44};');
+        assert.ok(confirmButton.text === '' && confirmButton.label === 'Conferma ordine' && confirmButton.icon && confirmButton.rightEdge && confirmButton.round, JSON.stringify({width,confirmButton}));
         assert.match(await evaluate('return document.querySelector(".checkout-addresses").textContent;'), /Napoli.*Caserta/);
         assert.match(await evaluate('return document.querySelector(".checkout-total").textContent;'), /130,00/);
         assert.equal(await evaluate('return !!document.querySelector(".booking-form input[name=sender_type],.booking-form select[name=sender_type]");'), false);

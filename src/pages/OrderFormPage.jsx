@@ -217,8 +217,8 @@ function OrderForm({ order, pickups }) {
         )}
       </section>
       <div className="booking-final-actions">
-        <button className="button booking-review-button" type="submit" disabled={busy || inactiveDestination} aria-busy={busy || undefined}>{busy ? "Verifica in corso…" : "Prosegui al riepilogo"}<Icon name="arrow-right" /></button>
         <IconButton action="delete" className="booking-cancel" label="Annulla compilazione" disabled={busy} onClick={()=>setCancelOpen(true)} />
+        <button className="button booking-review-button" type="submit" disabled={busy || inactiveDestination} aria-busy={busy || undefined} aria-label={busy ? "Verifica in corso" : "Prosegui al riepilogo"} data-tooltip={busy ? "Verifica in corso" : "Prosegui al riepilogo"}><Icon name={busy ? "hourglass-split" : "arrow-right"} /></button>
       </div>
     </Form></div>
     <Modal open={cancelOpen} title="Annullare la richiesta?" description="I dati inseriti in questa prenotazione andranno persi." danger onClose={()=>setCancelOpen(false)}>
