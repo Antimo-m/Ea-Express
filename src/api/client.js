@@ -51,22 +51,32 @@ export async function request(
   if (method !== "GET" && !csrfToken) await csrf();
   // I moduli con allegati viaggiano come multipart: il browser imposta il Content-Type con il boundary.
   const multipart = typeof FormData !== "undefined" && data instanceof FormData;
+  const send = () => fetch(`${base}${path}`, {
+    method,
+    credentials: "include",
+    signal: AbortSignal.timeout(multipart ? 90000 : 20000),
+    headers: {
+      Accept: "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+      ...(method !== "GET"
+        ? { ...(multipart ? {} : { "Content-Type": "application/json" }), "X-CSRF-TOKEN": csrfToken }
+        : {}),
+    },
+    ...(data !== undefined ? { body: multipart ? data : JSON.stringify(data) } : {}),
+  });
   let response;
   activity(1);
   try {
-    response = await fetch(`${base}${path}`, {
-      method,
-      credentials: "include",
-      signal: AbortSignal.timeout(multipart ? 90000 : 20000),
-      headers: {
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        ...(method !== "GET"
-          ? { ...(multipart ? {} : { "Content-Type": "application/json" }), "X-CSRF-TOKEN": csrfToken }
-          : {}),
-      },
-      ...(data !== undefined ? { body: multipart ? data : JSON.stringify(data) } : {}),
-    });
+    try {
+      response = await send();
+    } catch (failure) {
+      // Una lettura può fallire prima di raggiungere il server quando il browser riusa una connessione già chiusa
+      // (tipico di Safari/iOS dopo un periodo di inattività): la stessa GET, idempotente, viene ripetuta una sola volta.
+      // Timeout, assenza di rete e scritture non vengono mai ripetuti.
+      if (!transientReadFailure(method, failure)) throw failure;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      response = await send();
+    }
   } catch (failure) {
     const error = new ApiError(0);
     if (typeof navigator !== "undefined" && navigator.onLine === false) error.message = "Sei offline: controlla la connessione e riprova.";
@@ -111,4 +121,9 @@ export function query(params = {}) {
 function retrySeconds(header, fallback) {
   const seconds = header && /^\d+$/.test(header) ? Number(header) : header ? Math.ceil((Date.parse(header) - Date.now()) / 1000) : Number(fallback);
   return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+/** Errore di trasporto di una lettura: né timeout né assenza di rete, quindi una connessione interrotta prima della risposta. */
+function transientReadFailure(method, failure) {
+  return method === "GET" && failure instanceof TypeError && !(typeof navigator !== "undefined" && navigator.onLine === false);
 }

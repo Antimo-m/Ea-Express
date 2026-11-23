@@ -218,13 +218,13 @@ function OrderForm({ order, pickups }) {
       </section>
       <div className="booking-final-actions">
         <button className="button booking-review-button" type="submit" disabled={busy || inactiveDestination} aria-busy={busy || undefined}>{busy ? "Verifica in corso…" : "Prosegui al riepilogo"}<Icon name="arrow-right" /></button>
-        <button type="button" className="button danger" disabled={busy} onClick={()=>setCancelOpen(true)}><Icon name="trash"/> Annulla</button>
+        <IconButton action="delete" className="booking-cancel" label="Annulla compilazione" disabled={busy} onClick={()=>setCancelOpen(true)} />
       </div>
     </Form></div>
     <Modal open={cancelOpen} title="Annullare la richiesta?" description="I dati inseriti in questa prenotazione andranno persi." danger onClose={()=>setCancelOpen(false)}>
       <footer className="modal-actions">
         <button type="button" className="button modal-back modal-back-icon" onClick={()=>setCancelOpen(false)} aria-label="Continua compilazione" data-tooltip="Continua compilazione"><Icon name="arrow-left"/></button>
-        <IconButton action="delete" text label="Annulla compilazione" onClick={()=>{bookingForm.current?.reset();setReview(null);setError(null);setCancelOpen(false);navigate('/dashboard',{replace:true});}} />
+        <IconButton action="delete" className="booking-cancel-confirm" label="Annulla compilazione" onClick={()=>{bookingForm.current?.reset();setReview(null);setError(null);setCancelOpen(false);navigate('/dashboard',{replace:true});}} />
       </footer>
     </Modal></>
   );

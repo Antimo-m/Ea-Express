@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { sendFeedback } from "../api/workspace";
 import { compressImage } from "../utils/compress-image";
+import { previewable, readPreview } from "../utils/file-preview";
 import IconButton from "../components/IconButton";
 import { Feedback, Field, Form, Header, Icon } from "../components/UI";
 
@@ -19,7 +20,27 @@ const fileIcon = file => /\.pdf$/i.test(file.name) ? "file-earmark-pdf" : /\.txt
 
 function Thumb({ file, previews, className }) {
   const url = previews.get(file);
-  return url ? <img className={className} src={url} alt="" /> : <span className={`${className} feedback-file-icon`} aria-hidden="true"><Icon name={fileIcon(file)} /></span>;
+  if (url) return <img className={className} src={url} alt="" />;
+  // Immagine in preparazione: segnaposto tenue finché l'anteprima reale non è pronta.
+  if (previewable(file) && !previews.has(file)) return <span className={`${className} feedback-file-icon is-loading`} aria-hidden="true"><Icon name="image" /></span>;
+  return <span className={`${className} feedback-file-icon`} aria-hidden="true"><Icon name={fileIcon(file)} /></span>;
+}
+
+/** Anteprime reali, mantenute per i file ancora selezionati e create solo per quelli nuovi. */
+function useFilePreviews(files) {
+  const [previews, setPreviews] = useState(() => new Map());
+  useEffect(() => {
+    let active = true;
+    files.forEach(file => {
+      readPreview(file).then(url => {
+        if (!active) return;
+        // Ogni aggiornamento conserva solo i file ancora selezionati: le anteprime rimosse vengono scartate.
+        setPreviews(current => new Map([...current].filter(([candidate]) => files.includes(candidate))).set(file, url));
+      });
+    });
+    return () => { active = false; };
+  }, [files]);
+  return new Map([...previews].filter(([file]) => files.includes(file)));
 }
 
 function Caption({ file }) {
@@ -46,8 +67,7 @@ function Dropzone({ files, onChange, error, processing, onProcessing }) {
   const [dragging, setDragging] = useState(false);
   const [problem, setProblem] = useState("");
   const input = useRef(null);
-  const previews = useMemo(() => new Map(files.filter(file => file.type.startsWith("image/") && !/heic/i.test(file.type)).map(file => [file, URL.createObjectURL(file)])), [files]);
-  useEffect(() => () => previews.forEach(url => URL.revokeObjectURL(url)), [previews]);
+  const previews = useFilePreviews(files);
   const remove = file => { setProblem(""); onChange(files.filter(candidate => candidate !== file)); input.current?.focus(); };
   const single = files.length === 1 ? files[0] : null;
   async function add(incoming) {

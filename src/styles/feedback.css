@@ -96,3 +96,8 @@
 .sidebar .sidebar-content { scrollbar-gutter: stable both-edges; }
 .feedback-dropzone.is-processing { pointer-events: none; }
 .feedback-dropzone.is-processing .feedback-dropzone-icon { animation: feedback-bounce .6s ease-in-out infinite; }
+
+/* Segnaposto mentre l'anteprima reale viene preparata: resta secondario e non sostituisce l'immagine. */
+.feedback-file-icon.is-loading { color: var(--ea-muted); animation: feedback-preview-wait 1.1s ease-in-out infinite alternate; }
+@keyframes feedback-preview-wait { from { opacity: .55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .feedback-file-icon.is-loading { animation: none; } }

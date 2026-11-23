@@ -319,3 +319,16 @@ h4.checkout-caption { margin: 0; text-transform: uppercase; }
 @media (max-width: 575px) { .order-manage-bar .order-cancel-button { width: 100%; justify-content: center; } }
 .unavailable-page .unavailable-mark { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: var(--ea-orange-soft); color: var(--ea-brand); font-size: 30px; }
 .unavailable-page .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
+/* Creazione ritiro: «Prosegui al riepilogo» e, in fondo a destra, il solo cestino rosso per annullare la compilazione. */
+.booking-final-actions { display: flex !important; flex-flow: row nowrap; justify-content: flex-end; align-items: center; gap: 12px; }
+.booking-final-actions > .booking-review-button { margin-inline-start: auto; }
+.booking-final-actions > .booking-cancel { order: 2; flex: 0 0 auto; margin: 0 !important; width: auto !important; }
+@media (max-width: 575px) {
+  .booking-final-actions > .booking-review-button { flex: 1 1 auto; width: auto; margin-inline-start: 0; }
+  .booking-final-actions > .booking-cancel { min-height: 48px; min-width: 48px; }
+}
+.booking-final-actions > .icon-button.booking-cancel { color: var(--ea-on-color); background: var(--ea-danger); border-color: var(--ea-danger); }
+.booking-final-actions > .icon-button.booking-cancel:hover:not(:disabled) { background: color-mix(in srgb, var(--ea-danger) 86%, var(--ea-ink)); }
+/* Conferma di annullamento: solo il cestino rosso, compatto e allineato a destra anche su mobile. */
+.ea-modal .modal-actions:has(> .modal-back-icon) > .icon-button.booking-cancel-confirm, .ea-modal .modal-actions > .icon-button.booking-cancel-confirm { flex: 0 0 auto !important; inline-size: auto !important; width: auto !important; margin-inline: auto 0 !important; padding-inline: 0 !important; color: var(--ea-on-color); background: var(--ea-danger); border-color: var(--ea-danger); }

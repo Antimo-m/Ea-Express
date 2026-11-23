@@ -41,6 +41,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
   let savedAddress = null, confirmationStatus = 0, failAddressSave = false;
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
   let resourceStatus = 0, inactiveZone = false, statisticsError = false, priceState = 'agreed';
+  let failedReads = 0, failReads = 0, staleAsset = null, staleAssetServed = 0, productionCsp = false;
   const rateRequests = [];
   const orderRequests = [];
   const statisticsRequests = [];
@@ -140,11 +141,15 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       if (path === '/sender-address') { json({ data: savedAddress }); return; }
       json({ enabled: false, data: [] }); return;
     }
+    // File della versione precedente non più presente sul server dopo un aggiornamento del portale.
+    if (staleAsset && staleAsset.test(url.pathname)) { staleAsset = null; staleAssetServed++; response.statusCode = 404; response.end('Not found'); return; }
     const file = resolve('dist', `.${url.pathname}`);
     if (file.startsWith(resolve('dist') + '/') && existsSync(file) && extname(file)) {
       response.setHeader('Content-Type', ({ '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.woff': 'font/woff', '.svg': 'image/svg+xml' })[extname(file)] || 'application/octet-stream');
       response.end(readFileSync(file)); return;
     }
+    // Stessa Content-Security-Policy del portale in produzione (nginx): immagini solo da 'self' e data:.
+    if (productionCsp) response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'");
     response.setHeader('Content-Type', 'text/html'); response.end(readFileSync(built));
   });
   try {
@@ -161,6 +166,14 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     await new Promise(resolve => socket.addEventListener('open', resolve, { once: true }));
     let sequence = 0; const pending = new Map();
     const browserErrors = [];
+    // Errore di rete reale lato browser (connessione chiusa prima della risposta), senza ripetizioni automatiche di Chrome.
+    socket.addEventListener('message', ({ data }) => {
+      const event = JSON.parse(data);
+      if (event.method !== 'Fetch.requestPaused') return;
+      const detail = /\/api\/v1\/customer\/orders\/[0-9a-f-]{36}$/.test(new URL(event.params.request.url).pathname) && event.params.request.method === 'GET';
+      if (detail && failReads > 0) { failReads--; failedReads++; socket.send(JSON.stringify({ id: 900000 + failedReads, method: 'Fetch.failRequest', params: { requestId: event.params.requestId, errorReason: 'ConnectionReset' } })); return; }
+      socket.send(JSON.stringify({ id: 800000 + Math.floor(Math.random() * 99999), method: 'Fetch.continueRequest', params: { requestId: event.params.requestId } }));
+    });
     socket.addEventListener('message', ({ data }) => { const result = JSON.parse(data); if (result.method === 'Runtime.exceptionThrown') browserErrors.push(result.params.exceptionDetails.exception?.description || result.params.exceptionDetails.text); if (!pending.has(result.id)) return; const waiter = pending.get(result.id); pending.delete(result.id); result.error ? waiter.reject(new Error(result.error.message)) : waiter.resolve(result.result); });
     const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++sequence; const timer = setTimeout(() => reject(new Error(`Timeout ${method}`)), 15000); pending.set(id, { resolve: result => { clearTimeout(timer); resolve(result); }, reject: error => { clearTimeout(timer); reject(error); } }); socket.send(JSON.stringify({ id, method, params })); });
     await send('Runtime.enable');
@@ -379,6 +392,88 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
       await evaluate('document.querySelector(".action-reset").click();');
       await waitFor('location.search === "" && document.querySelector("input[name=q]").value === ""');
     });
+    await scenario('apertura ripetuta delle spedizioni: una lettura interrotta prima della risposta non mostra errori', async () => {
+      await send('Fetch.enable', { patterns: [{ urlPattern: '*/api/v1/customer/orders/*', requestStage: 'Request' }] });
+      try {
+        for (const width of [1440, 390]) {
+          await viewport(width);
+          for (let attempt = 0; attempt < 4; attempt++) {
+            await navigate('/shipments');
+            failReads = attempt % 2 === 0 ? 1 : 0;
+            const before = failedReads;
+            await click('.shipment-card');
+            await waitFor('location.pathname.startsWith("/shipments/") && (document.querySelector(".detail-grid") || [...document.querySelectorAll(".panel button")].some(button=>/Riprova/.test(button.textContent)))');
+            const state = await evaluate('return {detail:!!document.querySelector(".detail-grid"),error:[...document.querySelectorAll(".panel button")].some(button=>/Riprova/.test(button.textContent))};');
+            assert.ok(state.detail && !state.error, JSON.stringify({width,attempt,state}));
+            assert.equal(failedReads - before, attempt % 2 === 0 ? 1 : 0);
+            await evaluate('history.back();');
+            await waitFor('location.pathname === "/shipments" && document.querySelector(".shipment-card")');
+            await click('.shipment-card');
+            await waitFor('location.pathname.startsWith("/shipments/") && document.querySelector(".detail-grid")');
+          }
+        }
+        failReads = 2;
+        await viewport(390); await navigate('/shipments');
+        await click('.shipment-card');
+        await waitFor('[...document.querySelectorAll(".panel button")].some(button=>/Riprova/.test(button.textContent))');
+        assert.equal(failReads, 0, 'la lettura viene ripetuta una sola volta: due interruzioni consecutive restano visibili');
+        await evaluate('[...document.querySelectorAll(".panel button")].find(button=>/Riprova/.test(button.textContent)).click();');
+        await waitFor('document.querySelector(".detail-grid")');
+      } finally {
+        failReads = 0;
+        await send('Fetch.disable');
+      }
+    });
+
+    await scenario('segnalazioni: anteprime reali con la CSP di produzione, ordine, rimozione e file non immagine', async () => {
+      productionCsp = true;
+      try {
+        for (const width of [1440, 390]) {
+          await viewport(width); await navigate('/feedback');
+          const add = count => evaluate(`return (async()=>{const c=document.createElement('canvas');c.width=640;c.height=400;const g=c.getContext('2d');g.fillStyle='#1d4ed8';g.fillRect(0,0,640,400);const blob=await new Promise(r=>c.toBlob(r,'image/png'));const files=[new File([blob],'prima.png',{type:'image/png'}),new File(['%PDF-1.4'],'ricevuta.pdf',{type:'application/pdf'}),new File(['log'],'log.txt',{type:'text/plain'}),new File([blob],'seconda.png',{type:'image/png',lastModified:1})].slice(0,${count});const input=document.querySelector('.feedback-dropzone input');const dt=new DataTransfer();files.forEach(f=>dt.items.add(f));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));return true;})();`);
+          const state = () => evaluate('const images=[...document.querySelectorAll(".feedback-dropzone img, .feedback-files img")];return {single:document.querySelector(".feedback-dropzone").classList.contains("has-single"),strip:document.querySelector(".feedback-files")?.classList.contains("is-strip")||false,names:[...document.querySelectorAll(".feedback-files li strong, .feedback-dropzone-preview strong")].map(n=>n.textContent),images:images.length,loaded:images.filter(i=>i.complete&&i.naturalWidth>0).length,data:images.every(i=>i.src.startsWith("data:image/")),icons:document.querySelectorAll(".feedback-files .feedback-file-icon:not(.is-loading)").length,loading:document.querySelectorAll(".is-loading").length,scroll:document.documentElement.scrollWidth<=innerWidth+1};');
+          await add(1);
+          await waitFor('[...document.querySelectorAll(".feedback-dropzone-preview img")].some(i=>i.complete&&i.naturalWidth>0)');
+          let current = await state();
+          assert.ok(current.single && current.images === 1 && current.loaded === 1 && current.data && current.scroll, JSON.stringify({width,current}));
+          await evaluate('document.querySelector(".feedback-dropzone-preview .feedback-file-remove").click();');
+          await waitFor('!document.querySelector(".feedback-dropzone").classList.contains("has-single")');
+          await add(4);
+          await waitFor('document.querySelectorAll(".feedback-files li").length === 4 && [...document.querySelectorAll(".feedback-files img")].filter(i=>i.complete&&i.naturalWidth>0).length === 2');
+          current = await state();
+          assert.deepEqual(current.names, ['prima.png', 'ricevuta.pdf', 'log.txt', 'seconda.png'], JSON.stringify({width,current}));
+          assert.ok(current.strip && current.images === 2 && current.loaded === 2 && current.data && current.icons === 2 && current.loading === 0 && current.scroll, JSON.stringify({width,current}));
+          await evaluate('document.querySelectorAll(".feedback-files .feedback-file-remove")[1].click();');
+          await waitFor('document.querySelectorAll(".feedback-files li").length === 3');
+          current = await state();
+          assert.deepEqual(current.names, ['prima.png', 'log.txt', 'seconda.png']);
+          assert.ok(current.loaded === 2 && current.icons === 1, JSON.stringify({width,current}));
+        }
+      } finally {
+        productionCsp = false;
+      }
+    });
+
+    await scenario('aggiornamento del portale con una scheda aperta: la spedizione si apre dopo un solo ricaricamento', async () => {
+      for (const width of [1440, 390]) {
+        await viewport(width); await navigate('/shipments');
+        await evaluate('sessionStorage.removeItem("ea:stale-build-reload"); window.__oldPage = true;');
+        staleAsset = /\/assets\/OrderDetailPage-[^/]+\.js$/;
+        const served = staleAssetServed;
+        await click('.shipment-card');
+        await waitFor('!window.__oldPage && location.pathname.startsWith("/shipments/") && document.querySelector(".detail-grid")');
+        assert.equal(staleAssetServed - served, 1);
+        assert.equal(await evaluate('return /Qualcosa non ha funzionato/.test(document.body.textContent);'), false);
+      }
+      await viewport(1440); await navigate('/shipments');
+      await evaluate('sessionStorage.setItem("ea:stale-build-reload", String(Date.now())); window.__samePage = true;');
+      staleAsset = /\/assets\/OrderDetailPage-[^/]+\.js$/;
+      await click('.shipment-card');
+      await waitFor('/Qualcosa non ha funzionato/.test(document.body.textContent)');
+      assert.equal(await evaluate('return window.__samePage === true;'), true, 'nessun secondo ricaricamento automatico in loop');
+      staleAsset = null;
+    });
+
     await scenario('stato e cronologia spedizione restano disponibili senza controlli ritardi', async () => {
       await viewport(390); await navigate(`/shipments/${slug}`);
       assert.match(await evaluate('return document.querySelector(".order-statuses").textContent;'), /In consegna/);
@@ -485,20 +580,25 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         }
       }
     });
-    await scenario('annulla compilazione: bottoni del modale orizzontali e su una riga, filtri senza tipo mittente', async () => {
-      for (const width of [320,390,768,1440]) {
-        await viewport(width); await navigate(`/shipments/${slug}/edit`);
-        await evaluate('[...document.querySelectorAll(".booking-final-actions button")].find(button=>button.textContent.trim()==="Annulla").click();');
+    await scenario('annulla compilazione: solo cestino rosso in fondo a destra nel modulo e nel modale, filtri senza tipo mittente', async () => {
+      for (const path of ['/shipments/new', `/shipments/${slug}/edit`]) for (const width of [320,390,768,1440]) {
+        await viewport(width); await navigate(path);
+        const form = await evaluate('const bar=document.querySelector(".booking-final-actions"),cancel=bar.querySelector(".booking-cancel"),next=bar.querySelector(".booking-review-button"),b=bar.getBoundingClientRect(),c=cancel.getBoundingClientRect(),n=next.getBoundingClientRect();return {text:cancel.textContent.trim(),label:cancel.getAttribute("aria-label"),icon:!!cancel.querySelector(".bi-trash"),rightEdge:Math.abs(b.right-c.right)<=1,afterNext:c.left>=n.right,sameRow:Math.abs((c.top+c.bottom)/2-(n.top+n.bottom)/2)<=2,touch:c.width>=40&&c.height>=40,scroll:document.documentElement.scrollWidth<=innerWidth+1};');
+        assert.ok(form.text === '' && form.label === 'Annulla compilazione' && form.icon && form.rightEdge && form.afterNext && form.sameRow && form.touch && form.scroll, JSON.stringify({path,width,form}));
+        const danger = await evaluate('const probe=document.createElement("span");probe.style.color="var(--ea-danger)";document.body.append(probe);const red=getComputedStyle(probe).color;probe.remove();return {red,background:getComputedStyle(document.querySelector(".booking-cancel")).backgroundColor};');
+        assert.equal(danger.background, danger.red, JSON.stringify({path,width,danger}));
+        await click('.booking-cancel');
         await waitFor('document.querySelector(".ea-modal[open] .modal-actions .action-delete")');
-        const buttons = await evaluate('return [...document.querySelectorAll(".ea-modal[open] .modal-actions > *")].map(button=>{const box=button.getBoundingClientRect(),walker=document.createTreeWalker(button,NodeFilter.SHOW_TEXT),lines=new Set();for(let node=walker.nextNode();node;node=walker.nextNode()){if(!node.textContent.trim())continue;const range=document.createRange();range.selectNodeContents(node);for(const rect of range.getClientRects())if(rect.width>1)lines.add(Math.round(rect.top));}return {text:button.textContent.trim(),width:box.width,height:box.height,lines:lines.size};});');
-        assert.equal(buttons.length,2,JSON.stringify({width,buttons}));
-        // Regola globale: «Torna indietro» è la sola freccia a sinistra; l'azione resta testuale, su una riga, a destra.
-        const layout = await evaluate('const back=document.querySelector(".ea-modal[open] .modal-back"),action=document.querySelector(".ea-modal[open] .modal-actions .action-delete"),b=back.getBoundingClientRect(),a=action.getBoundingClientRect();return {label:back.getAttribute("aria-label"),text:back.textContent.trim(),round:Math.abs(b.width-b.height)<=1&&b.width>=44,leftOfAction:b.right<=a.left,sameRow:Math.abs((b.top+b.bottom)/2-(a.top+a.bottom)/2)<=2};');
-        assert.ok(layout.label && layout.text === '' && layout.round && layout.leftOfAction && layout.sameRow, JSON.stringify({width,layout}));
-        assert.ok(buttons[1].width>buttons[1].height*2 && buttons[1].lines===1,JSON.stringify({width,buttons}));
+        const layout = await evaluate('const bar=document.querySelector(".ea-modal[open] .modal-actions"),back=bar.querySelector(".modal-back"),action=bar.querySelector(".action-delete"),r=bar.getBoundingClientRect(),b=back.getBoundingClientRect(),a=action.getBoundingClientRect();return {children:bar.children.length,backText:back.textContent.trim(),text:action.textContent.trim(),label:action.getAttribute("aria-label"),icon:!!action.querySelector(".bi-trash"),backLeft:b.right<a.left&&b.left-r.left<=24,actionRight:Math.abs((b.left-r.left)-(r.right-a.right))<=1,sameRow:Math.abs(b.top-a.top)<=2,round:Math.abs(a.width-a.height)<=2&&a.width>=40};');
+        assert.ok(layout.children === 2 && layout.backText === '' && layout.text === '' && layout.label === 'Annulla compilazione' && layout.icon && layout.backLeft && layout.actionRight && layout.sameRow && layout.round, JSON.stringify({path,width,layout}));
         await evaluate('document.querySelector(".ea-modal[open] .modal-back").click();');
         await waitFor('!document.querySelector(".ea-modal[open]")');
       }
+      await viewport(1440); await navigate('/shipments/new');
+      await click('.booking-cancel');
+      await waitFor('document.querySelector(".ea-modal[open] .modal-actions .action-delete")');
+      await evaluate('document.querySelector(".ea-modal[open] .modal-actions .action-delete").click();');
+      await waitFor('location.pathname === "/dashboard"');
       await viewport(390); await navigate('/shipments?sender_type=business');
       await evaluate('document.querySelector(".filter-more").click();');
       await waitFor('document.querySelector(".ea-modal[open]")');
