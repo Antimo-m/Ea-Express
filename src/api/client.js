@@ -21,7 +21,7 @@ const messages = {
   429: "Troppe richieste. Attendi prima di riprovare.",
 };
 export class ApiError extends Error {
-  constructor(status, errors = {}, retryAfter = null, botChallenge = null) {
+  constructor(status, errors = {}, retryAfter = null, botChallenge = null, suspendedMessage = null) {
     super(
       messages[status] || "Il servizio non è disponibile. Riprova tra poco.",
     );
@@ -31,6 +31,7 @@ export class ApiError extends Error {
     this.botChallenge = botChallenge;
     if (botChallenge) this.message = "Completa la verifica di sicurezza e riprova.";
     if (status === 429 && retryAfter) this.message = `Troppe richieste. Potrai riprovare tra ${retryAfter < 60 ? `${retryAfter} secondi` : `${Math.ceil(retryAfter / 60)} minuti`}.`;
+    if (suspendedMessage) this.message = suspendedMessage;
   }
 }
 async function csrf() {
@@ -104,6 +105,7 @@ export async function request(
       response.status === 422 ? body.errors : {},
       response.status === 429 ? retrySeconds(response.headers.get('Retry-After'), body.retry_after) : null,
       body.bot_challenge || null,
+      response.status === 429 && body.code === "access_suspended" ? body.message : null,
     );
   }
   if (body.csrf_token) csrfToken = body.csrf_token;
