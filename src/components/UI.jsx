@@ -7,6 +7,7 @@ import NotFoundPage from "../pages/NotFoundPage";
 import UnavailablePage from "../pages/UnavailablePage";
 import ShipmentRoute from "./ShipmentRoute";
 import FirstShipment from "./FirstShipment";
+import { BrandLogo } from "./Brand";
 export function Icon({ name, ...props }) {
   return <i className={`bi bi-${name}`} aria-hidden="true" {...props} />;
 }
@@ -134,7 +135,7 @@ export function Feedback({ error, success }) {
 export function AppLoading({ label = "Caricamento del portale…" }) {
   return (
     <div className="app-loading" role="status" aria-live="polite">
-      <span className="app-loading-mark" aria-hidden="true"><b>EA</b>-Express</span>
+      <BrandLogo role="presentation" aria-label={undefined} aria-hidden="true" />
       <span className="app-loading-bar" aria-hidden="true"><span /></span>
       <span className="app-loading-label">{label}</span>
     </div>

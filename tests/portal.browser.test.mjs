@@ -219,9 +219,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         assert.ok(Math.abs(geometry.right - geometry.available) <= 1, JSON.stringify({width, ...geometry}));
         assert.equal(geometry.left, width < 992 ? 0 : 262);
         if (width < 992) await evaluate('document.querySelector(".menu-toggle").click();');
-        const brand = await evaluate(`const logo=document.querySelector('.sidebar .brand-wordmark'); const ranges=[...logo.children].map(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getBoundingClientRect().bottom;}); const sidebar=document.querySelector('.sidebar-content').getBoundingClientRect(), button=document.querySelector('.portal-create').getBoundingClientRect();return {baseline:Math.abs(ranges[0]-ranges[1]),center:Math.abs((sidebar.left+sidebar.right-button.left-button.right)/2),text:logo.textContent};`);
-        assert.ok(brand.baseline <= 1 && brand.center <= 1, JSON.stringify({width,...brand}));
-        assert.equal(brand.text, 'EA-Express');
+        const brand = await evaluate(`const logo=document.querySelector('.sidebar .ea-logo'),box=logo.getBoundingClientRect(),rail=document.querySelector('.sidebar').getBoundingClientRect(),sidebar=document.querySelector('.sidebar-content').getBoundingClientRect(), button=document.querySelector('.portal-create').getBoundingClientRect();return {ratio:box.width/box.height,inside:box.left>=rail.left&&box.right<=rail.right&&box.height>=48,center:Math.abs((sidebar.left+sidebar.right-button.left-button.right)/2),label:logo.getAttribute('aria-label'),raster:document.querySelectorAll('.sidebar img').length,ink:getComputedStyle(logo.querySelector('.ea-logo-ink')).fill};`);
+        assert.ok(brand.inside && Math.abs(brand.ratio - 601.36 / 301.1) < .02 && brand.center <= 1, JSON.stringify({width,...brand}));
+        assert.equal(brand.label, 'EA-Express');
+        assert.equal(brand.raster, 0);
+        assert.equal(brand.ink, 'rgb(246, 248, 247)');
         if (width < 992) await evaluate('document.querySelector(".sidebar-close").click();');
       }
     });

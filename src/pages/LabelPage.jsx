@@ -1,3 +1,4 @@
+import { BrandLogo } from "../components/Brand";
 import IconButton from "../components/IconButton";
 import { contentLabel } from "../utils/order-content";
 import { useState } from 'react';
@@ -18,7 +19,7 @@ export function Label({ order, showTools = true }) {
       <p className="muted small">Per un foglio pulito disattiva le intestazioni e i piè di pagina aggiunti dal browser.</p>
     </div>}
     <article className={`parcel-label document-${format}`}>
-      <header className="logistic-header"><div><img src="/brand.svg" alt="EA-Express" width="110" height="59"/><small>{format === 'a6' ? 'ETICHETTA DI SPEDIZIONE' : 'RICEVUTA DI SPEDIZIONE'}</small></div><b>COLLI<br/>{order.parcel_count}</b></header>
+      <header className="logistic-header"><div><BrandLogo className="ea-logo--paper" /><small>{format === 'a6' ? 'ETICHETTA DI SPEDIZIONE' : 'RICEVUTA DI SPEDIZIONE'}</small></div><b>COLLI<br/>{order.parcel_count}</b></header>
       <div className="label-reference"><small>CODICE SPEDIZIONE</small><strong>{order.reference}</strong></div>
       <section className="label-sender"><small>MITTENTE / RITIRARE DA</small><dl className="label-address"><div className="label-person"><dt>Nome mittente:</dt><dd>{order.store_name}</dd></div><div className="label-route"><dt>Indirizzo di ritiro:</dt><dd>{order.pickup_address} {order.pickup_street_number}</dd></div><div className="label-route"><dt>Città di ritiro:</dt><dd>{order.pickup_postal_code} {order.pickup_city}</dd></div></dl></section>
       <section className="label-destination"><small>DESTINATARIO / CONSEGNARE A</small><dl className="label-address"><div className="label-person"><dt>Nome destinatario:</dt><dd>{order.recipient_name}</dd></div><div className="label-route"><dt>Indirizzo di consegna:</dt><dd>{order.delivery_address} {order.delivery_street_number}</dd></div><div className="label-route"><dt>Comune di consegna:</dt><dd>{order.delivery_city}</dd></div><div><dt>CAP:</dt><dd>{order.delivery_postal_code || "Non indicato"}</dd></div><div><dt>Numero di cellulare:</dt><dd>{order.recipient_phone}</dd></div>{order.delivery_province && <div><dt>Provincia:</dt><dd>{order.delivery_province}</dd></div>}{order.delivery_region && <div><dt>Regione:</dt><dd>{order.delivery_region}</dd></div>}</dl></section>

@@ -16,6 +16,7 @@ createRoot(document.getElementById("root")).render(
 );
 
 import "./styles/experience.css";
+import "./styles/brand-logo.css";
 
 import "./styles/portal-revision.css";
 import "./styles/journey.css";

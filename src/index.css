@@ -3779,7 +3779,6 @@ input, select, textarea { border-radius: var(--ea-radius-control); }
 
 @media print {
   .parcel-label.document-a6 header.logistic-header {padding-bottom:5px; border-bottom-width:2px;}
-  .document-a6 .logistic-header img {width:88px; height:47px;}
   .document-a6 .logistic-header small {font-size:7px; margin-top:0;}
   .parcel-label.document-a6 .label-reference {padding:6px 0;}
   .parcel-label.document-a6 section {padding:6px 0;}
