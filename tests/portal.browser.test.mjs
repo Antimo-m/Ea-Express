@@ -42,6 +42,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
   let ratesPaginationMode = false, registrationError = false, contentError = false, bookingNow = null;
   let resourceStatus = 0, inactiveZone = false, statisticsError = false, priceState = 'agreed';
   let failedReads = 0, failReads = 0, staleAsset = null, staleAssetServed = 0, productionCsp = false;
+  let shipmentDocumentRequests = 0;
   const rateRequests = [];
   const orderRequests = [];
   const statisticsRequests = [];
@@ -150,6 +151,7 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     }
     // Stessa Content-Security-Policy del portale in produzione (nginx): immagini solo da 'self' e data:.
     if (productionCsp) response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'");
+    if (url.pathname === `/shipments/${slug}` && request.headers['sec-fetch-dest'] === 'document') shipmentDocumentRequests++;
     response.setHeader('Content-Type', 'text/html'); response.end(readFileSync(built));
   });
   try {
@@ -179,7 +181,17 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
     await send('Runtime.enable');
     await send('Emulation.setFocusEmulationEnabled', { enabled: true });
     const evaluate = async expression => { const result = await send('Runtime.evaluate', { expression: `(() => { ${expression} })()`, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text); return result.result.value; };
-    const waitFor = async expression => { for (let index = 0; index < 100; index++) { if (await evaluate(`return Boolean(${expression});`)) return; await new Promise(resolve => setTimeout(resolve, 30)); } throw new Error(`Not ready: ${expression}`); };
+    const waitFor = async (expression, { duringReload = false } = {}) => {
+      for (let index = 0; index < 100; index++) {
+        try {
+          if (await evaluate(`return Boolean(${expression});`)) return;
+        } catch (error) {
+          if (!duringReload || !/Inspected target navigated or closed|Execution context was destroyed|Cannot find context with specified id/.test(error.message)) throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 30));
+      }
+      throw new Error(`Not ready: ${expression}`);
+    };
     const navigate = async path => { await evaluate('window.__previous = true;'); await send('Page.navigate', { url: origin + path }); await waitFor('!window.__previous && document.readyState === "complete" && !document.querySelector(".skeletons") && document.querySelector("h1, .auth-form h2, [role=alert]")'); await evaluate('return document.fonts.ready.then(() => true);'); };
     const viewport = async width => {
       await send('Emulation.setDeviceMetricsOverride', { width, height: ({320:568,360:800,375:812,390:844,430:932,768:1024})[width] || 900, deviceScaleFactor: 1, mobile: width < 768 });
@@ -462,8 +474,11 @@ test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze ric
         await evaluate('sessionStorage.removeItem("ea:stale-build-reload"); window.__oldPage = true;');
         staleAsset = /\/assets\/OrderDetailPage-[^/]+\.js$/;
         const served = staleAssetServed;
-        await click('.shipment-card');
-        await waitFor('!window.__oldPage && location.pathname.startsWith("/shipments/") && document.querySelector(".detail-grid")');
+        const documentsBeforeClick = shipmentDocumentRequests;
+        await waitFor('document.querySelector(".shipment-card")');
+        await evaluate('document.querySelector(".shipment-card").click();');
+        await waitFor(`!window.__oldPage && location.pathname === "/shipments/${slug}" && document.querySelector(".detail-grid")`, { duringReload: true });
+        assert.equal(shipmentDocumentRequests - documentsBeforeClick, 1);
         assert.equal(staleAssetServed - served, 1);
         assert.equal(await evaluate('return /Qualcosa non ha funzionato/.test(document.body.textContent);'), false);
       }
