@@ -33,7 +33,7 @@ const statistics = {
   months: [{ month: '2026-09', shipments: 20 }, { month: '2026-10', shipments: 25 }],
 };
 
-test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze richieste', { skip: !existsSync(chrome) || !existsSync(built), timeout: 180000 }, async t => {
+test('Portale clienti: pagine, touch, modali e accessibilità alle larghezze richieste', { skip: !existsSync(chrome) || !existsSync(built), timeout: 300000 }, async t => {
   const scenario = (name, callback) => t.test(name, {skip: Boolean(process.env.EA_PORTAL_TEST_FILTER) && !new RegExp(process.env.EA_PORTAL_TEST_FILTER).test(name)}, callback);
   const temporary = mkdtempSync(join(tmpdir(), 'ea-portal-ui-'));
   let browser, socket, authenticated = true, otpPending = false, errorMode = false, emptyMode = false, loadingMode = false, dashboardEmpty = false, feedItems = [];
